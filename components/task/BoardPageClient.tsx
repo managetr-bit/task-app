@@ -318,11 +318,6 @@ export function BoardPageClient({ boardId }: Props) {
     [columns]
   )
 
-  const deleteBoard = useCallback(async () => {
-    await supabase.from('boards').delete().eq('id', boardId)
-    window.location.href = '/'
-  }, [boardId])
-
   // ── Render states ──
   if (loading) {
     return (
@@ -399,7 +394,6 @@ export function BoardPageClient({ boardId }: Props) {
           onAddColumn={addColumn}
           onDeleteColumn={deleteColumn}
           onUpdateFilePanelUrl={updateFilePanelUrl}
-          onDeleteBoard={deleteBoard}
         />
       )}
     </>

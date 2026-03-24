@@ -13,6 +13,8 @@ export default function LandingPage() {
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [recentBoards, setRecentBoards] = useState<RecentBoard[]>([])
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     // Load recent boards from localStorage
@@ -23,6 +25,26 @@ export default function LandingPage() {
       // ignore
     }
   }, [])
+
+  function isCreator(boardId: string) {
+    try { return localStorage.getItem(`task_creator_${boardId}`) === 'true' } catch { return false }
+  }
+
+  async function handleDeleteBoard(boardId: string) {
+    setDeletingId(boardId)
+    await supabase.from('boards').delete().eq('id', boardId)
+    try {
+      localStorage.removeItem(`task_creator_${boardId}`)
+      const raw = localStorage.getItem('task_recent_boards')
+      if (raw) {
+        const list = JSON.parse(raw).filter((b: RecentBoard) => b.boardId !== boardId)
+        localStorage.setItem('task_recent_boards', JSON.stringify(list))
+      }
+    } catch { /* ignore */ }
+    setRecentBoards(prev => prev.filter(b => b.boardId !== boardId))
+    setConfirmDeleteId(null)
+    setDeletingId(null)
+  }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -198,41 +220,72 @@ export default function LandingPage() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {recentBoards.slice(0, 4).map(rb => (
-              <button
+              <div
                 key={rb.boardId}
-                onClick={() => router.push(`/${rb.boardId}`)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
                   background: '#FFFFFF',
                   border: '1.5px solid #E8E5E0',
                   borderRadius: '12px',
                   padding: '0.75rem 1rem',
-                  cursor: 'pointer',
-                  transition: 'border-color 0.15s ease, background 0.15s ease',
-                  textAlign: 'left',
-                  width: '100%',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = '#c9a96e'
-                  ;(e.currentTarget as HTMLButtonElement).style.background = '#fdf6ed'
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5E0'
-                  ;(e.currentTarget as HTMLButtonElement).style.background = '#FFFFFF'
+                  gap: '0.5rem',
+                  transition: 'border-color 0.15s ease',
                 }}
               >
-                <div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#1a1a1a' }}>
+                {/* Board info — tıklayınca git */}
+                <div
+                  onClick={() => router.push(`/${rb.boardId}`)}
+                  style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}
+                >
+                  <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {rb.name}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.1rem' }}>
                     as {rb.nickname}
                   </div>
                 </div>
-                <span style={{ color: '#c9a96e', fontSize: '0.875rem' }}>→</span>
-              </button>
+
+                {/* Sağ taraf */}
+                {confirmDeleteId === rb.boardId ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
+                    <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Delete?</span>
+                    <button
+                      onClick={() => handleDeleteBoard(rb.boardId)}
+                      disabled={deletingId === rb.boardId}
+                      style={{ fontSize: '0.72rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '0.15rem 0.3rem' }}
+                    >
+                      {deletingId === rb.boardId ? '…' : 'Yes'}
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      style={{ fontSize: '0.72rem', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '0.15rem 0.3rem' }}
+                    >
+                      No
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                    <span
+                      onClick={() => router.push(`/${rb.boardId}`)}
+                      style={{ color: '#c9a96e', fontSize: '0.875rem', cursor: 'pointer' }}
+                    >
+                      →
+                    </span>
+                    {isCreator(rb.boardId) && (
+                      <button
+                        onClick={() => setConfirmDeleteId(rb.boardId)}
+                        title="Delete board"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb9', fontSize: '0.8rem', padding: '0.15rem 0.25rem', borderRadius: '4px', transition: 'color 0.15s ease', lineHeight: 1 }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c4bfb9' }}
+                      >
+                        🗑
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>
