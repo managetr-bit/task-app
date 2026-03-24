@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { type Task, type Column, type Member, type Priority } from '@/lib/types'
+import { type Task, type Column, type Member } from '@/lib/types'
 import { Avatar } from './MembersBar'
 
 type Props = {
@@ -30,7 +30,6 @@ export function TaskDetailModal({
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
-  const [priority, setPriority] = useState<Priority>(task.priority)
   const [dueDate, setDueDate] = useState(task.due_date ?? '')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -45,7 +44,6 @@ export function TaskDetailModal({
     await onUpdate(task.id, {
       title: title.trim() || task.title,
       description: description.trim() || null,
-      priority,
       due_date: dueDate || null,
     })
     setSaving(false)
@@ -56,11 +54,6 @@ export function TaskDetailModal({
     setDeleting(true)
     await onDelete(task.id)
   }
-
-  const priorityOptions: { value: Priority; label: string; color: string }[] = [
-    { value: 'normal', label: 'Normal', color: '#9ca3af' },
-    { value: 'high',   label: 'High',   color: '#ef4444' },
-  ]
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -192,48 +185,17 @@ export function TaskDetailModal({
 
         {/* Edit mode extras */}
         {editing && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
-            {/* Priority */}
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: '0.375rem' }}>
-                Priority
-              </label>
-              <div style={{ display: 'flex', gap: '0.375rem' }}>
-                {priorityOptions.map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setPriority(opt.value)}
-                    style={{
-                      flex: 1,
-                      padding: '0.375rem 0.25rem',
-                      border: `1.5px solid ${priority === opt.value ? opt.color : '#E8E5E0'}`,
-                      borderRadius: '8px',
-                      background: priority === opt.value ? `${opt.color}18` : 'transparent',
-                      color: priority === opt.value ? opt.color : '#9ca3af',
-                      fontSize: '0.7rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {/* Due date */}
-            <div>
-              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: '0.375rem' }}>
-                Due date
-              </label>
-              <input
-                className="input-base"
-                type="date"
-                value={dueDate}
-                onChange={e => setDueDate(e.target.value)}
-                style={{ padding: '0.375rem 0.625rem' }}
-              />
-            </div>
+          <div style={{ marginBottom: '1rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: '0.375rem' }}>
+              Due date
+            </label>
+            <input
+              className="input-base"
+              type="date"
+              value={dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              style={{ padding: '0.375rem 0.625rem' }}
+            />
           </div>
         )}
 
@@ -280,7 +242,6 @@ export function TaskDetailModal({
                     setEditing(false)
                     setTitle(task.title)
                     setDescription(task.description ?? '')
-                    setPriority(task.priority)
                     setDueDate(task.due_date ?? '')
                   }}
                   style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}
