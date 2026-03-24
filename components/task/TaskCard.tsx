@@ -1,16 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { type Task, type Member, type Column } from '@/lib/types'
+import { type Task, type Member } from '@/lib/types'
 import { Avatar } from './MembersBar'
 
 type Props = {
   task: Task
   members: Member[]
   currentMember: Member
-  allColumns: Column[]
   isDoneColumn: boolean
-  onMove: (taskId: string, colId: string) => Promise<void>
   onAssign: (taskId: string, memberId: string | null) => Promise<void>
   onClick: (task: Task) => void
 }
@@ -30,29 +27,13 @@ function getDueBadge(dueDate: string | null): { label: string; color: string; bg
   return { label: `${diffDays}d`, color: '#9ca3af', bg: '#f9fafb' }
 }
 
-export function TaskCard({ task, members, currentMember, allColumns, isDoneColumn, onMove, onAssign, onClick }: Props) {
-  const [moving, setMoving] = useState(false)
+export function TaskCard({ task, members, currentMember, isDoneColumn, onAssign, onClick }: Props) {
   const assignee = task.assigned_to ? members.find(m => m.id === task.assigned_to) : null
   const dueBadge = getDueBadge(task.due_date)
-  const isHigh = task.priority === 'high'
-  const isAssignedToMe = task.assigned_to === currentMember.id
-
-  // Quick move to next/prev column
-  const currentColIndex = allColumns.findIndex(c => c.id === task.column_id)
-  const nextCol = allColumns[currentColIndex + 1]
-  const prevCol = allColumns[currentColIndex - 1]
 
   async function handleTakeIt(e: React.MouseEvent) {
     e.stopPropagation()
     await onAssign(task.id, currentMember.id)
-  }
-
-  async function handleMoveNext(e: React.MouseEvent) {
-    e.stopPropagation()
-    if (!nextCol) return
-    setMoving(true)
-    await onMove(task.id, nextCol.id)
-    setMoving(false)
   }
 
   return (
@@ -62,7 +43,6 @@ export function TaskCard({ task, members, currentMember, allColumns, isDoneColum
       style={{
         background: isDoneColumn ? '#f9fafb' : '#FFFFFF',
         border: '1.5px solid #E8E5E0',
-        borderLeft: isHigh && !isDoneColumn ? '3px solid #ef4444' : '1.5px solid #E8E5E0',
         borderRadius: '12px',
         padding: '0.875rem',
         cursor: 'pointer',
@@ -133,7 +113,7 @@ export function TaskCard({ task, members, currentMember, allColumns, isDoneColum
           <div />
         )}
 
-        {/* Right side: due badge + move button */}
+        {/* Right side: due badge */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
           {dueBadge && !isDoneColumn && (
             <span
@@ -149,30 +129,6 @@ export function TaskCard({ task, members, currentMember, allColumns, isDoneColum
             >
               {dueBadge.label}
             </span>
-          )}
-
-          {/* Move to next column button */}
-          {nextCol && !isDoneColumn && (
-            <button
-              onClick={handleMoveNext}
-              disabled={moving}
-              title={`Move to ${nextCol.name}`}
-              style={{
-                fontSize: '0.7rem',
-                color: '#9ca3af',
-                background: 'transparent',
-                border: 'none',
-                cursor: moving ? 'default' : 'pointer',
-                padding: '0.15rem 0.25rem',
-                borderRadius: '4px',
-                lineHeight: 1,
-                transition: 'color 0.15s ease',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c9a96e' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af' }}
-            >
-              →
-            </button>
           )}
         </div>
       </div>

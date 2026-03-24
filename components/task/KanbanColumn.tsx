@@ -317,9 +317,7 @@ export function KanbanColumn({
                 task={task}
                 members={members}
                 currentMember={currentMember}
-                allColumns={allColumns}
                 isDoneColumn={isDoneColumn}
-                onMove={onMoveTask}
                 onAssign={onAssignTask}
                 onClick={onTaskClick}
               />
