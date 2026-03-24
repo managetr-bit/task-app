@@ -15,20 +15,14 @@ export default function LandingPage() {
   const [recentBoards, setRecentBoards] = useState<RecentBoard[]>([])
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [focused, setFocused] = useState(false)
 
   useEffect(() => {
-    // Load recent boards from localStorage
     try {
       const raw = localStorage.getItem('task_recent_boards')
       if (raw) setRecentBoards(JSON.parse(raw))
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   }, [])
-
-  function isCreator(boardId: string) {
-    try { return localStorage.getItem(`task_creator_${boardId}`) === 'true' } catch { return false }
-  }
 
   async function handleDeleteBoard(boardId: string) {
     setDeletingId(boardId)
@@ -53,7 +47,6 @@ export default function LandingPage() {
     setCreating(true)
     setError('')
 
-    // 1. Create board
     const { data: board, error: boardErr } = await supabase
       .from('boards')
       .insert({ name })
@@ -61,16 +54,14 @@ export default function LandingPage() {
       .single()
 
     if (boardErr || !board) {
-      setError('Could not create board. Check your connection and try again.')
+      setError('Could not create project. Check your connection and try again.')
       setCreating(false)
       return
     }
 
-    // 2. Seed default columns
     const cols = DEFAULT_COLUMNS.map(c => ({ board_id: board.id, name: c.name, position: c.position }))
     await supabase.from('columns').insert(cols)
 
-    // 3. Mark this user as the board creator in localStorage
     try {
       localStorage.setItem(`task_creator_${board.id}`, 'true')
     } catch { /* ignore */ }
@@ -90,75 +81,38 @@ export default function LandingPage() {
         background: '#FAF9F7',
       }}
     >
-      {/* Logo / wordmark */}
-      <div className="animate-fadeUp" style={{ marginBottom: '0.5rem' }}>
-        <span
-          style={{
-            fontSize: '1.75rem',
-            fontWeight: 700,
-            color: '#1a1a1a',
-            letterSpacing: '-0.03em',
-          }}
-        >
-          task
-          <span style={{ color: '#c9a96e' }}>.</span>
-        </span>
-      </div>
-
-      {/* Tagline */}
-      <p
-        className="animate-fadeUp"
-        style={{
-          fontSize: '1rem',
-          color: '#9ca3af',
-          marginBottom: '3rem',
-          animationDelay: '0.05s',
-        }}
-      >
-        Get things done, together.
-      </p>
-
-      {/* Create board card */}
+      {/* Create project card */}
       <div
         className="animate-fadeUp"
         style={{
           background: '#FFFFFF',
           borderRadius: '20px',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)',
+          boxShadow: focused
+            ? '0 8px 40px rgba(201,169,110,0.15), 0 2px 8px rgba(0,0,0,0.06)'
+            : '0 4px 24px rgba(0,0,0,0.07), 0 1px 4px rgba(0,0,0,0.04)',
           padding: '2.5rem',
           width: '100%',
           maxWidth: '440px',
-          animationDelay: '0.1s',
+          transition: 'box-shadow 0.3s ease',
         }}
       >
-        <h1
-          style={{
-            fontSize: '1.25rem',
-            fontWeight: 600,
-            color: '#1a1a1a',
-            marginBottom: '0.375rem',
-          }}
-        >
-          Start a new board
-        </h1>
-        <p style={{ fontSize: '0.875rem', color: '#9ca3af', marginBottom: '1.5rem' }}>
-          Name it, share the link — your team joins in seconds.
-        </p>
-
         <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <input
             className="input-base"
             type="text"
-            placeholder="e.g. Product Launch Q3"
+            placeholder="Name your project…"
             value={boardName}
-            onChange={e => setBoardName(e.target.value)}
+            onChange={e => { setBoardName(e.target.value); setError('') }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             maxLength={60}
             autoFocus
             required
+            style={{ fontSize: '1.0625rem', padding: '0.875rem 1rem' }}
           />
 
           {error && (
-            <p style={{ fontSize: '0.8125rem', color: '#ef4444' }}>{error}</p>
+            <p style={{ fontSize: '0.8125rem', color: '#ef4444', marginTop: '-0.25rem' }}>{error}</p>
           )}
 
           <button
@@ -168,72 +122,42 @@ export default function LandingPage() {
             style={{
               width: '100%',
               justifyContent: 'center',
-              padding: '0.75rem',
+              padding: '0.8125rem',
               fontSize: '0.9375rem',
-              opacity: creating || !boardName.trim() ? 0.6 : 1,
+              opacity: creating || !boardName.trim() ? 0.5 : 1,
+              transition: 'opacity 0.2s ease',
             }}
           >
             {creating ? (
               <>
                 <span
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: '50%',
-                    border: '2px solid rgba(255,255,255,0.4)',
-                    borderTopColor: '#fff',
-                    display: 'inline-block',
-                  }}
+                  style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', display: 'inline-block' }}
                   className="animate-spin"
                 />
                 Creating…
               </>
             ) : (
-              'Start board →'
+              'Start project →'
             )}
           </button>
         </form>
       </div>
 
-      {/* Recent boards */}
+      {/* Recent projects */}
       {recentBoards.length > 0 && (
         <div
           className="animate-fadeUp"
-          style={{
-            marginTop: '2rem',
-            width: '100%',
-            maxWidth: '440px',
-            animationDelay: '0.15s',
-          }}
+          style={{ marginTop: '1.5rem', width: '100%', maxWidth: '440px', animationDelay: '0.1s' }}
         >
-          <p
-            style={{
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              color: '#c4bfb9',
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              marginBottom: '0.75rem',
-            }}
-          >
-            Continue where you left off
+          <p style={{ fontSize: '0.72rem', fontWeight: 600, color: '#c4bfb9', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.625rem' }}>
+            Recent projects
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {recentBoards.slice(0, 4).map(rb => (
               <div
                 key={rb.boardId}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  background: '#FFFFFF',
-                  border: '1.5px solid #E8E5E0',
-                  borderRadius: '12px',
-                  padding: '0.75rem 1rem',
-                  gap: '0.5rem',
-                  transition: 'border-color 0.15s ease',
-                }}
+                style={{ display: 'flex', alignItems: 'center', background: '#FFFFFF', border: '1.5px solid #E8E5E0', borderRadius: '12px', padding: '0.75rem 1rem', gap: '0.5rem', transition: 'border-color 0.15s ease' }}
               >
-                {/* Board info — tıklayınca git */}
                 <div
                   onClick={() => router.push(`/${rb.boardId}`)}
                   style={{ flex: 1, cursor: 'pointer', minWidth: 0 }}
@@ -241,12 +165,11 @@ export default function LandingPage() {
                   <div style={{ fontSize: '0.875rem', fontWeight: 500, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {rb.name}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.1rem' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#9ca3af', marginTop: '0.1rem' }}>
                     as {rb.nickname}
                   </div>
                 </div>
 
-                {/* Sağ taraf */}
                 {confirmDeleteId === rb.boardId ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
                     <span style={{ fontSize: '0.72rem', color: '#9ca3af' }}>Delete?</span>
@@ -266,15 +189,10 @@ export default function LandingPage() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                    <span
-                      onClick={() => router.push(`/${rb.boardId}`)}
-                      style={{ color: '#c9a96e', fontSize: '0.875rem', cursor: 'pointer' }}
-                    >
-                      →
-                    </span>
+                    <span onClick={() => router.push(`/${rb.boardId}`)} style={{ color: '#c9a96e', fontSize: '0.875rem', cursor: 'pointer' }}>→</span>
                     <button
                       onClick={() => setConfirmDeleteId(rb.boardId)}
-                      title="Delete board"
+                      title="Delete project"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb9', fontSize: '0.8rem', padding: '0.15rem 0.25rem', borderRadius: '4px', transition: 'color 0.15s ease', lineHeight: 1 }}
                       onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }}
                       onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c4bfb9' }}
@@ -290,20 +208,9 @@ export default function LandingPage() {
       )}
 
       {/* Footer */}
-      <p
-        style={{
-          marginTop: '3rem',
-          fontSize: '0.75rem',
-          color: '#c4bfb9',
-        }}
-      >
+      <p style={{ marginTop: '2.5rem', fontSize: '0.75rem', color: '#c4bfb9' }}>
         by{' '}
-        <a
-          href="https://omercimen.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: '#c9a96e', textDecoration: 'none' }}
-        >
+        <a href="https://omercimen.com" target="_blank" rel="noopener noreferrer" style={{ color: '#c9a96e', textDecoration: 'none' }}>
           omercimen.com
         </a>
       </p>
