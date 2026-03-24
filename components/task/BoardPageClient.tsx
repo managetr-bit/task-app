@@ -301,6 +301,24 @@ export function BoardPageClient({ boardId }: Props) {
     [boardId]
   )
 
+  const updateBoardName = useCallback(
+    async (name: string) => {
+      const { data } = await supabase
+        .from('boards')
+        .update({ name })
+        .eq('id', boardId)
+        .select()
+        .single()
+      if (data) {
+        setBoard(data)
+        // Update recent boards list too
+        const session = getSession(boardId)
+        if (session) saveRecentBoard(boardId, name, session.nickname)
+      }
+    },
+    [boardId]
+  )
+
   const deleteColumn = useCallback(
     async (columnId: string) => {
       // Move tasks in this column to first column first
@@ -394,6 +412,7 @@ export function BoardPageClient({ boardId }: Props) {
           onAddColumn={addColumn}
           onDeleteColumn={deleteColumn}
           onUpdateFilePanelUrl={updateFilePanelUrl}
+          onUpdateBoardName={updateBoardName}
         />
       )}
     </>

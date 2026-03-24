@@ -96,13 +96,8 @@ export function TaskDetailModal({
           <button onClick={onClose} className="btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '1rem', flexShrink: 0 }}>✕</button>
         </div>
 
-        {/* Column badge + Priority */}
+        {/* Priority + due date badges */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-          {currentCol && (
-            <span style={{ fontSize: '0.75rem', background: '#F3F4F6', color: '#6b7280', borderRadius: '6px', padding: '0.2rem 0.5rem', fontWeight: 500 }}>
-              {currentCol.name}
-            </span>
-          )}
           {task.priority === 'high' && (
             <span
               style={{
@@ -190,35 +185,6 @@ export function TaskDetailModal({
                 <span style={{ fontSize: '0.75rem', color: '#4b5563', fontWeight: 500 }}>
                   {m.id === currentMember.id ? `${m.nickname} (you)` : m.nickname}
                 </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Move column */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: '0.5rem' }}>
-            Move to
-          </label>
-          <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-            {columns.map(c => (
-              <button
-                key={c.id}
-                onClick={() => { onMove(task.id, c.id); onClose() }}
-                disabled={c.id === task.column_id}
-                style={{
-                  padding: '0.3rem 0.75rem',
-                  borderRadius: '8px',
-                  border: `1.5px solid ${c.id === task.column_id ? '#c9a96e' : '#E8E5E0'}`,
-                  background: c.id === task.column_id ? '#fdf6ed' : 'transparent',
-                  color: c.id === task.column_id ? '#c9a96e' : '#9ca3af',
-                  fontSize: '0.75rem',
-                  fontWeight: c.id === task.column_id ? 600 : 400,
-                  cursor: c.id === task.column_id ? 'default' : 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {c.name}
               </button>
             ))}
           </div>

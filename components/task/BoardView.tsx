@@ -43,12 +43,13 @@ type Props = {
   onAddColumn: (name: string) => Promise<void>
   onDeleteColumn: (columnId: string) => Promise<void>
   onUpdateFilePanelUrl: (url: string | null) => Promise<void>
+  onUpdateBoardName: (name: string) => Promise<void>
 }
 
 export function BoardView({
   board, columns, members, tasks, currentMember, isCreator,
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
-  onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onUpdateFilePanelUrl,
+  onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onUpdateFilePanelUrl, onUpdateBoardName,
 }: Props) {
   const [addTaskColumnId, setAddTaskColumnId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -58,6 +59,8 @@ export function BoardView({
   const [copiedLink, setCopiedLink] = useState(false)
   const [showFilePanel, setShowFilePanel] = useState(true)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
+  const [editingBoardName, setEditingBoardName] = useState(false)
+  const [boardNameDraft, setBoardNameDraft] = useState(board.name)
 
   // Sensors: require 8px movement before drag starts — clicks still work
   const sensors = useSensors(
@@ -138,9 +141,32 @@ export function BoardView({
             task<span style={{ color: '#c9a96e' }}>.</span>
           </a>
           <span style={{ color: '#E8E5E0', fontSize: '1rem', flexShrink: 0 }}>/</span>
-          <h1 style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {board.name}
-          </h1>
+          {editingBoardName ? (
+            <input
+              value={boardNameDraft}
+              onChange={e => setBoardNameDraft(e.target.value)}
+              onBlur={async () => {
+                const name = boardNameDraft.trim()
+                if (name && name !== board.name) await onUpdateBoardName(name)
+                else setBoardNameDraft(board.name)
+                setEditingBoardName(false)
+              }}
+              onKeyDown={async e => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                if (e.key === 'Escape') { setBoardNameDraft(board.name); setEditingBoardName(false) }
+              }}
+              autoFocus
+              style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1a1a1a', border: 'none', borderBottom: '2px solid #c9a96e', outline: 'none', background: 'transparent', width: 180 }}
+            />
+          ) : (
+            <h1
+              onClick={() => setEditingBoardName(true)}
+              title="Click to rename"
+              style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+            >
+              {board.name}
+            </h1>
+          )}
         </div>
 
         <MembersBar members={members} currentMember={currentMember} />
