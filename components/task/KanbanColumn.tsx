@@ -323,7 +323,11 @@ export function KanbanColumn({
                 members={members}
                 currentMember={currentMember}
                 isDoneColumn={isDoneColumn}
+                isFirst={index === 0}
+                isLast={index === visibleTasks.length - 1}
                 onAssign={onAssignTask}
+                onMoveUp={() => onReorderTask(task.id, index - 1, column.id)}
+                onMoveDown={() => onReorderTask(task.id, index + 1, column.id)}
                 onClick={onTaskClick}
               />
             </div>
