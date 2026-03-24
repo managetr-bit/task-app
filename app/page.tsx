@@ -48,6 +48,11 @@ export default function LandingPage() {
     const cols = DEFAULT_COLUMNS.map(c => ({ board_id: board.id, name: c.name, position: c.position }))
     await supabase.from('columns').insert(cols)
 
+    // 3. Mark this user as the board creator in localStorage
+    try {
+      localStorage.setItem(`task_creator_${board.id}`, 'true')
+    } catch { /* ignore */ }
+
     router.push(`/${board.id}`)
   }
 

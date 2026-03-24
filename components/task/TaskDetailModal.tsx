@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { type Task, type Column, type Member, type Priority, PRIORITY_CONFIG } from '@/lib/types'
+import { type Task, type Column, type Member, type Priority } from '@/lib/types'
 import { Avatar } from './MembersBar'
 
 type Props = {
@@ -58,9 +58,8 @@ export function TaskDetailModal({
   }
 
   const priorityOptions: { value: Priority; label: string; color: string }[] = [
-    { value: 'low', label: 'Low', color: '#9ca3af' },
-    { value: 'medium', label: 'Medium', color: '#f59e0b' },
-    { value: 'high', label: 'High', color: '#ef4444' },
+    { value: 'normal', label: 'Normal', color: '#9ca3af' },
+    { value: 'high',   label: 'High',   color: '#ef4444' },
   ]
 
   return (
@@ -104,18 +103,20 @@ export function TaskDetailModal({
               {currentCol.name}
             </span>
           )}
-          <span
-            style={{
-              fontSize: '0.75rem',
-              background: `${PRIORITY_CONFIG[task.priority].color}18`,
-              color: PRIORITY_CONFIG[task.priority].color,
-              borderRadius: '6px',
-              padding: '0.2rem 0.5rem',
-              fontWeight: 600,
-            }}
-          >
-            {PRIORITY_CONFIG[task.priority].label}
-          </span>
+          {task.priority === 'high' && (
+            <span
+              style={{
+                fontSize: '0.75rem',
+                background: '#fef2f2',
+                color: '#ef4444',
+                borderRadius: '6px',
+                padding: '0.2rem 0.5rem',
+                fontWeight: 600,
+              }}
+            >
+              ↑ High priority
+            </span>
+          )}
           {task.due_date && (
             <span style={{ fontSize: '0.75rem', background: '#fffbeb', color: '#d97706', borderRadius: '6px', padding: '0.2rem 0.5rem', fontWeight: 500 }}>
               Due {task.due_date}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { type Task, type Member, type Column, PRIORITY_CONFIG } from '@/lib/types'
+import { type Task, type Member, type Column } from '@/lib/types'
 import { Avatar } from './MembersBar'
 
 type Props = {
@@ -34,7 +34,7 @@ export function TaskCard({ task, members, currentMember, allColumns, isDoneColum
   const [moving, setMoving] = useState(false)
   const assignee = task.assigned_to ? members.find(m => m.id === task.assigned_to) : null
   const dueBadge = getDueBadge(task.due_date)
-  const priority = PRIORITY_CONFIG[task.priority]
+  const isHigh = task.priority === 'high'
   const isAssignedToMe = task.assigned_to === currentMember.id
 
   // Quick move to next/prev column
@@ -62,6 +62,7 @@ export function TaskCard({ task, members, currentMember, allColumns, isDoneColum
       style={{
         background: isDoneColumn ? '#f9fafb' : '#FFFFFF',
         border: '1.5px solid #E8E5E0',
+        borderLeft: isHigh && !isDoneColumn ? '3px solid #ef4444' : '1.5px solid #E8E5E0',
         borderRadius: '12px',
         padding: '0.875rem',
         cursor: 'pointer',
@@ -69,20 +70,6 @@ export function TaskCard({ task, members, currentMember, allColumns, isDoneColum
         position: 'relative',
       }}
     >
-      {/* Priority dot */}
-      <div
-        title={`${priority.label} priority`}
-        style={{
-          position: 'absolute',
-          top: 10,
-          right: 10,
-          width: 8,
-          height: 8,
-          borderRadius: '50%',
-          background: priority.color,
-        }}
-      />
-
       {/* Title */}
       <p
         style={{
@@ -90,7 +77,6 @@ export function TaskCard({ task, members, currentMember, allColumns, isDoneColum
           fontWeight: 500,
           color: isDoneColumn ? '#9ca3af' : '#1a1a1a',
           lineHeight: 1.45,
-          paddingRight: '1rem',
           textDecoration: isDoneColumn ? 'line-through' : 'none',
           marginBottom: '0.625rem',
           wordBreak: 'break-word',

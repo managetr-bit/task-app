@@ -21,7 +21,7 @@ type Props = {
 export function AddTaskModal({ columnId, columns, members, currentMember, onClose, onSubmit }: Props) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState<Priority>('medium')
+  const [priority, setPriority] = useState<Priority>('normal')
   const [dueDate, setDueDate] = useState('')
   const [selectedColumnId, setSelectedColumnId] = useState(columnId)
   const [submitting, setSubmitting] = useState(false)
@@ -43,9 +43,8 @@ export function AddTaskModal({ columnId, columns, members, currentMember, onClos
   }
 
   const priorityOptions: { value: Priority; label: string; color: string }[] = [
-    { value: 'low', label: 'Low', color: '#9ca3af' },
-    { value: 'medium', label: 'Medium', color: '#f59e0b' },
-    { value: 'high', label: 'High', color: '#ef4444' },
+    { value: 'normal', label: 'Normal', color: '#9ca3af' },
+    { value: 'high',   label: 'High',   color: '#ef4444' },
   ]
 
   return (

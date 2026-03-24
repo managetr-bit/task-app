@@ -13,6 +13,7 @@ type Props = {
   isDoneColumn: boolean
   onAddTask: () => void
   onMoveTask: (taskId: string, colId: string) => Promise<void>
+  onReorderTask: (taskId: string, newIndex: number, colId: string) => Promise<void>
   onAssignTask: (taskId: string, memberId: string | null) => Promise<void>
   onTaskClick: (task: Task) => void
   onDeleteColumn?: () => void
@@ -37,34 +38,85 @@ export function KanbanColumn({
   isDoneColumn,
   onAddTask,
   onMoveTask,
+  onReorderTask,
   onAssignTask,
   onTaskClick,
   onDeleteColumn,
 }: Props) {
-  const [dragOver, setDragOver] = useState(false)
+  const [dragOverColumnOnly, setDragOverColumnOnly] = useState(false)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const [draggedId, setDraggedId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const colStyle = getColumnStyle(column.name)
 
-  // ── Drag and drop ──
-  function handleDragOver(e: React.DragEvent) {
+  // ── Column-level drop (handles cross-column moves) ──
+  function handleColumnDragOver(e: React.DragEvent) {
     e.preventDefault()
-    setDragOver(true)
+    setDragOverColumnOnly(true)
   }
-  function handleDragLeave() {
-    setDragOver(false)
+  function handleColumnDragLeave(e: React.DragEvent) {
+    // Only clear if leaving the column entirely (not entering a child)
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDragOverColumnOnly(false)
+      setDragOverIndex(null)
+    }
   }
-  function handleDrop(e: React.DragEvent) {
+  function handleColumnDrop(e: React.DragEvent) {
     e.preventDefault()
-    setDragOver(false)
+    setDragOverColumnOnly(false)
+    setDragOverIndex(null)
+    setDraggedId(null)
+
     const taskId = e.dataTransfer.getData('taskId')
-    if (taskId) onMoveTask(taskId, column.id)
+    const sourceColumnId = e.dataTransfer.getData('sourceColumnId')
+    if (!taskId) return
+
+    if (sourceColumnId === column.id) {
+      // Same-column reorder: drop at end
+      const newIndex = tasks.length - 1
+      onReorderTask(taskId, newIndex, column.id)
+    } else {
+      onMoveTask(taskId, column.id)
+    }
+  }
+
+  // ── Task-level drag-over: determines insert position ──
+  function handleTaskDragEnter(e: React.DragEvent, index: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverIndex(index)
+    setDragOverColumnOnly(false)
+  }
+  function handleEndZoneDragEnter(e: React.DragEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverIndex(tasks.length)
+  }
+
+  // Drop on a specific task slot
+  function handleTaskSlotDrop(e: React.DragEvent, index: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverIndex(null)
+    setDragOverColumnOnly(false)
+    setDraggedId(null)
+
+    const taskId = e.dataTransfer.getData('taskId')
+    const sourceColumnId = e.dataTransfer.getData('sourceColumnId')
+    if (!taskId) return
+
+    if (sourceColumnId === column.id) {
+      onReorderTask(taskId, index, column.id)
+    } else {
+      onMoveTask(taskId, column.id)
+    }
   }
 
   return (
     <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      onDragOver={handleColumnDragOver}
+      onDragLeave={handleColumnDragLeave}
+      onDrop={handleColumnDrop}
       style={{
         flexShrink: 0,
         width: 280,
@@ -119,7 +171,6 @@ export function KanbanColumn({
 
         {/* Column actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          {/* Add task to this column */}
           <button
             onClick={onAddTask}
             title="Add task"
@@ -140,7 +191,6 @@ export function KanbanColumn({
             +
           </button>
 
-          {/* Delete column (non-default only) */}
           {onDeleteColumn && !['To Do', 'Doing', 'Done'].includes(column.name) && (
             <>
               {showDeleteConfirm ? (
@@ -185,21 +235,21 @@ export function KanbanColumn({
         </div>
       </div>
 
-      {/* Drop zone / cards container */}
+      {/* Cards container */}
       <div
         style={{
-          background: dragOver ? '#fdf6ed' : colStyle.bg,
-          border: `1.5px dashed ${dragOver ? '#c9a96e' : 'transparent'}`,
+          background: dragOverColumnOnly ? '#fdf6ed' : colStyle.bg,
+          border: `1.5px dashed ${dragOverColumnOnly ? '#c9a96e' : 'transparent'}`,
           borderRadius: '14px',
           padding: '0.625rem',
           minHeight: 80,
           display: 'flex',
           flexDirection: 'column',
-          gap: '0.5rem',
+          gap: 0,
           transition: 'background 0.15s ease, border-color 0.15s ease',
         }}
       >
-        {tasks.length === 0 && (
+        {tasks.length === 0 && !dragOverColumnOnly && (
           <div
             style={{
               display: 'flex',
@@ -210,34 +260,91 @@ export function KanbanColumn({
               fontSize: '0.75rem',
             }}
           >
-            {dragOver ? 'Drop here' : 'Drop tasks here'}
+            Drop tasks here
           </div>
         )}
 
-        {tasks.map(task => (
-          <div
-            key={task.id}
-            draggable
-            onDragStart={e => {
-              e.dataTransfer.setData('taskId', task.id)
-              e.dataTransfer.effectAllowed = 'move'
-            }}
-            style={{ cursor: 'grab' }}
-          >
-            <TaskCard
-              task={task}
-              members={members}
-              currentMember={currentMember}
-              allColumns={allColumns}
-              isDoneColumn={isDoneColumn}
-              onMove={onMoveTask}
-              onAssign={onAssignTask}
-              onClick={onTaskClick}
-            />
+        {tasks.map((task, index) => (
+          <div key={task.id}>
+            {/* Drop indicator ABOVE this card */}
+            <div
+              onDragEnter={e => handleTaskDragEnter(e, index)}
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => handleTaskSlotDrop(e, index)}
+              style={{
+                height: dragOverIndex === index ? 28 : 0,
+                overflow: 'hidden',
+                transition: 'height 0.12s ease',
+                display: 'flex',
+                alignItems: 'center',
+                padding: dragOverIndex === index ? '0 0 4px 0' : 0,
+              }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  height: 2,
+                  background: '#c9a96e',
+                  borderRadius: 2,
+                  opacity: dragOverIndex === index ? 1 : 0,
+                  transition: 'opacity 0.12s ease',
+                }}
+              />
+            </div>
+
+            {/* Card wrapper */}
+            <div
+              draggable
+              onDragStart={e => {
+                e.dataTransfer.setData('taskId', task.id)
+                e.dataTransfer.setData('sourceColumnId', column.id)
+                e.dataTransfer.effectAllowed = 'move'
+                setDraggedId(task.id)
+              }}
+              onDragEnd={() => {
+                setDraggedId(null)
+                setDragOverIndex(null)
+                setDragOverColumnOnly(false)
+              }}
+              style={{
+                cursor: 'grab',
+                opacity: draggedId === task.id ? 0.35 : 1,
+                marginBottom: '0.5rem',
+                transition: 'opacity 0.15s ease',
+              }}
+            >
+              <TaskCard
+                task={task}
+                members={members}
+                currentMember={currentMember}
+                allColumns={allColumns}
+                isDoneColumn={isDoneColumn}
+                onMove={onMoveTask}
+                onAssign={onAssignTask}
+                onClick={onTaskClick}
+              />
+            </div>
           </div>
         ))}
 
-        {/* Add task inline prompt */}
+        {/* End-zone drop indicator (append to bottom) */}
+        <div
+          onDragEnter={handleEndZoneDragEnter}
+          onDragOver={e => e.preventDefault()}
+          onDrop={e => handleTaskSlotDrop(e, tasks.length)}
+          style={{
+            height: dragOverIndex === tasks.length ? 28 : 8,
+            transition: 'height 0.12s ease',
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          {dragOverIndex === tasks.length && (
+            <div style={{ flex: 1, height: 2, background: '#c9a96e', borderRadius: 2 }} />
+          )}
+        </div>
+
+        {/* Add task inline */}
         {!isDoneColumn && (
           <button
             onClick={onAddTask}

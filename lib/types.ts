@@ -1,6 +1,7 @@
 export type Board = {
   id: string
   name: string
+  file_panel_url: string | null
   created_at: string
 }
 
@@ -20,7 +21,7 @@ export type Member = {
   joined_at: string
 }
 
-export type Priority = 'low' | 'medium' | 'high'
+export type Priority = 'normal' | 'high'
 
 export type Task = {
   id: string
@@ -62,7 +63,6 @@ export const DEFAULT_COLUMNS = [
 ]
 
 export const PRIORITY_CONFIG: Record<Priority, { color: string; label: string }> = {
-  low: { color: '#6b7280', label: 'Low' },
-  medium: { color: '#f59e0b', label: 'Medium' },
-  high: { color: '#ef4444', label: 'High' },
+  normal: { color: '#9ca3af', label: 'Normal' },
+  high:   { color: '#ef4444', label: 'High' },
 }

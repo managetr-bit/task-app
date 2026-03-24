@@ -53,6 +53,7 @@ export function BoardPageClient({ boardId }: Props) {
   const [showNicknameModal, setShowNicknameModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [isCreator, setIsCreator] = useState(false)
 
   // ── Initial load ──
   useEffect(() => {
@@ -81,6 +82,11 @@ export function BoardPageClient({ boardId }: Props) {
       setColumns(colRes.data ?? [])
       setMembers(memRes.data ?? [])
       setTasks(taskRes.data ?? [])
+
+      // Check if current user created this board
+      try {
+        setIsCreator(localStorage.getItem(`task_creator_${boardId}`) === 'true')
+      } catch { /* ignore */ }
 
       // Check for existing session
       const session = getSession(boardId)
@@ -260,6 +266,41 @@ export function BoardPageClient({ boardId }: Props) {
     [boardId, columns]
   )
 
+  const reorderTask = useCallback(
+    async (taskId: string, newIndex: number, columnId: string) => {
+      const colTasks = tasks
+        .filter(t => t.column_id === columnId)
+        .sort((a, b) => a.position - b.position)
+
+      const dragged = colTasks.find(t => t.id === taskId)
+      if (!dragged) return
+
+      const withoutDragged = colTasks.filter(t => t.id !== taskId)
+      const clampedIndex = Math.max(0, Math.min(newIndex, withoutDragged.length))
+      withoutDragged.splice(clampedIndex, 0, dragged)
+
+      await Promise.all(
+        withoutDragged.map((t, i) =>
+          supabase.from('tasks').update({ position: i }).eq('id', t.id)
+        )
+      )
+    },
+    [tasks]
+  )
+
+  const updateFilePanelUrl = useCallback(
+    async (url: string | null) => {
+      const { data } = await supabase
+        .from('boards')
+        .update({ file_panel_url: url })
+        .eq('id', boardId)
+        .select()
+        .single()
+      if (data) setBoard(data)
+    },
+    [boardId]
+  )
+
   const deleteColumn = useCallback(
     async (columnId: string) => {
       // Move tasks in this column to first column first
@@ -343,13 +384,16 @@ export function BoardPageClient({ boardId }: Props) {
           members={members}
           tasks={tasks}
           currentMember={currentMember}
+          isCreator={isCreator}
           onCreateTask={createTask}
           onMoveTask={moveTask}
+          onReorderTask={reorderTask}
           onAssignTask={assignTask}
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
           onAddColumn={addColumn}
           onDeleteColumn={deleteColumn}
+          onUpdateFilePanelUrl={updateFilePanelUrl}
         />
       )}
     </>
