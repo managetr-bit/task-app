@@ -272,17 +272,15 @@ export default function LandingPage() {
                     >
                       →
                     </span>
-                    {isCreator(rb.boardId) && (
-                      <button
-                        onClick={() => setConfirmDeleteId(rb.boardId)}
-                        title="Delete board"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb9', fontSize: '0.8rem', padding: '0.15rem 0.25rem', borderRadius: '4px', transition: 'color 0.15s ease', lineHeight: 1 }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c4bfb9' }}
-                      >
-                        🗑
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setConfirmDeleteId(rb.boardId)}
+                      title="Delete board"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c4bfb9', fontSize: '0.8rem', padding: '0.15rem 0.25rem', borderRadius: '4px', transition: 'color 0.15s ease', lineHeight: 1 }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c4bfb9' }}
+                    >
+                      🗑
+                    </button>
                   </div>
                 )}
               </div>
