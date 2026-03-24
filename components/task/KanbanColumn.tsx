@@ -47,6 +47,11 @@ export function KanbanColumn({
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const PAGE_SIZE = 5
+  const visibleTasks = expanded ? tasks : tasks.slice(0, PAGE_SIZE)
+  const hiddenCount = tasks.length - PAGE_SIZE
   const colStyle = getColumnStyle(column.name)
 
   // ── Column-level drop (handles cross-column moves) ──
@@ -264,7 +269,7 @@ export function KanbanColumn({
           </div>
         )}
 
-        {tasks.map((task, index) => (
+        {visibleTasks.map((task, index) => (
           <div key={task.id}>
             {/* Drop indicator ABOVE this card */}
             <div
@@ -341,6 +346,29 @@ export function KanbanColumn({
             <div style={{ flex: 1, height: 2, background: '#c9a96e', borderRadius: 2 }} />
           )}
         </div>
+
+        {/* Show more / show less */}
+        {hiddenCount > 0 && (
+          <button
+            onClick={() => setExpanded(p => !p)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.4rem 0.5rem',
+              cursor: 'pointer',
+              color: '#9ca3af',
+              fontSize: '0.75rem',
+              fontWeight: 500,
+              textAlign: 'center',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c9a96e' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af' }}
+          >
+            {expanded ? '↑ Show less' : `↓ ${hiddenCount} more task${hiddenCount > 1 ? 's' : ''}`}
+          </button>
+        )}
 
         {/* Add task inline */}
         {!isDoneColumn && (
