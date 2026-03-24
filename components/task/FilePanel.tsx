@@ -108,9 +108,10 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate }: Props)
       setUploading(true)
       const ext = file.name.split('.').pop()
       const path = `${boardId}/${crypto.randomUUID()}.${ext}`
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file)
-      if (error) { setUploadError('Upload failed'); setUploading(false); continue }
-      await supabase.from('board_images').insert({ board_id: boardId, storage_path: path, file_name: file.name })
+      const { error: storageError } = await supabase.storage.from(BUCKET).upload(path, file)
+      if (storageError) { setUploadError(`Storage: ${storageError.message}`); setUploading(false); continue }
+      const { error: dbError } = await supabase.from('board_images').insert({ board_id: boardId, storage_path: path, file_name: file.name })
+      if (dbError) { setUploadError(`DB: ${dbError.message}`); setUploading(false); continue }
       setUploading(false)
     }
   }, [boardId])
