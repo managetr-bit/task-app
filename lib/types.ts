@@ -38,6 +38,14 @@ export type Task = {
   completed_at: string | null
 }
 
+export type BoardImage = {
+  id: string
+  board_id: string
+  storage_path: string
+  file_name: string
+  added_at: string
+}
+
 export type LocalSession = {
   boardId: string
   memberId: string

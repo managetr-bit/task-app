@@ -294,6 +294,7 @@ export function BoardView({
         {showFilePanel && (
           <div style={{ flexShrink: 0, alignSelf: 'stretch', display: 'flex' }}>
             <FilePanel
+              boardId={board.id}
               filePanelUrl={board.file_panel_url}
               isCreator={isCreator}
               onUpdate={onUpdateFilePanelUrl}
