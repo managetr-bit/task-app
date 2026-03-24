@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { type Task, type Member } from '@/lib/types'
 import { Avatar } from './MembersBar'
 
@@ -9,12 +8,9 @@ type Props = {
   members: Member[]
   currentMember: Member
   isDoneColumn: boolean
-  isFirst: boolean
-  isLast: boolean
   onAssign: (taskId: string, memberId: string | null) => Promise<void>
-  onMoveUp: () => void
-  onMoveDown: () => void
   onClick: (task: Task) => void
+  dragHandleProps?: Record<string, unknown>
 }
 
 function getDueBadge(dueDate: string | null): { label: string; color: string; bg: string } | null {
@@ -32,8 +28,7 @@ function getDueBadge(dueDate: string | null): { label: string; color: string; bg
   return { label: `${diffDays}d`, color: '#9ca3af', bg: '#f9fafb' }
 }
 
-export function TaskCard({ task, members, currentMember, isDoneColumn, isFirst, isLast, onAssign, onMoveUp, onMoveDown, onClick }: Props) {
-  const [hovered, setHovered] = useState(false)
+export function TaskCard({ task, members, currentMember, isDoneColumn, onAssign, onClick }: Props) {
   const assignee = task.assigned_to ? members.find(m => m.id === task.assigned_to) : null
   const dueBadge = getDueBadge(task.due_date)
 
@@ -46,8 +41,6 @@ export function TaskCard({ task, members, currentMember, isDoneColumn, isFirst, 
     <div
       className={`task-card animate-fadeUp ${isDoneColumn && task.completed_at ? 'animate-burst' : ''}`}
       onClick={() => onClick(task)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         background: isDoneColumn ? '#f9fafb' : '#FFFFFF',
         border: '1.5px solid #E8E5E0',
@@ -58,106 +51,33 @@ export function TaskCard({ task, members, currentMember, isDoneColumn, isFirst, 
         position: 'relative',
       }}
     >
-      {/* ↑ ↓ reorder buttons — visible on hover */}
-      {hovered && !isDoneColumn && (
-        <div
-          onClick={e => e.stopPropagation()}
-          style={{
-            position: 'absolute',
-            top: '0.5rem',
-            right: '0.5rem',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
-          }}
-        >
-          <button
-            onClick={onMoveUp}
-            disabled={isFirst}
-            title="Move up"
-            style={{
-              width: 22,
-              height: 22,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: isFirst ? 'transparent' : '#f3f4f6',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: isFirst ? 'default' : 'pointer',
-              fontSize: '0.65rem',
-              color: isFirst ? '#e5e7eb' : '#6b7280',
-              lineHeight: 1,
-              transition: 'background 0.1s ease, color 0.1s ease',
-            }}
-            onMouseEnter={e => { if (!isFirst) { (e.currentTarget as HTMLButtonElement).style.background = '#c9a96e'; (e.currentTarget as HTMLButtonElement).style.color = '#fff' } }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isFirst ? 'transparent' : '#f3f4f6'; (e.currentTarget as HTMLButtonElement).style.color = isFirst ? '#e5e7eb' : '#6b7280' }}
-          >
-            ↑
-          </button>
-          <button
-            onClick={onMoveDown}
-            disabled={isLast}
-            title="Move down"
-            style={{
-              width: 22,
-              height: 22,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: isLast ? 'transparent' : '#f3f4f6',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: isLast ? 'default' : 'pointer',
-              fontSize: '0.65rem',
-              color: isLast ? '#e5e7eb' : '#6b7280',
-              lineHeight: 1,
-              transition: 'background 0.1s ease, color 0.1s ease',
-            }}
-            onMouseEnter={e => { if (!isLast) { (e.currentTarget as HTMLButtonElement).style.background = '#c9a96e'; (e.currentTarget as HTMLButtonElement).style.color = '#fff' } }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = isLast ? 'transparent' : '#f3f4f6'; (e.currentTarget as HTMLButtonElement).style.color = isLast ? '#e5e7eb' : '#6b7280' }}
-          >
-            ↓
-          </button>
-        </div>
-      )}
-
-      {/* Title */}
-      <p
-        style={{
-          fontSize: '0.875rem',
-          fontWeight: 500,
-          color: isDoneColumn ? '#9ca3af' : '#1a1a1a',
-          lineHeight: 1.45,
-          textDecoration: isDoneColumn ? 'line-through' : 'none',
-          marginBottom: '0.625rem',
-          wordBreak: 'break-word',
-          paddingRight: hovered && !isDoneColumn ? '1.75rem' : 0,
-          transition: 'padding-right 0.1s ease',
-        }}
-      >
+      <p style={{
+        fontSize: '0.875rem',
+        fontWeight: 500,
+        color: isDoneColumn ? '#9ca3af' : '#1a1a1a',
+        lineHeight: 1.45,
+        textDecoration: isDoneColumn ? 'line-through' : 'none',
+        marginBottom: '0.625rem',
+        wordBreak: 'break-word',
+      }}>
         {task.title}
       </p>
 
-      {/* Description snippet */}
       {task.description && (
-        <p
-          style={{
-            fontSize: '0.75rem',
-            color: '#9ca3af',
-            lineHeight: 1.4,
-            marginBottom: '0.625rem',
-            overflow: 'hidden',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-          }}
-        >
+        <p style={{
+          fontSize: '0.75rem',
+          color: '#9ca3af',
+          lineHeight: 1.4,
+          marginBottom: '0.625rem',
+          overflow: 'hidden',
+          display: '-webkit-box',
+          WebkitLineClamp: 2,
+          WebkitBoxOrient: 'vertical',
+        }}>
           {task.description}
         </p>
       )}
 
-      {/* Bottom row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.375rem' }}>
         {assignee ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
@@ -173,19 +93,13 @@ export function TaskCard({ task, members, currentMember, isDoneColumn, isFirst, 
           >
             Take it
           </button>
-        ) : (
-          <div />
-        )}
+        ) : <div />}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-          {dueBadge && !isDoneColumn && (
-            <span
-              style={{ fontSize: '0.65rem', fontWeight: 600, color: dueBadge.color, background: dueBadge.bg, borderRadius: '6px', padding: '0.15rem 0.45rem', whiteSpace: 'nowrap' }}
-            >
-              {dueBadge.label}
-            </span>
-          )}
-        </div>
+        {dueBadge && !isDoneColumn && (
+          <span style={{ fontSize: '0.65rem', fontWeight: 600, color: dueBadge.color, background: dueBadge.bg, borderRadius: '6px', padding: '0.15rem 0.45rem', whiteSpace: 'nowrap' }}>
+            {dueBadge.label}
+          </span>
+        )}
       </div>
     </div>
   )
