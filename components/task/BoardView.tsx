@@ -31,6 +31,7 @@ type Props = {
   onAddColumn: (name: string) => Promise<void>
   onDeleteColumn: (columnId: string) => Promise<void>
   onUpdateFilePanelUrl: (url: string | null) => Promise<void>
+  onDeleteBoard: () => Promise<void>
 }
 
 export function BoardView({
@@ -49,6 +50,7 @@ export function BoardView({
   onAddColumn,
   onDeleteColumn,
   onUpdateFilePanelUrl,
+  onDeleteBoard,
 }: Props) {
   const [addTaskColumnId, setAddTaskColumnId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -57,6 +59,8 @@ export function BoardView({
   const [addingColumn, setAddingColumn] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
   const [showFilePanel, setShowFilePanel] = useState(true)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   // ── Psychology: progress + momentum ──
   const doneColumn = useMemo(() => columns.find(c => c.name === 'Done'), [columns])
@@ -170,6 +174,54 @@ export function BoardView({
           >
             {copiedLink ? '✓ Copied' : '🔗 Share'}
           </button>
+
+          {/* Delete board — creator only */}
+          {isCreator && (
+            confirmDelete ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Delete board?</span>
+                <button
+                  onClick={async () => { setDeleting(true); await onDeleteBoard() }}
+                  disabled={deleting}
+                  style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600, padding: '0.2rem 0.4rem' }}
+                >
+                  {deleting ? '…' : 'Yes'}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  style={{ fontSize: '0.75rem', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: '0.2rem 0.4rem' }}
+                >
+                  No
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                title="Delete this board"
+                style={{
+                  padding: '0.375rem 0.5rem',
+                  background: 'transparent',
+                  border: '1.5px solid #E8E5E0',
+                  borderRadius: '8px',
+                  color: '#c4bfb9',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  lineHeight: 1,
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = '#ef4444'
+                  ;(e.currentTarget as HTMLButtonElement).style.color = '#ef4444'
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5E0'
+                  ;(e.currentTarget as HTMLButtonElement).style.color = '#c4bfb9'
+                }}
+              >
+                🗑
+              </button>
+            )
+          )}
 
           {/* Toggle file panel */}
           <button
@@ -294,7 +346,6 @@ export function BoardView({
         {showFilePanel && (
           <div style={{ flexShrink: 0, alignSelf: 'stretch', display: 'flex' }}>
             <FilePanel
-              boardId={board.id}
               filePanelUrl={board.file_panel_url}
               isCreator={isCreator}
               onUpdate={onUpdateFilePanelUrl}
