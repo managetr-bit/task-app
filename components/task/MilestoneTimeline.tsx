@@ -59,6 +59,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [hoveredId, setHoveredId] = useState<string | null>(null)
 
   const [editingRange, setEditingRange] = useState<'start' | 'end' | null>(null)
   const [customStart, setCustomStart] = useState<string | null>(null)
@@ -80,10 +81,11 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
 
   // ── 4-slot label layout to prevent overlap ──
   // Slots: above-1 (near), below-1 (near), above-2 (far), below-2 (far)
-  // Labels are estimated by char width; algorithm places each milestone in the
-  // first slot that has enough horizontal clearance, preferring alternating rows.
+  // Key guarantee: adjacent milestones always get OPPOSITE ROWS (above vs below
+  // can never visually overlap regardless of horizontal distance). Level-2 is used
+  // only when both near-slots of a row are crowded by earlier milestones.
   const milestoneLayout: Map<string, { row: 'above' | 'below'; level: 1 | 2 }> = (() => {
-    const CHAR_PCT = 0.55  // ~1 char ≈ 0.55% of a ~900px timeline
+    const CHAR_PCT = 0.8   // ~1 char ≈ 0.8% of a ~900px timeline (conservative)
     const MIN_HW   = 4     // minimum half-width buffer in pct
 
     const sorted = [...milestones]
@@ -108,38 +110,45 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
     const lastHW:  Record<SlotKey, number> = { 'above-1': 0, 'above-2': 0, 'below-1': 0, 'below-2': 0 }
     const layout = new Map<string, { row: 'above' | 'below'; level: 1 | 2 }>()
 
-    // Toggle row priority so consecutive milestones alternate above/below
-    let preferAbove = true
+    // Track last assigned row: adjacent milestones will always get the opposite
+    let lastRow: 'above' | 'below' = 'below'  // first milestone → above
 
     for (const ms of sorted) {
-      // Reorder slots: preferred row first (levels 1 before 2)
-      const ordered: SlotDef[] = preferAbove
-        ? [SLOTS[0], SLOTS[1], SLOTS[2], SLOTS[3]]
-        : [SLOTS[1], SLOTS[0], SLOTS[3], SLOTS[2]]
+      const preferRow: 'above' | 'below' = lastRow === 'above' ? 'below' : 'above'
 
-      let chosen: SlotDef = ordered[0]
-      let chosenScore = -Infinity
+      // Slot preference: preferred-row L1, preferred-row L2, other-row L1, other-row L2
+      const ordered: SlotDef[] = [
+        ...SLOTS.filter(s => s.row === preferRow).sort((a, b) => a.level - b.level),
+        ...SLOTS.filter(s => s.row !== preferRow).sort((a, b) => a.level - b.level),
+      ]
 
-      for (const slot of ordered) {
-        const gap     = ms.pct - lastPct[slot.key]
-        const minGap  = ms.hw + lastHW[slot.key]
-        if (gap >= minGap) {
-          // First slot with enough clearance → use it immediately
-          chosen = slot
-          break
+      let chosen: SlotDef | null = null
+
+      // Pass 1: find first slot in preferred row with enough clearance
+      for (const slot of ordered.filter(s => s.row === preferRow)) {
+        const gap = ms.pct - lastPct[slot.key]
+        if (gap >= ms.hw + lastHW[slot.key]) { chosen = slot; break }
+      }
+
+      // Pass 2: if preferred row is fully crowded, try other row (still better than overlap)
+      if (!chosen) {
+        for (const slot of ordered.filter(s => s.row !== preferRow)) {
+          const gap = ms.pct - lastPct[slot.key]
+          if (gap >= ms.hw + lastHW[slot.key]) { chosen = slot; break }
         }
-        // Track fallback: slot with most relative space
-        const score = gap - minGap
-        if (score > chosenScore) {
-          chosenScore = score
-          chosen = slot
-        }
+      }
+
+      // Pass 3: all 4 slots crowded → FORCE opposite row from last (visual separation
+      // guaranteed since above-labels and below-labels can never overlap each other)
+      if (!chosen) {
+        // Pick preferRow L1 as forced choice — opposite row from last assignment
+        chosen = ordered[0]
       }
 
       layout.set(ms.id, { row: chosen.row, level: chosen.level })
       lastPct[chosen.key] = ms.pct
       lastHW[chosen.key]  = ms.hw
-      preferAbove = chosen.row === 'below'  // next prefers opposite row
+      lastRow = chosen.row
     }
 
     return layout
@@ -373,10 +382,11 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             const status = getMilestoneStatus(ms, linked, done)
             const pct = pctOf(new Date(ms.target_date))
             const isSelected = selectedId === ms.id
+            const isHovered  = hoveredId === ms.id
             const layout = milestoneLayout.get(ms.id) ?? { row: 'above', level: 1 }
             const isAbove = layout.row === 'above'
             const isL2    = layout.level === 2
-            const subLabel = `${formatLabel(ms.target_date)}${linked.length > 0 ? ` · ${done}/${linked.length}` : ''}`
+            const tooltipLabel = `${formatLabel(ms.target_date)}${linked.length > 0 ? ` · ${done}/${linked.length}` : ''}`
 
             // Label CSS offset from the 22px hit-div (11px radius)
             const labelOffset = isL2 ? L2_OFFSET : L1_OFFSET
@@ -386,49 +396,32 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                 key={ms.id}
                 data-ms-dot="1"
                 onClick={e => { e.stopPropagation(); setPendingPct(null); setSelectedId(isSelected ? null : ms.id); setConfirmDeleteId(null) }}
+                onMouseEnter={() => setHoveredId(ms.id)}
+                onMouseLeave={() => setHoveredId(null)}
                 style={{ position: 'absolute', left: `${pct}%`, top: LINE_Y + 0.5, transform: 'translate(-50%, -50%)', cursor: 'pointer', zIndex: 4, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                {/* Connector stem for L2 labels — thin colored line bridging label to dot */}
+                {/* Connector stem for L2 labels */}
                 {isL2 && isAbove && (
-                  <div style={{
-                    position: 'absolute',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 1,
-                    height: L2_OFFSET - L1_OFFSET,
-                    background: `${status.color}70`,
-                    bottom: `calc(100% + ${L1_OFFSET}px)`,
-                    pointerEvents: 'none',
-                  }} />
+                  <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: 1, height: L2_OFFSET - L1_OFFSET, background: `${status.color}70`, bottom: `calc(100% + ${L1_OFFSET}px)`, pointerEvents: 'none' }} />
                 )}
                 {isL2 && !isAbove && (
-                  <div style={{
-                    position: 'absolute',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: 1,
-                    height: L2_OFFSET - L1_OFFSET,
-                    background: `${status.color}70`,
-                    top: `calc(100% + ${L1_OFFSET}px)`,
-                    pointerEvents: 'none',
-                  }} />
+                  <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', width: 1, height: L2_OFFSET - L1_OFFSET, background: `${status.color}70`, top: `calc(100% + ${L1_OFFSET}px)`, pointerEvents: 'none' }} />
                 )}
 
-                {/* Label above */}
-                {isAbove && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: `calc(100% + ${labelOffset}px)`,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    whiteSpace: 'nowrap',
-                    textAlign: 'center',
-                    pointerEvents: 'none',
-                  }}>
-                    <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#374151' }}>{ms.name}</div>
-                    <div style={{ fontSize: '0.575rem', color: '#9ca3af', marginTop: 1 }}>{subLabel}</div>
-                  </div>
-                )}
+                {/* Static label — name only, no date */}
+                <div style={{
+                  position: 'absolute',
+                  ...(isAbove
+                    ? { bottom: `calc(100% + ${labelOffset}px)` }
+                    : { top:    `calc(100% + ${labelOffset}px)` }),
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center',
+                  pointerEvents: 'none',
+                }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 600, color: isSelected ? status.color : '#374151' }}>{ms.name}</div>
+                </div>
 
                 {/* Diamond */}
                 <div style={{
@@ -439,24 +432,34 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                   border: '2.5px solid #fff',
                   boxShadow: isSelected
                     ? `0 0 0 3px ${status.ring}, 0 2px 10px rgba(0,0,0,0.2)`
+                    : isHovered
+                    ? `0 0 0 2px ${status.color}50, 0 2px 8px rgba(0,0,0,0.2)`
                     : '0 1px 5px rgba(0,0,0,0.18)',
                   transition: 'all 0.15s ease',
                   flexShrink: 0,
                 }} />
 
-                {/* Label below */}
-                {!isAbove && (
+                {/* Hover tooltip — date + task count, opposite side from label */}
+                {isHovered && !isSelected && (
                   <div style={{
                     position: 'absolute',
-                    top: `calc(100% + ${labelOffset}px)`,
+                    ...(isAbove
+                      ? { top: 'calc(100% + 6px)' }     // below diamond (opposite side from above-label)
+                      : { bottom: 'calc(100% + 6px)' }), // above diamond (opposite side from below-label)
                     left: '50%',
                     transform: 'translateX(-50%)',
+                    background: '#1a1a1a',
+                    color: '#fff',
+                    fontSize: '0.58rem',
+                    fontWeight: 500,
+                    padding: '0.18rem 0.5rem',
+                    borderRadius: 5,
                     whiteSpace: 'nowrap',
-                    textAlign: 'center',
                     pointerEvents: 'none',
+                    zIndex: 50,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
                   }}>
-                    <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#374151' }}>{ms.name}</div>
-                    <div style={{ fontSize: '0.575rem', color: '#9ca3af', marginTop: 1 }}>{subLabel}</div>
+                    {tooltipLabel}
                   </div>
                 )}
               </div>
