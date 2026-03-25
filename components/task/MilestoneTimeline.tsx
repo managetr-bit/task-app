@@ -81,6 +81,34 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   }
   const todayPct = pctOf(today)
 
+  // ── Stagger milestone dots above/below the line to prevent label overlap ──
+  const milestoneRows: Map<string, 'above' | 'below'> = (() => {
+    const THRESHOLD = 7 // % of timeline width
+    const sorted = [...milestones]
+      .map(ms => ({ id: ms.id, pct: pctOf(new Date(ms.target_date)) }))
+      .sort((a, b) => a.pct - b.pct)
+    const rows = new Map<string, 'above' | 'below'>()
+    let lastAbove = -Infinity
+    let lastBelow = -Infinity
+    for (const ms of sorted) {
+      const gapAbove = ms.pct - lastAbove
+      const gapBelow = ms.pct - lastBelow
+      let row: 'above' | 'below'
+      if (gapBelow >= THRESHOLD) {
+        row = 'below'
+      } else if (gapAbove >= THRESHOLD) {
+        row = 'above'
+      } else {
+        row = gapAbove >= gapBelow ? 'above' : 'below'
+      }
+      rows.set(ms.id, row)
+      if (row === 'below') lastBelow = ms.pct
+      else lastAbove = ms.pct
+    }
+    return rows
+  })()
+  const hasAboveRow = milestones.length > 0 && [...milestoneRows.values()].some(r => r === 'above')
+
   // ── Tick marks: weekly if span ≤ 60 days, monthly otherwise ──
   const useWeekly = totalDays <= 60
   const monthTicks: { label: string; pct: number; isYearBoundary?: boolean }[] = []
@@ -154,7 +182,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   const selectedMs = milestones.find(m => m.id === selectedId)
 
   return (
-    <div style={{ padding: '1rem 1.5rem 0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
+    <div style={{ padding: hasAboveRow ? '2.5rem 1.5rem 0' : '1rem 1.5rem 0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
       {/* Timeline bar */}
       <div
         ref={barRef}
@@ -227,21 +255,32 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           const status = getMilestoneStatus(ms, linked, done)
           const pct = pctOf(new Date(ms.target_date))
           const isSelected = selectedId === ms.id
+          const isAbove = milestoneRows.get(ms.id) === 'above'
+          const subLabel = `${formatLabel(ms.target_date)}${linked.length > 0 ? ` · ${done}/${linked.length}` : ''}`
 
           return (
             <div
               key={ms.id}
               data-ms-dot="1"
               onClick={e => { e.stopPropagation(); setPendingPct(null); setSelectedId(isSelected ? null : ms.id); setConfirmDeleteId(null) }}
-              style={{ position: 'absolute', left: `${pct}%`, top: 29, transform: 'translateX(-50%)', cursor: 'pointer', zIndex: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+              style={{ position: 'absolute', left: `${pct}%`, top: 21, transform: 'translateX(-50%)', cursor: 'pointer', zIndex: 4 }}
             >
+              {/* Label above */}
+              {isAbove && (
+                <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 8, whiteSpace: 'nowrap', textAlign: 'center', pointerEvents: 'none' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#1a1a1a' }}>{ms.name}</div>
+                  <div style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{subLabel}</div>
+                </div>
+              )}
               {/* Dot */}
-              <div style={{ width: 16, height: 16, borderRadius: '50%', background: status.color, border: `3px solid #fff`, boxShadow: isSelected ? `0 0 0 3px ${status.color}, 0 2px 8px rgba(0,0,0,0.15)` : `0 1px 4px rgba(0,0,0,0.2)`, transition: 'all 0.15s ease', flexShrink: 0 }} />
+              <div style={{ width: 16, height: 16, borderRadius: '50%', background: status.color, border: `3px solid #fff`, boxShadow: isSelected ? `0 0 0 3px ${status.color}, 0 2px 8px rgba(0,0,0,0.15)` : `0 1px 4px rgba(0,0,0,0.2)`, transition: 'all 0.15s ease' }} />
               {/* Label below */}
-              <div style={{ marginTop: 6, whiteSpace: 'nowrap', textAlign: 'center', pointerEvents: 'none' }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#1a1a1a' }}>{ms.name}</div>
-                <div style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{formatLabel(ms.target_date)}{linked.length > 0 ? ` · ${done}/${linked.length}` : ''}</div>
-              </div>
+              {!isAbove && (
+                <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 6, whiteSpace: 'nowrap', textAlign: 'center', pointerEvents: 'none' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#1a1a1a' }}>{ms.name}</div>
+                  <div style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{subLabel}</div>
+                </div>
+              )}
             </div>
           )
         })}

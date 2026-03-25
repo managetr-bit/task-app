@@ -348,6 +348,8 @@ export function BoardView({
           task={selectedTask}
           members={members}
           currentMember={currentMember}
+          milestones={milestones}
+          milestoneTasks={milestoneTasks}
           onClose={() => setSelectedTask(null)}
           onAssign={onAssignTask}
           onUpdate={onUpdateTask}

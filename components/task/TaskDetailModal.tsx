@@ -1,20 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { type Task, type Member } from '@/lib/types'
+import { type Task, type Member, type Milestone, type MilestoneTask } from '@/lib/types'
 import { Avatar } from './MembersBar'
 
 type Props = {
   task: Task
   members: Member[]
   currentMember: Member
+  milestones?: Milestone[]
+  milestoneTasks?: MilestoneTask[]
   onClose: () => void
   onAssign: (taskId: string, memberId: string | null) => Promise<void>
   onUpdate: (taskId: string, updates: Partial<Pick<Task, 'title' | 'description' | 'due_date'>>) => Promise<void>
   onDelete: (taskId: string) => Promise<void>
 }
 
-export function TaskDetailModal({ task, members, currentMember, onClose, onAssign, onUpdate, onDelete }: Props) {
+export function TaskDetailModal({ task, members, currentMember, milestones, milestoneTasks, onClose, onAssign, onUpdate, onDelete }: Props) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
@@ -24,6 +26,9 @@ export function TaskDetailModal({ task, members, currentMember, onClose, onAssig
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   const creator = task.created_by ? members.find(m => m.id === task.created_by) : null
+  const linkedMilestones = milestones && milestoneTasks
+    ? milestones.filter(m => milestoneTasks.some(mt => mt.milestone_id === m.id && mt.task_id === task.id))
+    : []
 
   async function handleSave() {
     setSaving(true)
@@ -141,6 +146,22 @@ export function TaskDetailModal({ task, members, currentMember, onClose, onAssig
             ))}
           </div>
         </div>
+
+        {/* Linked milestones */}
+        {linkedMilestones.length > 0 && (
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: '0.375rem' }}>
+              Milestones
+            </label>
+            <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+              {linkedMilestones.map(m => (
+                <span key={m.id} style={{ fontSize: '0.72rem', padding: '0.2rem 0.5rem', borderRadius: '6px', background: '#fdf6ed', color: '#c9a96e', fontWeight: 500, border: '1px solid #f0e4d0', whiteSpace: 'nowrap' }}>
+                  {m.name} · {new Date(m.target_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
