@@ -185,7 +185,12 @@ export function BoardPageClient({ boardId }: Props) {
         { event: '*', schema: 'public', table: 'milestone_tasks' },
         payload => {
           if (payload.eventType === 'INSERT') {
-            setMilestoneTasks(prev => [...prev, payload.new as MilestoneTask])
+            const n = payload.new as MilestoneTask
+            setMilestoneTasks(prev =>
+              prev.some(mt => mt.milestone_id === n.milestone_id && mt.task_id === n.task_id)
+                ? prev
+                : [...prev, n]
+            )
           } else if (payload.eventType === 'DELETE') {
             const old = payload.old as MilestoneTask
             setMilestoneTasks(prev => prev.filter(mt => !(mt.milestone_id === old.milestone_id && mt.task_id === old.task_id)))
@@ -372,14 +377,23 @@ export function BoardPageClient({ boardId }: Props) {
   )
 
   const deleteMilestone = useCallback(async (milestoneId: string) => {
-    await supabase.from('milestones').delete().eq('id', milestoneId)
+    // Optimistic: remove from UI immediately
     setMilestones(prev => prev.filter(m => m.id !== milestoneId))
     setMilestoneTasks(prev => prev.filter(mt => mt.milestone_id !== milestoneId))
+    const { error } = await supabase.from('milestones').delete().eq('id', milestoneId)
+    if (error) console.error('deleteMilestone error:', error)
   }, [])
 
   const linkTask = useCallback(async (milestoneId: string, taskId: string) => {
-    await supabase.from('milestone_tasks').insert({ milestone_id: milestoneId, task_id: taskId })
-    setMilestoneTasks(prev => [...prev, { milestone_id: milestoneId, task_id: taskId }])
+    // Optimistic update first
+    setMilestoneTasks(prev => {
+      if (prev.some(mt => mt.milestone_id === milestoneId && mt.task_id === taskId)) return prev
+      return [...prev, { milestone_id: milestoneId, task_id: taskId }]
+    })
+    const { error } = await supabase
+      .from('milestone_tasks')
+      .upsert({ milestone_id: milestoneId, task_id: taskId }, { onConflict: 'milestone_id,task_id', ignoreDuplicates: true })
+    if (error) console.error('linkTask error:', error)
   }, [])
 
   const unlinkTask = useCallback(async (milestoneId: string, taskId: string) => {
