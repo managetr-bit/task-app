@@ -83,20 +83,31 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
 
   // ── Tick marks: weekly if span ≤ 60 days, monthly otherwise ──
   const useWeekly = totalDays <= 60
-  const monthTicks: { label: string; pct: number }[] = []
+  const monthTicks: { label: string; pct: number; isYearBoundary?: boolean }[] = []
   if (useWeekly) {
-    // Start from first Monday on or after startDate
     const tick = new Date(startDate)
     tick.setDate(tick.getDate() + ((8 - tick.getDay()) % 7 || 7))
+    let lastYear = -1
     while (tick <= endDate) {
-      monthTicks.push({ label: tick.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), pct: pctOf(tick) })
+      const isNewYear = tick.getFullYear() !== lastYear
+      const label = isNewYear
+        ? tick.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        : tick.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      monthTicks.push({ label, pct: pctOf(tick), isYearBoundary: isNewYear })
+      lastYear = tick.getFullYear()
       tick.setDate(tick.getDate() + 7)
     }
   } else {
     const cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1)
     cursor.setMonth(cursor.getMonth() + 1)
+    let lastYear = -1
     while (cursor <= endDate) {
-      monthTicks.push({ label: cursor.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }), pct: pctOf(cursor) })
+      const isNewYear = cursor.getFullYear() !== lastYear
+      const label = isNewYear
+        ? cursor.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+        : cursor.toLocaleDateString('en-GB', { month: 'short' })
+      monthTicks.push({ label, pct: pctOf(cursor), isYearBoundary: isNewYear })
+      lastYear = cursor.getFullYear()
       cursor.setMonth(cursor.getMonth() + 1)
     }
   }
@@ -150,11 +161,11 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleBarClick}
-        style={{ position: 'relative', height: 64, cursor: 'crosshair', userSelect: 'none' }}
+        style={{ position: 'relative', height: 90, cursor: 'crosshair', userSelect: 'none', overflow: 'visible' }}
       >
         {/* Month labels */}
         {monthTicks.map((t, i) => (
-          <div key={i} style={{ position: 'absolute', left: `${t.pct}%`, top: 0, transform: 'translateX(-50%)', fontSize: '0.6rem', color: '#c4bfb9', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+          <div key={i} style={{ position: 'absolute', left: `${t.pct}%`, top: 0, transform: 'translateX(-50%)', fontSize: t.isYearBoundary ? '0.65rem' : '0.6rem', color: t.isYearBoundary ? '#9ca3af' : '#c4bfb9', fontWeight: t.isYearBoundary ? 600 : 400, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
             {t.label}
           </div>
         ))}
@@ -222,13 +233,13 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
               key={ms.id}
               data-ms-dot="1"
               onClick={e => { e.stopPropagation(); setPendingPct(null); setSelectedId(isSelected ? null : ms.id); setConfirmDeleteId(null) }}
-              style={{ position: 'absolute', left: `${pct}%`, top: 22, transform: 'translate(-50%, -50%)', cursor: 'pointer', zIndex: 2 }}
+              style={{ position: 'absolute', left: `${pct}%`, top: 29, transform: 'translateX(-50%)', cursor: 'pointer', zIndex: 4, display: 'flex', flexDirection: 'column', alignItems: 'center' }}
             >
               {/* Dot */}
-              <div style={{ width: 14, height: 14, borderRadius: '50%', background: status.color, border: `3px solid ${isSelected ? '#fff' : status.ring}`, boxShadow: isSelected ? `0 0 0 3px ${status.color}` : 'none', transition: 'all 0.15s ease' }} />
+              <div style={{ width: 16, height: 16, borderRadius: '50%', background: status.color, border: `3px solid #fff`, boxShadow: isSelected ? `0 0 0 3px ${status.color}, 0 2px 8px rgba(0,0,0,0.15)` : `0 1px 4px rgba(0,0,0,0.2)`, transition: 'all 0.15s ease', flexShrink: 0 }} />
               {/* Label below */}
-              <div style={{ position: 'absolute', top: 14, left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', textAlign: 'center', pointerEvents: 'none' }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#1a1a1a', marginTop: 2 }}>{ms.name}</div>
+              <div style={{ marginTop: 6, whiteSpace: 'nowrap', textAlign: 'center', pointerEvents: 'none' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#1a1a1a' }}>{ms.name}</div>
                 <div style={{ fontSize: '0.6rem', color: '#9ca3af' }}>{formatLabel(ms.target_date)}{linked.length > 0 ? ` · ${done}/${linked.length}` : ''}</div>
               </div>
             </div>

@@ -352,21 +352,30 @@ export function BoardPageClient({ boardId }: Props) {
 
   const addMilestone = useCallback(
     async (name: string, targetDate: string) => {
-      await supabase.from('milestones').insert({ board_id: boardId, name, target_date: targetDate })
+      const { data } = await supabase
+        .from('milestones')
+        .insert({ board_id: boardId, name, target_date: targetDate })
+        .select()
+        .single()
+      if (data) setMilestones(prev => [...prev, data])
     },
     [boardId]
   )
 
   const deleteMilestone = useCallback(async (milestoneId: string) => {
     await supabase.from('milestones').delete().eq('id', milestoneId)
+    setMilestones(prev => prev.filter(m => m.id !== milestoneId))
+    setMilestoneTasks(prev => prev.filter(mt => mt.milestone_id !== milestoneId))
   }, [])
 
   const linkTask = useCallback(async (milestoneId: string, taskId: string) => {
     await supabase.from('milestone_tasks').insert({ milestone_id: milestoneId, task_id: taskId })
+    setMilestoneTasks(prev => [...prev, { milestone_id: milestoneId, task_id: taskId }])
   }, [])
 
   const unlinkTask = useCallback(async (milestoneId: string, taskId: string) => {
     await supabase.from('milestone_tasks').delete().eq('milestone_id', milestoneId).eq('task_id', taskId)
+    setMilestoneTasks(prev => prev.filter(mt => !(mt.milestone_id === milestoneId && mt.task_id === taskId)))
   }, [])
 
   const deleteColumn = useCallback(
