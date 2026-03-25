@@ -20,7 +20,7 @@ import { TaskDetailModal } from './TaskDetailModal'
 import { ProgressArc } from './ProgressArc'
 import { MembersBar } from './MembersBar'
 import { FilePanel } from './FilePanel'
-import { MilestonePanel } from './MilestonePanel'
+import { MilestoneTimeline } from './MilestoneTimeline'
 
 type Props = {
   board: Board
@@ -201,17 +201,30 @@ export function BoardView({
       </header>
 
       {/* Board body */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* Timeline — full width above all columns */}
+        <MilestoneTimeline
+          milestones={milestones}
+          milestoneTasks={milestoneTasks}
+          tasks={tasks}
+          onAdd={onAddMilestone}
+          onDelete={onDeleteMilestone}
+          onLinkTask={onLinkTask}
+          onUnlinkTask={onUnlinkTask}
+        />
+
+        {/* Kanban + file panel */}
+        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
-          <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-            {columns.map((col, index) => {
+          <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: '1rem 1.5rem 1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+            {columns.map(col => {
               const colTasks = tasks.filter(t => t.column_id === col.id).sort((a, b) => a.position - b.position)
-              const column = (
+              return (
                 <KanbanColumn
                   key={col.id}
                   column={col}
@@ -225,23 +238,6 @@ export function BoardView({
                   onDeleteColumn={columns.length > 1 ? () => onDeleteColumn(col.id) : undefined}
                 />
               )
-              if (index === 0) {
-                return (
-                  <div key={col.id} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <MilestonePanel
-                      milestones={milestones}
-                      milestoneTasks={milestoneTasks}
-                      tasks={tasks}
-                      onAdd={onAddMilestone}
-                      onDelete={onDeleteMilestone}
-                      onLinkTask={onLinkTask}
-                      onUnlinkTask={onUnlinkTask}
-                    />
-                    {column}
-                  </div>
-                )
-              }
-              return column
             })}
 
             {/* Add column */}
@@ -286,6 +282,7 @@ export function BoardView({
             <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} />
           </div>
         )}
+        </div>
       </div>
 
       {/* Modals */}
