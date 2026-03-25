@@ -83,31 +83,39 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
 
   // ── Stagger milestone dots above/below the line to prevent label overlap ──
   const milestoneRows: Map<string, 'above' | 'below'> = (() => {
-    const THRESHOLD = 7 // % of timeline width
+    const THRESHOLD = 12 // % of timeline width — ~100px on a 900px timeline
     const sorted = [...milestones]
       .map(ms => ({ id: ms.id, pct: pctOf(new Date(ms.target_date)) }))
       .sort((a, b) => a.pct - b.pct)
     const rows = new Map<string, 'above' | 'below'>()
     let lastAbove = -Infinity
     let lastBelow = -Infinity
+    let lastRow: 'above' | 'below' = 'above' // so first milestone prefers below
+
     for (const ms of sorted) {
       const gapAbove = ms.pct - lastAbove
       const gapBelow = ms.pct - lastBelow
       let row: 'above' | 'below'
-      if (gapBelow >= THRESHOLD) {
+
+      if (gapBelow >= THRESHOLD && gapAbove >= THRESHOLD) {
+        // Both rows clear — alternate so milestones spread evenly
+        row = lastRow === 'below' ? 'above' : 'below'
+      } else if (gapBelow >= THRESHOLD) {
         row = 'below'
       } else if (gapAbove >= THRESHOLD) {
         row = 'above'
       } else {
-        row = gapAbove >= gapBelow ? 'above' : 'below'
+        // Both crowded (milestones very close together) — force opposite of last
+        row = lastRow === 'below' ? 'above' : 'below'
       }
+
       rows.set(ms.id, row)
+      lastRow = row
       if (row === 'below') lastBelow = ms.pct
       else lastAbove = ms.pct
     }
     return rows
   })()
-  const hasAboveRow = milestones.length > 0 && [...milestoneRows.values()].some(r => r === 'above')
 
   // ── Tick marks: weekly if span ≤ 60 days, monthly otherwise ──
   const useWeekly = totalDays <= 60
@@ -182,7 +190,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   const selectedMs = milestones.find(m => m.id === selectedId)
 
   return (
-    <div style={{ padding: hasAboveRow ? '2.5rem 1.5rem 0' : '1rem 1.5rem 0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
+    <div style={{ padding: '2.5rem 1.5rem 0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
       {/* Timeline bar */}
       <div
         ref={barRef}
@@ -201,32 +209,40 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
         {/* The line */}
         <div style={{ position: 'absolute', left: 0, right: 0, top: 28, height: 2, background: '#E8E5E0', borderRadius: 2 }} />
 
-        {/* Start handle */}
+        {/* Start milestone marker */}
         <div
           data-ms-dot="1"
-          title="Click to set start date"
+          title="Click to edit start date"
           onClick={e => { e.stopPropagation(); setEditingRange('start'); setPendingPct(null); setSelectedId(null) }}
-          style={{ position: 'absolute', left: 0, top: 20, width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}
+          style={{ position: 'absolute', left: 0, top: 21, transform: 'translateX(-50%)', cursor: 'pointer', zIndex: 5 }}
         >
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#E8E5E0', border: '2px solid #c9a96e', transition: 'all 0.15s' }} />
+          <div style={{ position: 'absolute', bottom: '100%', left: 0, marginBottom: 8, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Start</div>
+            <div style={{ fontSize: '0.6rem', color: '#c4bfb9' }}>{formatLabel(toDateStr(startDate))}</div>
+          </div>
+          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#fff', border: '2px solid #c9a96e', boxShadow: '0 1px 4px rgba(0,0,0,0.12)', transition: 'all 0.15s' }} />
           {editingRange === 'start' && (
-            <div style={{ position: 'absolute', top: 18, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #E8E5E0', borderRadius: 8, padding: '0.4rem', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+            <div style={{ position: 'absolute', top: 20, left: 0, zIndex: 10, background: '#fff', border: '1.5px solid #E8E5E0', borderRadius: 8, padding: '0.4rem', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
               <input type="date" value={customStart ?? toDateStr(startDate)} onChange={e => setCustomStart(e.target.value)} className="input-base" style={{ padding: '0.25rem 0.4rem', fontSize: '0.75rem', width: 130 }} autoFocus />
               <button onClick={() => setEditingRange(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
             </div>
           )}
         </div>
 
-        {/* End handle */}
+        {/* Finish milestone marker */}
         <div
           data-ms-dot="1"
-          title="Click to set end date"
+          title="Click to edit finish date"
           onClick={e => { e.stopPropagation(); setEditingRange('end'); setPendingPct(null); setSelectedId(null) }}
-          style={{ position: 'absolute', right: 0, top: 20, width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 3 }}
+          style={{ position: 'absolute', left: '100%', top: 21, transform: 'translateX(-50%)', cursor: 'pointer', zIndex: 5 }}
         >
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#E8E5E0', border: '2px solid #c9a96e', transition: 'all 0.15s' }} />
+          <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: 8, whiteSpace: 'nowrap', pointerEvents: 'none', textAlign: 'right' }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Finish</div>
+            <div style={{ fontSize: '0.6rem', color: '#c4bfb9' }}>{formatLabel(toDateStr(endDate))}</div>
+          </div>
+          <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#fff', border: '2px solid #c9a96e', boxShadow: '0 1px 4px rgba(0,0,0,0.12)', transition: 'all 0.15s' }} />
           {editingRange === 'end' && (
-            <div style={{ position: 'absolute', top: 18, right: 0, zIndex: 10, background: '#fff', border: '1.5px solid #E8E5E0', borderRadius: 8, padding: '0.4rem', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+            <div style={{ position: 'absolute', top: 20, right: 0, zIndex: 10, background: '#fff', border: '1.5px solid #E8E5E0', borderRadius: 8, padding: '0.4rem', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
               <input type="date" value={customEnd ?? toDateStr(endDate)} onChange={e => setCustomEnd(e.target.value)} className="input-base" style={{ padding: '0.25rem 0.4rem', fontSize: '0.75rem', width: 130 }} autoFocus />
               <button onClick={() => setEditingRange(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '0.8rem' }}>✕</button>
             </div>
