@@ -11,6 +11,7 @@ import {
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { type Board, type Column, type Member, type Task, type Milestone, type MilestoneTask, type Priority } from '@/lib/types'
@@ -54,6 +55,21 @@ type Props = {
   onDeleteMilestone: (milestoneId: string) => Promise<void>
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
+}
+
+// Custom collision: column drags only collide with col-* targets; task drags ignore col-* targets
+const columnAwareCollision: CollisionDetection = (args) => {
+  const activeId = String(args.active.id)
+  if (activeId.startsWith('col-')) {
+    return closestCenter({
+      ...args,
+      droppableContainers: args.droppableContainers.filter(c => String(c.id).startsWith('col-')),
+    })
+  }
+  return closestCenter({
+    ...args,
+    droppableContainers: args.droppableContainers.filter(c => !String(c.id).startsWith('col-')),
+  })
 }
 
 export function BoardView({
@@ -239,7 +255,7 @@ export function BoardView({
         <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={columnAwareCollision}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
         >
@@ -285,7 +301,7 @@ export function BoardView({
             )}
           </div>
 
-          {/* Drag overlay — floating card while dragging */}
+          {/* Drag overlay — floating card/column while dragging */}
           <DragOverlay>
             {activeTask && (
               <div style={{ transform: 'rotate(2deg)', opacity: 0.95, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))' }}>
@@ -297,6 +313,11 @@ export function BoardView({
                   onAssign={async () => {}}
                   onClick={() => {}}
                 />
+              </div>
+            )}
+            {activeColumn && (
+              <div style={{ width: 280, background: '#FFFFFF', borderRadius: 14, padding: '0.5rem 0.75rem', opacity: 0.9, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', transform: 'rotate(1deg)' }}>
+                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1a1a1a' }}>{activeColumn.name}</div>
               </div>
             )}
           </DragOverlay>
