@@ -12,6 +12,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
+import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable'
 import { type Board, type Column, type Member, type Task, type Milestone, type MilestoneTask, type Priority } from '@/lib/types'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCard } from './TaskCard'
@@ -46,6 +47,7 @@ type Props = {
   onAddColumn: (name: string) => Promise<void>
   onDeleteColumn: (columnId: string, targetColumnId?: string) => Promise<void>
   onRenameColumn: (columnId: string, name: string) => Promise<void>
+  onReorderColumn: (columnId: string, newIndex: number) => Promise<void>
   onUpdateFilePanelUrl: (url: string | null) => Promise<void>
   onUpdateBoardName: (name: string) => Promise<void>
   onAddMilestone: (name: string, targetDate: string) => Promise<void>
@@ -58,7 +60,7 @@ export function BoardView({
   board, columns, members, tasks, currentMember, isCreator,
   milestones, milestoneTasks,
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
-  onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn,
+  onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn, onReorderColumn,
   onUpdateFilePanelUrl, onUpdateBoardName,
   onAddMilestone, onDeleteMilestone, onLinkTask, onUnlinkTask,
 }: Props) {
@@ -70,6 +72,7 @@ export function BoardView({
   const [copiedLink, setCopiedLink] = useState(false)
   const [showFilePanel, setShowFilePanel] = useState(true)
   const [activeTask, setActiveTask] = useState<Task | null>(null)
+  const [activeColumn, setActiveColumn] = useState<Column | null>(null)
   const [editingBoardName, setEditingBoardName] = useState(false)
   const [boardNameDraft, setBoardNameDraft] = useState(board.name)
   // Column delete confirmation state
@@ -108,18 +111,39 @@ export function BoardView({
   }
 
   function handleDragStart({ active }: DragStartEvent) {
+    const id = String(active.id)
+    if (id.startsWith('col-')) {
+      const col = columns.find(c => `col-${c.id}` === id)
+      if (col) setActiveColumn(col)
+      return
+    }
     const task = tasks.find(t => t.id === active.id)
     if (task) setActiveTask(task)
   }
 
   function handleDragEnd({ active, over }: DragEndEvent) {
     setActiveTask(null)
+    setActiveColumn(null)
     if (!over || active.id === over.id) return
 
+    const activeId = String(active.id)
+    const overId = String(over.id)
+
+    // Column reorder
+    if (activeId.startsWith('col-') && overId.startsWith('col-')) {
+      const activeColId = activeId.slice(4)
+      const overColId = overId.slice(4)
+      const sorted = [...columns].sort((a, b) => a.position - b.position)
+      const newIndex = sorted.findIndex(c => c.id === overColId)
+      if (newIndex !== -1) onReorderColumn(activeColId, newIndex)
+      return
+    }
+
+    // Task drag
     const activeTask = tasks.find(t => t.id === active.id)
     if (!activeTask) return
 
-    // Dropped onto a column (empty column drop target)
+    // Dropped onto a column drop zone
     const targetColumn = columns.find(c => c.id === over.id)
     if (targetColumn) {
       if (targetColumn.id !== activeTask.column_id) {
@@ -133,14 +157,12 @@ export function BoardView({
     if (!overTask) return
 
     if (activeTask.column_id === overTask.column_id) {
-      // Same column — reorder
       const colTasks = tasks
         .filter(t => t.column_id === activeTask.column_id)
         .sort((a, b) => a.position - b.position)
       const newIndex = colTasks.findIndex(t => t.id === overTask.id)
       onReorderTask(activeTask.id, newIndex, activeTask.column_id)
     } else {
-      // Cross-column move
       onMoveTask(activeTask.id, overTask.column_id)
     }
   }
@@ -222,6 +244,7 @@ export function BoardView({
           onDragEnd={handleDragEnd}
         >
           <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: '1rem 1.5rem 1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+            <SortableContext items={columns.map(c => `col-${c.id}`)} strategy={horizontalListSortingStrategy}>
             {columns.map(col => {
               const colTasks = tasks.filter(t => t.column_id === col.id).sort((a, b) => a.position - b.position)
               return (
@@ -240,6 +263,7 @@ export function BoardView({
                 />
               )
             })}
+            </SortableContext>
 
             {/* Add column */}
             {columns.length < 6 && (

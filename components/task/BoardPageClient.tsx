@@ -154,9 +154,10 @@ export function BoardPageClient({ boardId }: Props) {
         { event: '*', schema: 'public', table: 'columns', filter: `board_id=eq.${boardId}` },
         payload => {
           if (payload.eventType === 'INSERT') {
-            setColumns(prev =>
-              [...prev, payload.new as Column].sort((a, b) => a.position - b.position)
-            )
+            setColumns(prev => {
+              if (prev.some(c => c.id === (payload.new as Column).id)) return prev
+              return [...prev, payload.new as Column].sort((a, b) => a.position - b.position)
+            })
           } else if (payload.eventType === 'UPDATE') {
             setColumns(prev =>
               prev
@@ -287,6 +288,7 @@ export function BoardPageClient({ boardId }: Props) {
 
   const deleteTask = useCallback(async (taskId: string) => {
     await supabase.from('tasks').delete().eq('id', taskId)
+    setMilestoneTasks(prev => prev.filter(mt => mt.task_id !== taskId))
   }, [])
 
   const addColumn = useCallback(
@@ -404,6 +406,20 @@ export function BoardPageClient({ boardId }: Props) {
     setColumns(prev => prev.map(c => c.id === columnId ? { ...c, name } : c))
   }, [])
 
+  const reorderColumn = useCallback(
+    async (columnId: string, newIndex: number) => {
+      const sorted = [...columns].sort((a, b) => a.position - b.position)
+      const oldIndex = sorted.findIndex(c => c.id === columnId)
+      if (oldIndex === -1 || oldIndex === newIndex) return
+      const reordered = [...sorted]
+      const [moved] = reordered.splice(oldIndex, 1)
+      reordered.splice(newIndex, 0, moved)
+      setColumns(reordered.map((c, i) => ({ ...c, position: i })))
+      await Promise.all(reordered.map((c, i) => supabase.from('columns').update({ position: i }).eq('id', c.id)))
+    },
+    [columns]
+  )
+
   // ── Render states ──
   if (loading) {
     return (
@@ -482,6 +498,7 @@ export function BoardPageClient({ boardId }: Props) {
           onAddColumn={addColumn}
           onDeleteColumn={deleteColumn}
           onRenameColumn={renameColumn}
+          onReorderColumn={reorderColumn}
           onUpdateFilePanelUrl={updateFilePanelUrl}
           onUpdateBoardName={updateBoardName}
           onAddMilestone={addMilestone}

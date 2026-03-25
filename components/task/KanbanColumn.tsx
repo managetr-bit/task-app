@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { useDroppable } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { type Column, type Task, type Member } from '@/lib/types'
 import { SortableTaskCard } from './SortableTaskCard'
 
@@ -44,6 +45,14 @@ export function KanbanColumn({
   const hiddenCount = tasks.length - PAGE_SIZE
 
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setSortableRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `col-${column.id}` })
 
   async function handleRename() {
     const name = nameDraft.trim()
@@ -56,10 +65,29 @@ export function KanbanColumn({
   }
 
   return (
-    <div style={{ flexShrink: 0, width: 280, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+    <div
+      ref={setSortableRef}
+      {...attributes}
+      style={{
+        flexShrink: 0,
+        width: 280,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+    >
       {/* Column header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.5rem 0.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, minWidth: 0 }}>
+          {/* Drag handle */}
+          <span
+            {...listeners}
+            title="Drag to reorder"
+            style={{ cursor: isDragging ? 'grabbing' : 'grab', color: '#d1cdc7', fontSize: '0.7rem', flexShrink: 0, lineHeight: 1, touchAction: 'none' }}
+          >⠿</span>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: colStyle.dot, flexShrink: 0, display: 'inline-block' }} />
           {editingName ? (
             <input
