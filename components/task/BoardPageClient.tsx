@@ -292,7 +292,13 @@ export function BoardPageClient({ boardId }: Props) {
   const addColumn = useCallback(
     async (name: string) => {
       const maxPos = columns.length
-      await supabase.from('columns').insert({ board_id: boardId, name, position: maxPos })
+      const { data, error } = await supabase
+        .from('columns')
+        .insert({ board_id: boardId, name, position: maxPos })
+        .select()
+        .single()
+      if (error) { console.error('addColumn error:', error); return }
+      if (data) setColumns(prev => [...prev, data].sort((a, b) => a.position - b.position))
     },
     [boardId, columns]
   )
@@ -352,11 +358,12 @@ export function BoardPageClient({ boardId }: Props) {
 
   const addMilestone = useCallback(
     async (name: string, targetDate: string) => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('milestones')
         .insert({ board_id: boardId, name, target_date: targetDate })
         .select()
         .single()
+      if (error) { console.error('Milestone insert error:', error); return }
       if (data) setMilestones(prev => [...prev, data])
     },
     [boardId]
@@ -379,21 +386,23 @@ export function BoardPageClient({ boardId }: Props) {
   }, [])
 
   const deleteColumn = useCallback(
-    async (columnId: string) => {
-      // Move tasks in this column to first column first
-      if (columns.length > 1) {
-        const firstCol = columns.find(c => c.id !== columnId)
-        if (firstCol) {
-          await supabase
-            .from('tasks')
-            .update({ column_id: firstCol.id })
-            .eq('column_id', columnId)
-        }
+    async (columnId: string, targetColumnId?: string) => {
+      if (targetColumnId) {
+        await supabase.from('tasks').update({ column_id: targetColumnId }).eq('column_id', columnId)
+        setTasks(prev => prev.map(t => t.column_id === columnId ? { ...t, column_id: targetColumnId } : t))
+      } else {
+        setTasks(prev => prev.filter(t => t.column_id !== columnId))
       }
       await supabase.from('columns').delete().eq('id', columnId)
+      setColumns(prev => prev.filter(c => c.id !== columnId))
     },
-    [columns]
+    []
   )
+
+  const renameColumn = useCallback(async (columnId: string, name: string) => {
+    await supabase.from('columns').update({ name }).eq('id', columnId)
+    setColumns(prev => prev.map(c => c.id === columnId ? { ...c, name } : c))
+  }, [])
 
   // ── Render states ──
   if (loading) {
@@ -472,6 +481,7 @@ export function BoardPageClient({ boardId }: Props) {
           onDeleteTask={deleteTask}
           onAddColumn={addColumn}
           onDeleteColumn={deleteColumn}
+          onRenameColumn={renameColumn}
           onUpdateFilePanelUrl={updateFilePanelUrl}
           onUpdateBoardName={updateBoardName}
           onAddMilestone={addMilestone}

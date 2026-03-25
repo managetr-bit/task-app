@@ -154,7 +154,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   const selectedMs = milestones.find(m => m.id === selectedId)
 
   return (
-    <div style={{ padding: '1rem 1.5rem 0', flexShrink: 0, position: 'relative' }}>
+    <div style={{ padding: '1rem 1.5rem 0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
       {/* Timeline bar */}
       <div
         ref={barRef}
@@ -260,14 +260,15 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           style={{
             position: 'absolute',
             left: `clamp(8px, calc(${pendingPct}% + 1.5rem - 100px), calc(100% - 220px))`,
-            top: 72,
-            zIndex: 30,
+            top: 80,
+            zIndex: 100,
             background: '#fff',
             border: '1.5px solid #E8E5E0',
             borderRadius: 12,
             padding: '0.75rem',
             width: 220,
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+            overflow: 'visible',
           }}
         >
           <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

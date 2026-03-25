@@ -44,7 +44,8 @@ type Props = {
   onUpdateTask: (taskId: string, updates: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'due_date'>>) => Promise<void>
   onDeleteTask: (taskId: string) => Promise<void>
   onAddColumn: (name: string) => Promise<void>
-  onDeleteColumn: (columnId: string) => Promise<void>
+  onDeleteColumn: (columnId: string, targetColumnId?: string) => Promise<void>
+  onRenameColumn: (columnId: string, name: string) => Promise<void>
   onUpdateFilePanelUrl: (url: string | null) => Promise<void>
   onUpdateBoardName: (name: string) => Promise<void>
   onAddMilestone: (name: string, targetDate: string) => Promise<void>
@@ -57,7 +58,7 @@ export function BoardView({
   board, columns, members, tasks, currentMember, isCreator,
   milestones, milestoneTasks,
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
-  onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn,
+  onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn,
   onUpdateFilePanelUrl, onUpdateBoardName,
   onAddMilestone, onDeleteMilestone, onLinkTask, onUnlinkTask,
 }: Props) {
@@ -71,6 +72,8 @@ export function BoardView({
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [editingBoardName, setEditingBoardName] = useState(false)
   const [boardNameDraft, setBoardNameDraft] = useState(board.name)
+  // Column delete confirmation state
+  const [deleteColConfirm, setDeleteColConfirm] = useState<{ columnId: string; columnName: string } | null>(null)
 
   // Sensors: require 8px movement before drag starts — clicks still work
   const sensors = useSensors(
@@ -147,10 +150,7 @@ export function BoardView({
       {/* Header */}
       <header style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', padding: '0 1.5rem', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', position: 'sticky', top: 0, zIndex: 20, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-          <a href="/" style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1a1a', textDecoration: 'none', flexShrink: 0 }}>
-            task<span style={{ color: '#c9a96e' }}>.</span>
-          </a>
-          <span style={{ color: '#E8E5E0', fontSize: '1rem', flexShrink: 0 }}>/</span>
+          <a href="/" title="All projects" style={{ fontSize: '1rem', color: '#c4bfb9', textDecoration: 'none', flexShrink: 0, lineHeight: 1 }}>←</a>
           {editingBoardName ? (
             <input
               value={boardNameDraft}
@@ -235,7 +235,8 @@ export function BoardView({
                   onAddTask={() => setAddTaskColumnId(col.id)}
                   onAssignTask={onAssignTask}
                   onTaskClick={setSelectedTask}
-                  onDeleteColumn={columns.length > 1 ? () => onDeleteColumn(col.id) : undefined}
+                  onRenameColumn={(name) => onRenameColumn(col.id, name)}
+                  onDeleteColumn={columns.length > 1 ? () => setDeleteColConfirm({ columnId: col.id, columnName: col.name }) : undefined}
                 />
               )
             })}
@@ -308,6 +309,55 @@ export function BoardView({
           onDelete={async id => { await onDeleteTask(id); setSelectedTask(null) }}
         />
       )}
+
+      {/* Delete column confirmation */}
+      {deleteColConfirm && (() => {
+        const incompleteTasks = tasks.filter(t => t.column_id === deleteColConfirm.columnId && !t.completed_at)
+        const otherCols = columns.filter(c => c.id !== deleteColConfirm.columnId)
+        return (
+          <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setDeleteColConfirm(null) }}>
+            <div className="modal-card" style={{ padding: '2rem', maxWidth: 420 }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#1a1a1a', marginBottom: '0.75rem' }}>
+                Delete "{deleteColConfirm.columnName}"?
+              </h2>
+              {incompleteTasks.length > 0 ? (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.25rem' }}>
+                    This column has <strong>{incompleteTasks.length} incomplete task{incompleteTasks.length > 1 ? 's' : ''}</strong>. Move them to another column or delete with the column.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                    {otherCols.map(col => (
+                      <button
+                        key={col.id}
+                        onClick={async () => { await onDeleteColumn(deleteColConfirm.columnId, col.id); setDeleteColConfirm(null) }}
+                        style={{ textAlign: 'left', padding: '0.6rem 0.875rem', borderRadius: 10, border: '1.5px solid #E8E5E0', background: '#fff', cursor: 'pointer', fontSize: '0.85rem', color: '#1a1a1a' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#c9a96e' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5E0' }}
+                      >
+                        Move to <strong>{col.name}</strong>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    onClick={async () => { await onDeleteColumn(deleteColConfirm.columnId); setDeleteColConfirm(null) }}
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: 10, border: 'none', background: '#fef2f2', color: '#ef4444', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 }}
+                  >
+                    Delete column and all tasks
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '1.25rem' }}>This will permanently delete the column.</p>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button className="btn-ghost" onClick={() => setDeleteColConfirm(null)} style={{ flex: 1, justifyContent: 'center', padding: '0.6rem' }}>Cancel</button>
+                    <button onClick={async () => { await onDeleteColumn(deleteColConfirm.columnId); setDeleteColConfirm(null) }} style={{ flex: 1, padding: '0.6rem', borderRadius: 10, border: 'none', background: '#fef2f2', color: '#ef4444', cursor: 'pointer', fontWeight: 600 }}>Delete</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
