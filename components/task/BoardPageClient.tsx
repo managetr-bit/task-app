@@ -401,6 +401,12 @@ export function BoardPageClient({ boardId }: Props) {
     setMilestoneTasks(prev => prev.filter(mt => !(mt.milestone_id === milestoneId && mt.task_id === taskId)))
   }, [])
 
+  const updateMilestoneDate = useCallback(async (milestoneId: string, newDate: string) => {
+    setMilestones(prev => prev.map(m => m.id === milestoneId ? { ...m, target_date: newDate } : m))
+    const { error } = await supabase.from('milestones').update({ target_date: newDate }).eq('id', milestoneId)
+    if (error) console.error('updateMilestoneDate error:', error)
+  }, [])
+
   const deleteColumn = useCallback(
     async (columnId: string, targetColumnId?: string) => {
       if (targetColumnId) {
@@ -517,6 +523,7 @@ export function BoardPageClient({ boardId }: Props) {
           onUpdateBoardName={updateBoardName}
           onAddMilestone={addMilestone}
           onDeleteMilestone={deleteMilestone}
+          onUpdateMilestoneDate={updateMilestoneDate}
           onLinkTask={linkTask}
           onUnlinkTask={unlinkTask}
         />

@@ -53,6 +53,7 @@ type Props = {
   onUpdateBoardName: (name: string) => Promise<void>
   onAddMilestone: (name: string, targetDate: string) => Promise<void>
   onDeleteMilestone: (milestoneId: string) => Promise<void>
+  onUpdateMilestoneDate: (milestoneId: string, newDate: string) => Promise<void>
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
 }
@@ -78,7 +79,7 @@ export function BoardView({
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
   onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn, onReorderColumn,
   onUpdateFilePanelUrl, onUpdateBoardName,
-  onAddMilestone, onDeleteMilestone, onLinkTask, onUnlinkTask,
+  onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onLinkTask, onUnlinkTask,
 }: Props) {
   const [addTaskColumnId, setAddTaskColumnId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -247,6 +248,7 @@ export function BoardView({
           tasks={tasks}
           onAdd={onAddMilestone}
           onDelete={onDeleteMilestone}
+          onUpdateDate={onUpdateMilestoneDate}
           onLinkTask={onLinkTask}
           onUnlinkTask={onUnlinkTask}
         />
