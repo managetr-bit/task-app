@@ -12,7 +12,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { type Board, type Column, type Member, type Task, type Priority } from '@/lib/types'
+import { type Board, type Column, type Member, type Task, type Milestone, type MilestoneTask, type Priority } from '@/lib/types'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCard } from './TaskCard'
 import { AddTaskModal } from './AddTaskModal'
@@ -20,6 +20,7 @@ import { TaskDetailModal } from './TaskDetailModal'
 import { ProgressArc } from './ProgressArc'
 import { MembersBar } from './MembersBar'
 import { FilePanel } from './FilePanel'
+import { MilestonePanel } from './MilestonePanel'
 
 type Props = {
   board: Board
@@ -28,6 +29,8 @@ type Props = {
   tasks: Task[]
   currentMember: Member
   isCreator: boolean
+  milestones: Milestone[]
+  milestoneTasks: MilestoneTask[]
   onCreateTask: (p: {
     columnId: string
     title: string
@@ -44,12 +47,19 @@ type Props = {
   onDeleteColumn: (columnId: string) => Promise<void>
   onUpdateFilePanelUrl: (url: string | null) => Promise<void>
   onUpdateBoardName: (name: string) => Promise<void>
+  onAddMilestone: (name: string, targetDate: string) => Promise<void>
+  onDeleteMilestone: (milestoneId: string) => Promise<void>
+  onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
+  onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
 }
 
 export function BoardView({
   board, columns, members, tasks, currentMember, isCreator,
+  milestones, milestoneTasks,
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
-  onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onUpdateFilePanelUrl, onUpdateBoardName,
+  onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn,
+  onUpdateFilePanelUrl, onUpdateBoardName,
+  onAddMilestone, onDeleteMilestone, onLinkTask, onUnlinkTask,
 }: Props) {
   const [addTaskColumnId, setAddTaskColumnId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -199,20 +209,40 @@ export function BoardView({
           onDragEnd={handleDragEnd}
         >
           <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: '1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-            {columns.map(col => (
-              <KanbanColumn
-                key={col.id}
-                column={col}
-                tasks={tasks.filter(t => t.column_id === col.id).sort((a, b) => a.position - b.position)}
-                members={members}
-                currentMember={currentMember}
-                isDoneColumn={col.name === 'Done'}
-                onAddTask={() => setAddTaskColumnId(col.id)}
-                onAssignTask={onAssignTask}
-                onTaskClick={setSelectedTask}
-                onDeleteColumn={columns.length > 1 ? () => onDeleteColumn(col.id) : undefined}
-              />
-            ))}
+            {columns.map((col, index) => {
+              const colTasks = tasks.filter(t => t.column_id === col.id).sort((a, b) => a.position - b.position)
+              const column = (
+                <KanbanColumn
+                  key={col.id}
+                  column={col}
+                  tasks={colTasks}
+                  members={members}
+                  currentMember={currentMember}
+                  isDoneColumn={col.name === 'Done'}
+                  onAddTask={() => setAddTaskColumnId(col.id)}
+                  onAssignTask={onAssignTask}
+                  onTaskClick={setSelectedTask}
+                  onDeleteColumn={columns.length > 1 ? () => onDeleteColumn(col.id) : undefined}
+                />
+              )
+              if (index === 0) {
+                return (
+                  <div key={col.id} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <MilestonePanel
+                      milestones={milestones}
+                      milestoneTasks={milestoneTasks}
+                      tasks={tasks}
+                      onAdd={onAddMilestone}
+                      onDelete={onDeleteMilestone}
+                      onLinkTask={onLinkTask}
+                      onUnlinkTask={onUnlinkTask}
+                    />
+                    {column}
+                  </div>
+                )
+              }
+              return column
+            })}
 
             {/* Add column */}
             {columns.length < 6 && (
@@ -273,11 +303,9 @@ export function BoardView({
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
-          columns={columns}
           members={members}
           currentMember={currentMember}
           onClose={() => setSelectedTask(null)}
-          onMove={onMoveTask}
           onAssign={onAssignTask}
           onUpdate={onUpdateTask}
           onDelete={async id => { await onDeleteTask(id); setSelectedTask(null) }}

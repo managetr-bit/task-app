@@ -7,6 +7,8 @@ import {
   type Column,
   type Member,
   type Task,
+  type Milestone,
+  type MilestoneTask,
   type LocalSession,
   type Priority,
   MEMBER_COLORS,
@@ -54,6 +56,8 @@ export function BoardPageClient({ boardId }: Props) {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [isCreator, setIsCreator] = useState(false)
+  const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [milestoneTasks, setMilestoneTasks] = useState<MilestoneTask[]>([])
 
   // ── Initial load ──
   useEffect(() => {
@@ -72,16 +76,20 @@ export function BoardPageClient({ boardId }: Props) {
       }
       setBoard(boardData)
 
-      // Fetch columns, members, tasks in parallel
-      const [colRes, memRes, taskRes] = await Promise.all([
+      // Fetch columns, members, tasks, milestones in parallel
+      const [colRes, memRes, taskRes, msRes, mtRes] = await Promise.all([
         supabase.from('columns').select('*').eq('board_id', boardId).order('position'),
         supabase.from('members').select('*').eq('board_id', boardId).order('joined_at'),
         supabase.from('tasks').select('*').eq('board_id', boardId).order('position'),
+        supabase.from('milestones').select('*').eq('board_id', boardId).order('target_date'),
+        supabase.from('milestone_tasks').select('*'),
       ])
 
       setColumns(colRes.data ?? [])
       setMembers(memRes.data ?? [])
       setTasks(taskRes.data ?? [])
+      setMilestones(msRes.data ?? [])
+      setMilestoneTasks(mtRes.data ?? [])
 
       // Check if current user created this board
       try {
@@ -157,6 +165,29 @@ export function BoardPageClient({ boardId }: Props) {
             )
           } else if (payload.eventType === 'DELETE') {
             setColumns(prev => prev.filter(c => c.id !== (payload.old as Column).id))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'milestones', filter: `board_id=eq.${boardId}` },
+        payload => {
+          if (payload.eventType === 'INSERT') {
+            setMilestones(prev => [...prev, payload.new as Milestone])
+          } else if (payload.eventType === 'DELETE') {
+            setMilestones(prev => prev.filter(m => m.id !== (payload.old as Milestone).id))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'milestone_tasks' },
+        payload => {
+          if (payload.eventType === 'INSERT') {
+            setMilestoneTasks(prev => [...prev, payload.new as MilestoneTask])
+          } else if (payload.eventType === 'DELETE') {
+            const old = payload.old as MilestoneTask
+            setMilestoneTasks(prev => prev.filter(mt => !(mt.milestone_id === old.milestone_id && mt.task_id === old.task_id)))
           }
         }
       )
@@ -319,6 +350,25 @@ export function BoardPageClient({ boardId }: Props) {
     [boardId]
   )
 
+  const addMilestone = useCallback(
+    async (name: string, targetDate: string) => {
+      await supabase.from('milestones').insert({ board_id: boardId, name, target_date: targetDate })
+    },
+    [boardId]
+  )
+
+  const deleteMilestone = useCallback(async (milestoneId: string) => {
+    await supabase.from('milestones').delete().eq('id', milestoneId)
+  }, [])
+
+  const linkTask = useCallback(async (milestoneId: string, taskId: string) => {
+    await supabase.from('milestone_tasks').insert({ milestone_id: milestoneId, task_id: taskId })
+  }, [])
+
+  const unlinkTask = useCallback(async (milestoneId: string, taskId: string) => {
+    await supabase.from('milestone_tasks').delete().eq('milestone_id', milestoneId).eq('task_id', taskId)
+  }, [])
+
   const deleteColumn = useCallback(
     async (columnId: string) => {
       // Move tasks in this column to first column first
@@ -403,6 +453,8 @@ export function BoardPageClient({ boardId }: Props) {
           tasks={tasks}
           currentMember={currentMember}
           isCreator={isCreator}
+          milestones={milestones}
+          milestoneTasks={milestoneTasks}
           onCreateTask={createTask}
           onMoveTask={moveTask}
           onReorderTask={reorderTask}
@@ -413,6 +465,10 @@ export function BoardPageClient({ boardId }: Props) {
           onDeleteColumn={deleteColumn}
           onUpdateFilePanelUrl={updateFilePanelUrl}
           onUpdateBoardName={updateBoardName}
+          onAddMilestone={addMilestone}
+          onDeleteMilestone={deleteMilestone}
+          onLinkTask={linkTask}
+          onUnlinkTask={unlinkTask}
         />
       )}
     </>

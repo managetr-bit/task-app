@@ -1,32 +1,20 @@
 'use client'
 
 import { useState } from 'react'
-import { type Task, type Column, type Member } from '@/lib/types'
+import { type Task, type Member } from '@/lib/types'
 import { Avatar } from './MembersBar'
 
 type Props = {
   task: Task
-  columns: Column[]
   members: Member[]
   currentMember: Member
   onClose: () => void
-  onMove: (taskId: string, colId: string) => Promise<void>
   onAssign: (taskId: string, memberId: string | null) => Promise<void>
-  onUpdate: (taskId: string, updates: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'due_date'>>) => Promise<void>
+  onUpdate: (taskId: string, updates: Partial<Pick<Task, 'title' | 'description' | 'due_date'>>) => Promise<void>
   onDelete: (taskId: string) => Promise<void>
 }
 
-export function TaskDetailModal({
-  task,
-  columns,
-  members,
-  currentMember,
-  onClose,
-  onMove,
-  onAssign,
-  onUpdate,
-  onDelete,
-}: Props) {
+export function TaskDetailModal({ task, members, currentMember, onClose, onAssign, onUpdate, onDelete }: Props) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description ?? '')
@@ -35,8 +23,6 @@ export function TaskDetailModal({
   const [deleting, setDeleting] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const assignee = task.assigned_to ? members.find(m => m.id === task.assigned_to) : null
-  const currentCol = columns.find(c => c.id === task.column_id)
   const creator = task.created_by ? members.find(m => m.id === task.created_by) : null
 
   async function handleSave() {
@@ -57,10 +43,7 @@ export function TaskDetailModal({
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div
-        className="modal-card"
-        style={{ padding: '2rem', maxWidth: 520 }}
-      >
+      <div className="modal-card" style={{ padding: '2rem', maxWidth: 520 }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '1.25rem' }}>
           {editing ? (
@@ -73,14 +56,7 @@ export function TaskDetailModal({
             />
           ) : (
             <h2
-              style={{
-                fontSize: '1rem',
-                fontWeight: 600,
-                color: '#1a1a1a',
-                lineHeight: 1.4,
-                flex: 1,
-                cursor: 'pointer',
-              }}
+              style={{ fontSize: '1rem', fontWeight: 600, color: '#1a1a1a', lineHeight: 1.4, flex: 1, cursor: 'pointer' }}
               onClick={() => setEditing(true)}
             >
               {task.title}
@@ -89,28 +65,14 @@ export function TaskDetailModal({
           <button onClick={onClose} className="btn-ghost" style={{ padding: '0.25rem 0.5rem', fontSize: '1rem', flexShrink: 0 }}>✕</button>
         </div>
 
-        {/* Priority + due date badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-          {task.priority === 'high' && (
-            <span
-              style={{
-                fontSize: '0.75rem',
-                background: '#fef2f2',
-                color: '#ef4444',
-                borderRadius: '6px',
-                padding: '0.2rem 0.5rem',
-                fontWeight: 600,
-              }}
-            >
-              ↑ High priority
-            </span>
-          )}
-          {task.due_date && (
+        {/* Due date badge (view mode) */}
+        {task.due_date && !editing && (
+          <div style={{ marginBottom: '1.25rem' }}>
             <span style={{ fontSize: '0.75rem', background: '#fffbeb', color: '#d97706', borderRadius: '6px', padding: '0.2rem 0.5rem', fontWeight: 500 }}>
               Due {task.due_date}
             </span>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Description */}
         <div style={{ marginBottom: '1.25rem' }}>
@@ -137,55 +99,9 @@ export function TaskDetailModal({
           )}
         </div>
 
-        {/* Assignee row */}
-        <div style={{ marginBottom: '1.25rem' }}>
-          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: '0.5rem' }}>
-            Assigned to
-          </label>
-          <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => onAssign(task.id, null)}
-              style={{
-                padding: '0.3rem 0.6rem',
-                borderRadius: '8px',
-                border: `1.5px solid ${!task.assigned_to ? '#c9a96e' : '#E8E5E0'}`,
-                background: !task.assigned_to ? '#fdf6ed' : 'transparent',
-                color: !task.assigned_to ? '#c9a96e' : '#9ca3af',
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-            >
-              Unassigned
-            </button>
-            {members.map(m => (
-              <button
-                key={m.id}
-                onClick={() => onAssign(task.id, m.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.375rem',
-                  padding: '0.3rem 0.6rem',
-                  borderRadius: '8px',
-                  border: `1.5px solid ${task.assigned_to === m.id ? m.color : '#E8E5E0'}`,
-                  background: task.assigned_to === m.id ? `${m.color}18` : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Avatar member={m} isCurrent={m.id === currentMember.id} small />
-                <span style={{ fontSize: '0.75rem', color: '#4b5563', fontWeight: 500 }}>
-                  {m.id === currentMember.id ? `${m.nickname} (you)` : m.nickname}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Edit mode extras */}
+        {/* Due date (edit mode) */}
         {editing && (
-          <div style={{ marginBottom: '1rem' }}>
+          <div style={{ marginBottom: '1.25rem' }}>
             <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: '0.375rem' }}>
               Due date
             </label>
@@ -199,77 +115,69 @@ export function TaskDetailModal({
           </div>
         )}
 
-        {/* Footer actions */}
+        {/* Assignee */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#9ca3af', display: 'block', marginBottom: '0.5rem' }}>
+            Assigned to
+          </label>
+          <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => onAssign(task.id, null)}
+              style={{ padding: '0.3rem 0.6rem', borderRadius: '8px', border: `1.5px solid ${!task.assigned_to ? '#c9a96e' : '#E8E5E0'}`, background: !task.assigned_to ? '#fdf6ed' : 'transparent', color: !task.assigned_to ? '#c9a96e' : '#9ca3af', fontSize: '0.75rem', fontWeight: 500, cursor: 'pointer' }}
+            >
+              Unassigned
+            </button>
+            {members.map(m => (
+              <button
+                key={m.id}
+                onClick={() => onAssign(task.id, m.id)}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.3rem 0.6rem', borderRadius: '8px', border: `1.5px solid ${task.assigned_to === m.id ? m.color : '#E8E5E0'}`, background: task.assigned_to === m.id ? `${m.color}18` : 'transparent', cursor: 'pointer', transition: 'all 0.15s ease' }}
+              >
+                <Avatar member={m} isCurrent={m.id === currentMember.id} small />
+                <span style={{ fontSize: '0.75rem', color: '#4b5563', fontWeight: 500 }}>
+                  {m.id === currentMember.id ? `${m.nickname} (you)` : m.nickname}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-          {/* Delete */}
           <div>
             {confirmDelete ? (
               <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Delete?</span>
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}
-                >
+                <button onClick={handleDelete} disabled={deleting} style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
                   {deleting ? '…' : 'Yes'}
                 </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  style={{ fontSize: '0.75rem', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}
-                >
-                  No
-                </button>
+                <button onClick={() => setConfirmDelete(false)} style={{ fontSize: '0.75rem', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>No</button>
               </div>
             ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="btn-ghost"
-                style={{ fontSize: '0.8rem', color: '#c4bfb9', padding: '0.375rem 0.5rem' }}
-              >
+              <button onClick={() => setConfirmDelete(true)} className="btn-ghost" style={{ fontSize: '0.8rem', color: '#c4bfb9', padding: '0.375rem 0.5rem' }}>
                 Delete
               </button>
             )}
           </div>
 
-          {/* Save / Edit */}
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {editing ? (
               <>
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  onClick={() => {
-                    setEditing(false)
-                    setTitle(task.title)
-                    setDescription(task.description ?? '')
-                    setDueDate(task.due_date ?? '')
-                  }}
-                  style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}
-                >
+                <button type="button" className="btn-ghost" onClick={() => { setEditing(false); setTitle(task.title); setDescription(task.description ?? ''); setDueDate(task.due_date ?? '') }} style={{ padding: '0.5rem 0.875rem', fontSize: '0.875rem' }}>
                   Cancel
                 </button>
-                <button
-                  className="btn-primary"
-                  onClick={handleSave}
-                  disabled={saving}
-                  style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', opacity: saving ? 0.6 : 1 }}
-                >
+                <button className="btn-primary" onClick={handleSave} disabled={saving} style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', opacity: saving ? 0.6 : 1 }}>
                   {saving ? 'Saving…' : 'Save'}
                 </button>
               </>
             ) : (
-              <button
-                className="btn-primary"
-                onClick={() => setEditing(true)}
-                style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', background: '#f3f4f6', color: '#4b5563' }}
-              >
+              <button className="btn-primary" onClick={() => setEditing(true)} style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', background: '#f3f4f6', color: '#4b5563' }}>
                 Edit
               </button>
             )}
           </div>
         </div>
 
-        {/* Creator info */}
         {creator && (
           <p style={{ marginTop: '1rem', fontSize: '0.7rem', color: '#c4bfb9' }}>
             Created by {creator.nickname} · {new Date(task.created_at).toLocaleDateString()}
