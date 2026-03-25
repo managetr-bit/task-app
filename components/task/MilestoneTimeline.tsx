@@ -78,36 +78,71 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   }
   const todayPct = pctOf(today)
 
-  // ── Stagger milestone rows to prevent label overlap ──
-  const milestoneRows: Map<string, 'above' | 'below'> = (() => {
-    const THRESHOLD = 12
+  // ── 4-slot label layout to prevent overlap ──
+  // Slots: above-1 (near), below-1 (near), above-2 (far), below-2 (far)
+  // Labels are estimated by char width; algorithm places each milestone in the
+  // first slot that has enough horizontal clearance, preferring alternating rows.
+  const milestoneLayout: Map<string, { row: 'above' | 'below'; level: 1 | 2 }> = (() => {
+    const CHAR_PCT = 0.55  // ~1 char ≈ 0.55% of a ~900px timeline
+    const MIN_HW   = 4     // minimum half-width buffer in pct
+
     const sorted = [...milestones]
-      .map(ms => ({ id: ms.id, pct: pctOf(new Date(ms.target_date)) }))
+      .map(ms => ({
+        id:  ms.id,
+        pct: pctOf(new Date(ms.target_date)),
+        hw:  Math.max(MIN_HW, (ms.name.length * CHAR_PCT) / 2),
+      }))
       .sort((a, b) => a.pct - b.pct)
-    const rows = new Map<string, 'above' | 'below'>()
-    let lastAbove = -Infinity
-    let lastBelow = -Infinity
-    let lastRow: 'above' | 'below' = 'above'
+
+    type SlotKey = 'above-1' | 'above-2' | 'below-1' | 'below-2'
+    type SlotDef = { key: SlotKey; row: 'above' | 'below'; level: 1 | 2 }
+
+    const SLOTS: SlotDef[] = [
+      { key: 'above-1', row: 'above', level: 1 },
+      { key: 'below-1', row: 'below', level: 1 },
+      { key: 'above-2', row: 'above', level: 2 },
+      { key: 'below-2', row: 'below', level: 2 },
+    ]
+
+    const lastPct: Record<SlotKey, number> = { 'above-1': -Infinity, 'above-2': -Infinity, 'below-1': -Infinity, 'below-2': -Infinity }
+    const lastHW:  Record<SlotKey, number> = { 'above-1': 0, 'above-2': 0, 'below-1': 0, 'below-2': 0 }
+    const layout = new Map<string, { row: 'above' | 'below'; level: 1 | 2 }>()
+
+    // Toggle row priority so consecutive milestones alternate above/below
+    let preferAbove = true
 
     for (const ms of sorted) {
-      const gapAbove = ms.pct - lastAbove
-      const gapBelow = ms.pct - lastBelow
-      let row: 'above' | 'below'
-      if (gapBelow >= THRESHOLD && gapAbove >= THRESHOLD) {
-        row = lastRow === 'below' ? 'above' : 'below'
-      } else if (gapBelow >= THRESHOLD) {
-        row = 'below'
-      } else if (gapAbove >= THRESHOLD) {
-        row = 'above'
-      } else {
-        row = lastRow === 'below' ? 'above' : 'below'
+      // Reorder slots: preferred row first (levels 1 before 2)
+      const ordered: SlotDef[] = preferAbove
+        ? [SLOTS[0], SLOTS[1], SLOTS[2], SLOTS[3]]
+        : [SLOTS[1], SLOTS[0], SLOTS[3], SLOTS[2]]
+
+      let chosen: SlotDef = ordered[0]
+      let chosenScore = -Infinity
+
+      for (const slot of ordered) {
+        const gap     = ms.pct - lastPct[slot.key]
+        const minGap  = ms.hw + lastHW[slot.key]
+        if (gap >= minGap) {
+          // First slot with enough clearance → use it immediately
+          chosen = slot
+          break
+        }
+        // Track fallback: slot with most relative space
+        const score = gap - minGap
+        if (score > chosenScore) {
+          chosenScore = score
+          chosen = slot
+        }
       }
-      rows.set(ms.id, row)
-      lastRow = row
-      if (row === 'below') lastBelow = ms.pct
-      else lastAbove = ms.pct
+
+      layout.set(ms.id, { row: chosen.row, level: chosen.level })
+      lastPct[chosen.key] = ms.pct
+      lastHW[chosen.key]  = ms.hw
+      preferAbove = chosen.row === 'below'  // next prefers opposite row
     }
-    return rows
+
+    return layout
   })()
 
   // ── Tick marks ──
@@ -181,8 +216,16 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
 
   const selectedMs = milestones.find(m => m.id === selectedId)
 
-  // Line is at top: 32 within the bar (bar height: 88)
-  const LINE_Y = 32
+  // ── Layout constants ──
+  // LINE_Y = vertical center of the track within the bar div
+  // paddingTop reserves space for 2 levels of above-labels
+  const LINE_Y    = 52
+  const TRACK_H   = 7
+  const BAR_H     = 150
+  // L1 label offset from hit-div edge (22px div → 11px radius)
+  const L1_OFFSET = 4   // px gap between div edge and label
+  // L2 label offset: far enough to clear L1 label (~24px tall) + gap
+  const L2_OFFSET = 30
 
   return (
     <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
@@ -201,8 +244,9 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
         </span>
       </div>
 
-      {/* ── Track area (2rem top padding reserves space for above-row labels) ── */}
-      <div style={{ padding: '2rem 1.5rem 0.625rem', position: 'relative' }}>
+      {/* ── Track area ── */}
+      {/* paddingTop: 4.5rem reserves ~72px for 2 above-label levels */}
+      <div style={{ padding: '4.5rem 1.5rem 0.625rem', position: 'relative' }}>
 
         {/* Bar */}
         <div
@@ -210,7 +254,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           onClick={handleBarClick}
-          style={{ position: 'relative', height: 88, cursor: 'crosshair', userSelect: 'none', overflow: 'visible' }}
+          style={{ position: 'relative', height: BAR_H, cursor: 'crosshair', userSelect: 'none', overflow: 'visible' }}
         >
           {/* Tick labels */}
           {monthTicks.map((t, i) => (
@@ -234,17 +278,21 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             <div key={`line-${i}`} style={{
               position: 'absolute',
               left: `${t.pct}%`,
-              top: LINE_Y - 4,
+              top: LINE_Y - 5,
               width: 1,
-              height: 8,
+              height: 10,
               background: t.isYearBoundary ? '#d1cdc7' : '#E8E5E0',
               transform: 'translateX(-50%)',
               pointerEvents: 'none',
             }} />
           ))}
 
-          {/* Track background */}
-          <div style={{ position: 'absolute', left: 0, right: 0, top: LINE_Y - 1, height: 3, background: '#F0EDE8', borderRadius: 3 }} />
+          {/* Track background — 7px bar */}
+          <div style={{
+            position: 'absolute', left: 0, right: 0,
+            top: LINE_Y - Math.floor(TRACK_H / 2),
+            height: TRACK_H, background: '#F0EDE8', borderRadius: 4,
+          }} />
 
           {/* Progress fill: start → today */}
           {todayPct > 0 && (
@@ -252,10 +300,10 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
               position: 'absolute',
               left: 0,
               width: `${todayPct}%`,
-              top: LINE_Y - 1,
-              height: 3,
+              top: LINE_Y - Math.floor(TRACK_H / 2),
+              height: TRACK_H,
               background: 'linear-gradient(90deg, #f0e4d0 0%, #c9a96e 100%)',
-              borderRadius: 3,
+              borderRadius: 4,
             }} />
           )}
 
@@ -300,8 +348,8 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           </div>
 
           {/* ── Today marker ── */}
-          <div style={{ position: 'absolute', left: `${todayPct}%`, top: LINE_Y - 10, width: 1.5, height: 22, background: '#c9a96e', transform: 'translateX(-50%)', borderRadius: 1, pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', left: `${todayPct}%`, top: LINE_Y - 22, transform: 'translateX(-50%)', background: '#c9a96e', color: '#fff', fontSize: '0.5rem', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: 4, whiteSpace: 'nowrap', letterSpacing: '0.05em', pointerEvents: 'none' }}>
+          <div style={{ position: 'absolute', left: `${todayPct}%`, top: LINE_Y - 12, width: 1.5, height: 24, background: '#c9a96e', transform: 'translateX(-50%)', borderRadius: 1, pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', left: `${todayPct}%`, top: LINE_Y - 24, transform: 'translateX(-50%)', background: '#c9a96e', color: '#fff', fontSize: '0.5rem', fontWeight: 800, padding: '0.1rem 0.35rem', borderRadius: 4, whiteSpace: 'nowrap', letterSpacing: '0.05em', pointerEvents: 'none' }}>
             TODAY
           </div>
 
@@ -311,7 +359,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
               <div style={{ position: 'absolute', left: `${hoverPct}%`, top: LINE_Y + 0.5, transform: 'translate(-50%, -50%)', width: 18, height: 18, borderRadius: '50%', background: '#c9a96e18', border: '1.5px dashed #c9a96e', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <span style={{ fontSize: '0.7rem', color: '#c9a96e', fontWeight: 700, lineHeight: 1 }}>+</span>
               </div>
-              <div style={{ position: 'absolute', left: `${hoverPct}%`, top: LINE_Y + 14, transform: 'translateX(-50%)', fontSize: '0.6rem', color: '#6b7280', whiteSpace: 'nowrap', background: '#fff', padding: '0.15rem 0.45rem', borderRadius: 5, border: '1px solid #E8E5E0', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', pointerEvents: 'none', fontWeight: 500 }}>
+              <div style={{ position: 'absolute', left: `${hoverPct}%`, top: LINE_Y + 16, transform: 'translateX(-50%)', fontSize: '0.6rem', color: '#6b7280', whiteSpace: 'nowrap', background: '#fff', padding: '0.15rem 0.45rem', borderRadius: 5, border: '1px solid #E8E5E0', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', pointerEvents: 'none', fontWeight: 500 }}>
                 {formatFull(hoverDate)}
               </div>
             </>
@@ -325,8 +373,13 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             const status = getMilestoneStatus(ms, linked, done)
             const pct = pctOf(new Date(ms.target_date))
             const isSelected = selectedId === ms.id
-            const isAbove = milestoneRows.get(ms.id) === 'above'
+            const layout = milestoneLayout.get(ms.id) ?? { row: 'above', level: 1 }
+            const isAbove = layout.row === 'above'
+            const isL2    = layout.level === 2
             const subLabel = `${formatLabel(ms.target_date)}${linked.length > 0 ? ` · ${done}/${linked.length}` : ''}`
+
+            // Label CSS offset from the 22px hit-div (11px radius)
+            const labelOffset = isL2 ? L2_OFFSET : L1_OFFSET
 
             return (
               <div
@@ -335,9 +388,43 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                 onClick={e => { e.stopPropagation(); setPendingPct(null); setSelectedId(isSelected ? null : ms.id); setConfirmDeleteId(null) }}
                 style={{ position: 'absolute', left: `${pct}%`, top: LINE_Y + 0.5, transform: 'translate(-50%, -50%)', cursor: 'pointer', zIndex: 4, width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
+                {/* Connector stem for L2 labels — thin colored line bridging label to dot */}
+                {isL2 && isAbove && (
+                  <div style={{
+                    position: 'absolute',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 1,
+                    height: L2_OFFSET - L1_OFFSET,
+                    background: `${status.color}70`,
+                    bottom: `calc(100% + ${L1_OFFSET}px)`,
+                    pointerEvents: 'none',
+                  }} />
+                )}
+                {isL2 && !isAbove && (
+                  <div style={{
+                    position: 'absolute',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: 1,
+                    height: L2_OFFSET - L1_OFFSET,
+                    background: `${status.color}70`,
+                    top: `calc(100% + ${L1_OFFSET}px)`,
+                    pointerEvents: 'none',
+                  }} />
+                )}
+
                 {/* Label above */}
                 {isAbove && (
-                  <div style={{ position: 'absolute', bottom: 'calc(100% + 5px)', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', textAlign: 'center', pointerEvents: 'none' }}>
+                  <div style={{
+                    position: 'absolute',
+                    bottom: `calc(100% + ${labelOffset}px)`,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                    pointerEvents: 'none',
+                  }}>
                     <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#374151' }}>{ms.name}</div>
                     <div style={{ fontSize: '0.575rem', color: '#9ca3af', marginTop: 1 }}>{subLabel}</div>
                   </div>
@@ -359,7 +446,15 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
 
                 {/* Label below */}
                 {!isAbove && (
-                  <div style={{ position: 'absolute', top: 'calc(100% + 5px)', left: '50%', transform: 'translateX(-50%)', whiteSpace: 'nowrap', textAlign: 'center', pointerEvents: 'none' }}>
+                  <div style={{
+                    position: 'absolute',
+                    top: `calc(100% + ${labelOffset}px)`,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'center',
+                    pointerEvents: 'none',
+                  }}>
                     <div style={{ fontSize: '0.65rem', fontWeight: 600, color: '#374151' }}>{ms.name}</div>
                     <div style={{ fontSize: '0.575rem', color: '#9ca3af', marginTop: 1 }}>{subLabel}</div>
                   </div>
