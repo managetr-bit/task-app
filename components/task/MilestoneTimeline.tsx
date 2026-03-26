@@ -51,7 +51,7 @@ function getMilestoneStatus(ms: Milestone, linkedTasks: Task[], completedCount: 
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 const LINE_Y    = 60  // px from top of bar div
-const TRACK_H   = 48  // track bar height (double-thick, fits TODAY text)
+const TRACK_H   = 36  // track bar height (fits TODAY text)
 const L_SPACING = 34  // px between label levels
 const CHAR_PX   = 7.5 // approx px per char at 0.65rem font
 
@@ -207,8 +207,8 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
 
   // Fixed container sizing — always allocates space for 3 levels above & below.
   // Never grows when milestones are added, giving a stable frame height.
-  const paddingTopPx = 130  // room for 3 label rows above the track
-  const barHeightPx  = 200  // LINE_Y + room for 3 label rows below the track
+  const paddingTopPx = 65   // room for 3 label rows above the track
+  const barHeightPx  = 100  // LINE_Y + room for 3 label rows below the track
 
   // ── Tick marks ──
   const useWeekly = totalDays <= 60
