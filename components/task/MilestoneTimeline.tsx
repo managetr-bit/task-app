@@ -925,8 +925,8 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                     />
                   ) : (
                     <div
-                      title="Double-click to rename"
-                      onDoubleClick={() => { setEditingNameId(selectedMs.id); setEditingNameDraft(selectedMs.name) }}
+                      title="Click to rename"
+                      onClick={() => { setEditingNameId(selectedMs.id); setEditingNameDraft(selectedMs.name) }}
                       style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
                     >{selectedMs.name}</div>
                   )}
