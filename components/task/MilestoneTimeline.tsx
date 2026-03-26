@@ -497,7 +497,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             position: 'absolute', left: 0, right: 0,
             top: LINE_Y - Math.floor(TRACK_H / 2),
             height: TRACK_H,
-            clipPath: 'polygon(10px 0%, 0% 50%, 10px 100%, calc(100% - 14px) 100%, 100% 50%, calc(100% - 14px) 0%)',
+            clipPath: 'polygon(14px 0%, 0% 50%, 14px 100%, calc(100% - 14px) 100%, 100% 50%, calc(100% - 14px) 0%)',
             overflow: 'hidden',
           }}>
             {/* Track background */}
