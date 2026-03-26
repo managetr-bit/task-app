@@ -508,7 +508,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             borderRadius: 1, pointerEvents: 'none',
           }} />
           <div style={{
-            position: 'absolute', left: `${todayPct}%`, top: LINE_Y - 26,
+            position: 'absolute', left: `${todayPct}%`, top: LINE_Y - 13,
             transform: 'translateX(-50%)', background: '#c9a96e', color: '#fff',
             fontSize: '0.5rem', fontWeight: 800, padding: '0.1rem 0.35rem',
             borderRadius: 4, whiteSpace: 'nowrap', letterSpacing: '0.05em',
@@ -531,7 +531,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                 transform: 'translateX(-50%)', fontSize: '0.6rem', color: '#6b7280',
                 whiteSpace: 'nowrap', background: '#fff', padding: '0.15rem 0.45rem',
                 borderRadius: 5, border: '1px solid #E8E5E0', boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
-                pointerEvents: 'none', fontWeight: 500, zIndex: 3,
+                pointerEvents: 'none', fontWeight: 500, zIndex: 30,
               }}>{formatFull(hoverDate)}</div>
             </>
           )}
@@ -594,7 +594,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                   const y1 = isAbove ? -8 : 8  // diamond surface
                   const isDragged = lOff.dx !== 0 || lOff.dy !== 0
                   return (
-                    <svg style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', overflow: 'visible', pointerEvents: 'none', zIndex: 0 }} width={0} height={0}>
+                    <svg style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', overflow: 'visible', pointerEvents: 'none', zIndex: 0 }} width="1" height="1">
                       <line x1={0} y1={y1} x2={x2} y2={y2}
                         stroke={`${status.color}${isDragged ? 'b0' : '60'}`}
                         strokeWidth={isDragged ? 1.5 : 1}
