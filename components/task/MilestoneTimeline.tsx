@@ -523,9 +523,9 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             height: TRACK_H,
             transform: 'translateX(calc(-100% - 4px))',
             display: 'flex', alignItems: 'center',
-            background: '#c9a96e', color: '#fff',
+            color: '#fff',
             fontSize: '0.5rem', fontWeight: 800, padding: '0 0.4rem',
-            borderRadius: 4, whiteSpace: 'nowrap', letterSpacing: '0.05em',
+            whiteSpace: 'nowrap', letterSpacing: '0.05em',
             pointerEvents: 'none', zIndex: 5,
           }}>{todayLabel}</div>
 
