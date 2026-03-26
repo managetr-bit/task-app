@@ -12,9 +12,10 @@ type SavedSketch = { id: string; dataUrl: string; title: string; savedAt: string
 type Props = {
   boardId: string
   onClose: () => void
+  cloudScriptUrl?: string
 }
 
-export function Whiteboard({ boardId, onClose }: Props) {
+export function Whiteboard({ boardId, onClose, cloudScriptUrl }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [tool, setTool] = useState<Tool>('pen')
   const [color, setColor] = useState('#1a1a1a')
@@ -25,6 +26,7 @@ export function Whiteboard({ boardId, onClose }: Props) {
   const [showGallery, setShowGallery] = useState(false)
   const [saveTitle, setSaveTitle] = useState('')
   const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [driveStatus, setDriveStatus] = useState<'idle' | 'uploading' | 'ok' | 'error'>('idle')
 
   const STORAGE_KEY = `whiteboard_${boardId}`
 
@@ -142,6 +144,33 @@ export function Whiteboard({ boardId, onClose }: Props) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)) } catch { /* ignore */ }
   }
 
+  async function saveToDrive(title?: string) {
+    if (!cloudScriptUrl) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    setDriveStatus('uploading')
+    const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '-')
+    const time = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }).replace(':', '-')
+    const fileName = `${title || 'whiteboard'}-${date}-${time}.png`
+    try {
+      const res = await fetch('/api/drive-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scriptUrl: cloudScriptUrl,
+          fileName,
+          data: canvas.toDataURL('image/png'),
+          folder: 'whiteboard',
+        }),
+      })
+      const json = await res.json()
+      setDriveStatus(json.success ? 'ok' : 'error')
+    } catch {
+      setDriveStatus('error')
+    }
+    setTimeout(() => setDriveStatus('idle'), 3500)
+  }
+
   return (
     <div style={{
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200,
@@ -223,6 +252,21 @@ export function Whiteboard({ boardId, onClose }: Props) {
           }}>
             Save
           </button>
+          {cloudScriptUrl && (
+            <button
+              onClick={() => saveToDrive()}
+              disabled={driveStatus === 'uploading'}
+              title="Save PNG to Drive whiteboard folder"
+              style={{
+                padding: '0.3rem 0.625rem', borderRadius: 8, fontSize: '0.75rem', cursor: driveStatus === 'uploading' ? 'wait' : 'pointer', fontWeight: 600,
+                border: `1.5px solid ${driveStatus === 'ok' ? '#22c55e' : driveStatus === 'error' ? '#ef4444' : '#4285F4'}`,
+                background: driveStatus === 'ok' ? '#f0fdf4' : driveStatus === 'error' ? '#fef2f2' : '#EEF3FD',
+                color: driveStatus === 'ok' ? '#22c55e' : driveStatus === 'error' ? '#ef4444' : '#4285F4',
+              }}
+            >
+              {driveStatus === 'uploading' ? '…' : driveStatus === 'ok' ? '✓ Saved to Drive' : driveStatus === 'error' ? '✗ Error' : '☁ Save to Drive'}
+            </button>
+          )}
           <button onClick={downloadPng} style={{
             padding: '0.3rem 0.625rem', borderRadius: 8, border: '1.5px solid #E8E5E0',
             background: '#fff', color: '#6b7280', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 500,
