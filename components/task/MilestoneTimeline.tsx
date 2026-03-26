@@ -510,7 +510,6 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             const isAbove = layout.row === 'above'
             const level   = layout.level
             const offset  = labelOffset(level)
-            const tooltipLabel = `${formatLabel(ms.target_date)}${linked.length > 0 ? ` · ${done}/${linked.length}` : ''}`
 
             return (
               <div
@@ -593,28 +592,6 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                   transition: isDragging ? 'none' : 'all 0.15s ease',
                   flexShrink: 0,
                 }} />
-
-                {/* Hover tooltip — date + tasks (opposite side from label, high zIndex) */}
-                {isHovered && !isSelected && (
-                  <div style={{
-                    position: 'absolute',
-                    ...(isAbove ? { top: 'calc(100% + 7px)' } : { bottom: 'calc(100% + 7px)' }),
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: '#1a1a1a',
-                    color: '#fff',
-                    fontSize: '0.58rem',
-                    fontWeight: 500,
-                    padding: '0.2rem 0.55rem',
-                    borderRadius: 5,
-                    whiteSpace: 'nowrap',
-                    pointerEvents: 'none',
-                    zIndex: 200,
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                  }}>
-                    {tooltipLabel}
-                  </div>
-                )}
 
                 {/* Drag position tooltip */}
                 {isDragging && dragPct !== null && (
@@ -774,7 +751,6 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                   ) : (
                     <button onClick={() => setConfirmDeleteId(selectedMs.id)} style={{ fontSize: '1rem', color: '#d1cdc7', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: '0 0.2rem' }} onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }} onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#d1cdc7' }}>×</button>
                   )}
-                  <button onClick={() => setSelectedId(null)} style={{ fontSize: '0.85rem', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: '0 0.2rem' }}>✕</button>
                 </div>
               </div>
               {linked.length > 0 && (
