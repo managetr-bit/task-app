@@ -50,13 +50,14 @@ function getMilestoneStatus(ms: Milestone, linkedTasks: Task[], completedCount: 
 }
 
 // ── Layout constants ──────────────────────────────────────────────────────────
-const LINE_Y    = 60  // px from top of bar div
+const LINE_Y    = 50  // px from top of bar div — set to barHeightPx/2 for center
 const TRACK_H   = 36  // track bar height (fits TODAY text)
-const L_SPACING = 34  // px between label levels
+const L_SPACING = 26  // px between label levels
 const CHAR_PX   = 7.5 // approx px per char at 0.65rem font
+const DATE_COL  = 56  // px width for start/end date columns flanking the bar
 
 function labelOffset(level: 1 | 2 | 3): number {
-  return 8 + (level - 1) * L_SPACING  // L1=8, L2=42, L3=76
+  return 8 + (level - 1) * L_SPACING  // L1=8, L2=34, L3=60
 }
 
 export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onCollapse }: Props) {
@@ -205,10 +206,10 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
     return layout
   })()
 
-  // Fixed container sizing — always allocates space for 3 levels above & below.
-  // Never grows when milestones are added, giving a stable frame height.
-  const paddingTopPx = 65   // room for 3 label rows above the track
-  const barHeightPx  = 100  // LINE_Y + room for 3 label rows below the track
+  // Fixed container sizing — bar is vertically centered.
+  // Formula: paddingTopPx = barHeightPx − 2×LINE_Y + 12  →  bar center = track-area center.
+  const paddingTopPx = 32   // = 120 − 2×50 + 12
+  const barHeightPx  = 120  // LINE_Y=50 is exactly the midpoint
 
   // ── Tick marks ──
   const useWeekly = totalDays <= 60
@@ -387,7 +388,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   const selectedMs = milestones.find(m => m.id === selectedId)
 
   return (
-    <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', flexShrink: 0, position: 'relative', zIndex: 10, overflow: 'hidden' }}>
+    <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.5rem 0', flexWrap: 'wrap' }}>
@@ -424,7 +425,35 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
       </div>
 
       {/* ── Track area ── */}
-      <div style={{ padding: `${paddingTopPx}px 7.5% 0.75rem`, position: 'relative' }}>
+      <div style={{ padding: `${paddingTopPx}px 1rem 0.75rem`, position: 'relative' }}>
+
+        {/* Flex row: [start date col] [bar — flex:1] [end date col] */}
+        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+
+          {/* Start date — left of bar, vertically aligned to bar track */}
+          <div
+            onClick={e => { e.stopPropagation(); setEditingField(editingField === 'start' ? null : 'start') }}
+            title="Click to change start date"
+            style={{
+              width: DATE_COL, flexShrink: 0, position: 'relative',
+              height: barHeightPx, cursor: 'pointer',
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
+              paddingTop: LINE_Y - Math.floor(TRACK_H / 2),
+              paddingRight: 6,
+              boxSizing: 'border-box',
+            }}
+          >
+            {editingField === 'start' ? (
+              <input type="date" value={customStart ?? toDateStr(startDate)} onChange={e => setCustomStart(e.target.value)}
+                onBlur={() => setEditingField(null)} autoFocus onClick={e => e.stopPropagation()}
+                style={{ fontSize: '0.48rem', border: '1px solid #c9a96e', borderRadius: 3, padding: '0.05rem 0.15rem', background: '#fff', outline: 'none', color: '#374151', width: 82 }} />
+            ) : (
+              <span style={{ fontSize: '0.52rem', fontWeight: 600, color: '#9ca3af', whiteSpace: 'nowrap', lineHeight: `${TRACK_H}px`, textAlign: 'right' }}>
+                {formatLabel(toDateStr(startDate))}
+              </span>
+            )}
+          </div>
+
         <div
           ref={barRef}
           onMouseMove={handleMouseMove}
@@ -432,6 +461,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           onClick={handleBarClick}
           onMouseUp={handleBarMouseUp}
           style={{
+            flex: 1,
             position: 'relative',
             height: barHeightPx,
             cursor: draggingId ? 'grabbing' : 'crosshair',
@@ -459,62 +489,6 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
               transform: 'translateX(-50%)', pointerEvents: 'none',
             }} />
           ))}
-
-          {/* Start date label — left edge of bar, clickable to edit range start */}
-          <div
-            onClick={e => { e.stopPropagation(); setEditingField(editingField === 'start' ? null : 'start') }}
-            title="Click to change start date"
-            style={{
-              position: 'absolute', left: 18,
-              top: LINE_Y - Math.floor(TRACK_H / 2), height: TRACK_H,
-              display: 'flex', alignItems: 'center',
-              zIndex: 8, cursor: 'pointer',
-            }}
-          >
-            {editingField === 'start' ? (
-              <input
-                type="date"
-                value={customStart ?? toDateStr(startDate)}
-                onChange={e => setCustomStart(e.target.value)}
-                onBlur={() => setEditingField(null)}
-                autoFocus
-                onClick={e => e.stopPropagation()}
-                style={{ fontSize: '0.5rem', border: '1px solid #c9a96e', borderRadius: 3, padding: '0.05rem 0.2rem', background: '#fff', outline: 'none', color: '#374151', width: 88 }}
-              />
-            ) : (
-              <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#ffffffcc', letterSpacing: '0.03em', pointerEvents: 'none' }}>
-                {formatLabel(toDateStr(startDate))}
-              </span>
-            )}
-          </div>
-
-          {/* End date label — right edge of bar, clickable to edit range end */}
-          <div
-            onClick={e => { e.stopPropagation(); setEditingField(editingField === 'end' ? null : 'end') }}
-            title="Click to change end date"
-            style={{
-              position: 'absolute', right: 22,
-              top: LINE_Y - Math.floor(TRACK_H / 2), height: TRACK_H,
-              display: 'flex', alignItems: 'center',
-              zIndex: 8, cursor: 'pointer',
-            }}
-          >
-            {editingField === 'end' ? (
-              <input
-                type="date"
-                value={customEnd ?? toDateStr(endDate)}
-                onChange={e => setCustomEnd(e.target.value)}
-                onBlur={() => setEditingField(null)}
-                autoFocus
-                onClick={e => e.stopPropagation()}
-                style={{ fontSize: '0.5rem', border: '1px solid #c9a96e', borderRadius: 3, padding: '0.05rem 0.2rem', background: '#fff', outline: 'none', color: '#374151', width: 88 }}
-              />
-            ) : (
-              <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#c9a96ecc', letterSpacing: '0.03em', pointerEvents: 'none' }}>
-                {formatLabel(toDateStr(endDate))}
-              </span>
-            )}
-          </div>
 
           {/* Track: notched-start left + arrowhead right, clip-path wrapper */}
           <div style={{
@@ -738,7 +712,33 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
               <div style={{ width: 10, height: 10, transform: 'rotate(45deg)', background: '#c9a96e', border: '2px solid #fff', boxShadow: '0 0 0 3px #c9a96e33' }} />
             </div>
           )}
-        </div>
+        </div>{/* end barDiv */}
+
+          {/* End date — right of bar, vertically aligned to bar track */}
+          <div
+            onClick={e => { e.stopPropagation(); setEditingField(editingField === 'end' ? null : 'end') }}
+            title="Click to change end date"
+            style={{
+              width: DATE_COL, flexShrink: 0, position: 'relative',
+              height: barHeightPx, cursor: 'pointer',
+              display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start',
+              paddingTop: LINE_Y - Math.floor(TRACK_H / 2),
+              paddingLeft: 6,
+              boxSizing: 'border-box',
+            }}
+          >
+            {editingField === 'end' ? (
+              <input type="date" value={customEnd ?? toDateStr(endDate)} onChange={e => setCustomEnd(e.target.value)}
+                onBlur={() => setEditingField(null)} autoFocus onClick={e => e.stopPropagation()}
+                style={{ fontSize: '0.48rem', border: '1px solid #c9a96e', borderRadius: 3, padding: '0.05rem 0.15rem', background: '#fff', outline: 'none', color: '#374151', width: 82 }} />
+            ) : (
+              <span style={{ fontSize: '0.52rem', fontWeight: 600, color: '#9ca3af', whiteSpace: 'nowrap', lineHeight: `${TRACK_H}px` }}>
+                {formatLabel(toDateStr(endDate))}
+              </span>
+            )}
+          </div>
+
+        </div>{/* end flex row */}
 
         {/* ── Add milestone form ── */}
         {pendingPct !== null && (
@@ -747,7 +747,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             onClick={e => e.stopPropagation()}
             style={{
               position: 'absolute',
-              left: `clamp(0px, calc(${pendingPct}% - 116px), calc(100% - 1.5rem - 232px))`,
+              left: `clamp(${DATE_COL}px, calc(${DATE_COL}px + ${pendingPct / 100} * (100% - ${DATE_COL * 2}px - 2rem) - 116px), calc(100% - ${DATE_COL}px - 1rem - 232px))`,
               top: 'calc(100% - 0.75rem)',
               zIndex: 100,
               background: '#fff',
@@ -784,7 +784,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             onClick={e => e.stopPropagation()}
             style={{
               position: 'absolute',
-              left: `clamp(8px, calc(1.5rem + ${pct / 100} * (100% - 3rem) - 130px), calc(100% - 268px))`,
+              left: `clamp(${DATE_COL}px, calc(${DATE_COL}px + ${pct / 100} * (100% - ${DATE_COL * 2}px - 2rem) - 130px), calc(100% - ${DATE_COL}px - 1rem - 260px))`,
               top: 'calc(100% - 16px)',
               zIndex: 50,
               background: '#fff',
@@ -831,7 +831,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             onClick={e => e.stopPropagation()}
             style={{
               position: 'absolute',
-              left: `clamp(8px, calc(1.5rem + ${pct / 100} * (100% - 3rem) - 140px), calc(100% - 288px))`,
+              left: `clamp(${DATE_COL}px, calc(${DATE_COL}px + ${pct / 100} * (100% - ${DATE_COL * 2}px - 2rem) - 140px), calc(100% - ${DATE_COL}px - 1rem - 288px))`,
               top: 'calc(100% - 16px)',
               zIndex: 30,
               background: '#fff',
