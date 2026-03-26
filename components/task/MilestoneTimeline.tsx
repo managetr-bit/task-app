@@ -12,6 +12,7 @@ type Props = {
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUpdateDate: (milestoneId: string, newDate: string) => Promise<void>
+  onUpdateName?: (milestoneId: string, name: string) => Promise<void>
   onCollapse?: () => void
 }
 
@@ -114,7 +115,7 @@ function computeAutoArrangeOffsets(
   return result
 }
 
-export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onCollapse }: Props) {
+export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onCollapse }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
 
   // ── Bar width tracking for accurate label-width estimation ──
@@ -138,6 +139,8 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [hoveredId, setHoveredId] = useState<string | null>(null)
+  const [editingNameId, setEditingNameId] = useState<string | null>(null)
+  const [editingNameDraft, setEditingNameDraft] = useState('')
 
   // ── Date range editing (inline in header) ──
   const [customStart, setCustomStart] = useState<string | null>(null)
@@ -899,7 +902,34 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             <div style={{ padding: '0.875rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedMs.name}</div>
+                  {editingNameId === selectedMs.id ? (
+                    <input
+                      value={editingNameDraft}
+                      onChange={e => setEditingNameDraft(e.target.value)}
+                      onKeyDown={async e => {
+                        if (e.key === 'Enter') {
+                          const name = editingNameDraft.trim()
+                          if (name && name !== selectedMs.name && onUpdateName) await onUpdateName(selectedMs.id, name)
+                          setEditingNameId(null)
+                        }
+                        if (e.key === 'Escape') setEditingNameId(null)
+                      }}
+                      onBlur={async () => {
+                        const name = editingNameDraft.trim()
+                        if (name && name !== selectedMs.name && onUpdateName) await onUpdateName(selectedMs.id, name)
+                        setEditingNameId(null)
+                      }}
+                      autoFocus
+                      maxLength={60}
+                      style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1a1a1a', border: 'none', borderBottom: '1.5px solid #c9a96e', outline: 'none', background: 'transparent', width: '100%', padding: 0 }}
+                    />
+                  ) : (
+                    <div
+                      title="Double-click to rename"
+                      onDoubleClick={() => { setEditingNameId(selectedMs.id); setEditingNameDraft(selectedMs.name) }}
+                      style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'text' }}
+                    >{selectedMs.name}</div>
+                  )}
                   <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 2, display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
                     {editingDateId === selectedMs.id ? (
                       <input

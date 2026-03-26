@@ -15,6 +15,7 @@ type Props = {
   onConvertToTask: (content: string) => void
   onCollapse?: () => void
   cloudScriptUrl?: string
+  driveFolderId?: string
 }
 
 function timeAgo(iso: string) {
@@ -43,7 +44,7 @@ function saveNotes(boardId: string, notes: LocalNote[]) {
   try { localStorage.setItem(storageKey(boardId), JSON.stringify(notes)) } catch { /* ignore */ }
 }
 
-export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, cloudScriptUrl }: Props) {
+export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, cloudScriptUrl, driveFolderId }: Props) {
   const [notes, setNotes] = useState<LocalNote[]>([])
   const [draft, setDraft] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
@@ -102,6 +103,7 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
           fileName: `notes-${date}.txt`,
           data: text,
           folder: 'notes',
+          parentFolderId: driveFolderId,
         }),
       })
       const json = await res.json()

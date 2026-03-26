@@ -13,9 +13,10 @@ type Props = {
   boardId: string
   onClose: () => void
   cloudScriptUrl?: string
+  driveFolderId?: string
 }
 
-export function Whiteboard({ boardId, onClose, cloudScriptUrl }: Props) {
+export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [tool, setTool] = useState<Tool>('pen')
   const [color, setColor] = useState('#1a1a1a')
@@ -161,6 +162,7 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl }: Props) {
           fileName,
           data: canvas.toDataURL('image/png'),
           folder: 'whiteboard',
+          parentFolderId: driveFolderId,
         }),
       })
       const json = await res.json()

@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { scriptUrl, fileName, data, folder } = body
+    const { scriptUrl, fileName, data, folder, parentFolderId } = body
 
     if (!scriptUrl) {
       return NextResponse.json({ error: 'No scriptUrl provided' }, { status: 400 })
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch(scriptUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fileName, data, folder }),
+      body: JSON.stringify({ fileName, data, folder, parentFolderId }),
       redirect: 'follow',
     })
 

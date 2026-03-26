@@ -6,6 +6,8 @@ type Props = {
   filePanelUrl: string | null
   isCreator: boolean
   onUpdate: (url: string | null) => Promise<void>
+  cloudScriptUrl: string
+  onCloudScriptUrlChange: (url: string) => void
 }
 
 type EmbedInfo = {
@@ -36,10 +38,12 @@ const PLATFORM_ICONS: Record<string, string> = {
   'gdrive-folder': '📁', 'gdrive-file': '📄', 'onedrive': '☁️', 'link': '🔗',
 }
 
-export function FilePanel({ filePanelUrl, isCreator, onUpdate }: Props) {
+export function FilePanel({ filePanelUrl, isCreator, onUpdate, cloudScriptUrl, onCloudScriptUrlChange }: Props) {
   const [editing, setEditing] = useState(false)
   const [inputUrl, setInputUrl] = useState(filePanelUrl ?? '')
   const [saving, setSaving] = useState(false)
+  const [showUploadSetup, setShowUploadSetup] = useState(false)
+  const [scriptDraft, setScriptDraft] = useState(cloudScriptUrl)
 
   const embed = filePanelUrl ? parseUrl(filePanelUrl) : null
   const canEmbed = embed?.type === 'gdrive-folder' || embed?.type === 'gdrive-file'
@@ -118,13 +122,100 @@ export function FilePanel({ filePanelUrl, isCreator, onUpdate }: Props) {
             </button>
           </div>
         ) : canEmbed ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '0.5rem 1rem', background: '#fafaf9', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '0.5rem 1rem', background: '#fafaf9', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
               <span style={{ fontSize: '0.75rem' }}>{PLATFORM_ICONS[embed!.type]}</span>
               <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 500 }}>{embed!.displayName}</span>
-              <a href={filePanelUrl} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#c9a96e', textDecoration: 'none' }}>Open ↗</a>
+              <a href={filePanelUrl!} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#c9a96e', textDecoration: 'none' }}>Open ↗</a>
             </div>
             <iframe src={embed!.embedUrl} style={{ flex: 1, border: 'none', width: '100%', minHeight: 0 }} allow="clipboard-read; clipboard-write" />
+
+            {/* ── Upload setup (only for Google Drive folders) ── */}
+            {embed!.type === 'gdrive-folder' && (
+              <div style={{ flexShrink: 0, borderTop: '1px solid #F0EDE8', background: '#FAFAF9' }}>
+                <button
+                  onClick={() => { setScriptDraft(cloudScriptUrl); setShowUploadSetup(p => !p) }}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+                >
+                  <span style={{ fontSize: '0.65rem' }}>{cloudScriptUrl ? '🟢' : '⚪'}</span>
+                  <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#9ca3af' }}>
+                    {cloudScriptUrl ? 'Upload enabled' : 'Enable uploads (Notes & Whiteboard)'}
+                  </span>
+                  <span style={{ marginLeft: 'auto', fontSize: '0.6rem', color: '#c4bfb9' }}>{showUploadSetup ? '▲' : '▼'}</span>
+                </button>
+                {showUploadSetup && (
+                  <div style={{ padding: '0 1rem 0.875rem' }}>
+                    <p style={{ fontSize: '0.68rem', color: '#9ca3af', marginBottom: '0.5rem', lineHeight: 1.5 }}>
+                      Notes export to <strong>notes/</strong> and whiteboard saves go to <strong>whiteboard/</strong> inside this Drive folder. Requires a Google Apps Script Web App URL.
+                    </p>
+                    <details style={{ marginBottom: '0.625rem', fontSize: '0.68rem', color: '#9ca3af', background: '#F3F4F6', borderRadius: 8, padding: '0.4rem 0.625rem' }}>
+                      <summary style={{ cursor: 'pointer', fontWeight: 600 }}>How to set up (one-time)</summary>
+                      <ol style={{ margin: '0.5rem 0 0', paddingLeft: '1.1rem', lineHeight: 1.9 }}>
+                        <li>Go to <strong>script.google.com</strong> → New project</li>
+                        <li>Paste the script below and save</li>
+                        <li><strong>Deploy → New deployment → Web App</strong></li>
+                        <li><em>Execute as</em>: Me &nbsp;|&nbsp; <em>Access</em>: Anyone</li>
+                        <li>Copy the Web App URL and paste it below</li>
+                      </ol>
+                      <pre style={{ marginTop: '0.5rem', background: '#fff', padding: '0.5rem', borderRadius: 6, fontSize: '0.62rem', overflowX: 'auto', border: '1px solid #E8E5E0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{`function doPost(e) {
+  try {
+    var d = JSON.parse(e.postData.contents);
+    var root = d.parentFolderId
+      ? DriveApp.getFolderById(d.parentFolderId)
+      : DriveApp.getRootFolder();
+    var sub = getOrCreate(root, d.folder || 'files');
+    var blob;
+    if (d.data && d.data.indexOf('base64,') > -1) {
+      var b64 = d.data.split('base64,')[1];
+      blob = Utilities.newBlob(
+        Utilities.base64Decode(b64), 'image/png', d.fileName);
+    } else {
+      blob = Utilities.newBlob(
+        d.data || '', 'text/plain', d.fileName);
+    }
+    var file = sub.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,
+      DriveApp.Permission.VIEW);
+    return ContentService
+      .createTextOutput(JSON.stringify(
+        {success:true, url:file.getUrl()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify(
+        {success:false, error:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+function getOrCreate(parent, name) {
+  var it = parent.getFoldersByName(name);
+  return it.hasNext() ? it.next() : parent.createFolder(name);
+}`}</pre>
+                    </details>
+                    <input
+                      value={scriptDraft}
+                      onChange={e => setScriptDraft(e.target.value)}
+                      placeholder="https://script.google.com/macros/s/…/exec"
+                      style={{ width: '100%', padding: '0.45rem 0.6rem', borderRadius: 8, border: '1.5px solid #E8E5E0', fontSize: '0.7rem', outline: 'none', boxSizing: 'border-box', marginBottom: '0.5rem', fontFamily: 'monospace', color: '#374151' }}
+                      onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
+                      onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
+                    />
+                    <div style={{ display: 'flex', gap: '0.375rem' }}>
+                      <button
+                        onClick={() => { onCloudScriptUrlChange(scriptDraft.trim()); setShowUploadSetup(false) }}
+                        style={{ flex: 1, padding: '0.4rem', borderRadius: 8, border: 'none', background: '#c9a96e', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+                      >Save</button>
+                      {cloudScriptUrl && (
+                        <button
+                          onClick={() => { onCloudScriptUrlChange(''); setScriptDraft(''); setShowUploadSetup(false) }}
+                          style={{ padding: '0.4rem 0.625rem', borderRadius: 8, border: '1.5px solid #E8E5E0', background: '#fff', color: '#ef4444', fontSize: '0.72rem', cursor: 'pointer' }}
+                        >Disconnect</button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

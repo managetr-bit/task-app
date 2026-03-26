@@ -56,6 +56,7 @@ type Props = {
   onAddMilestone: (name: string, targetDate: string) => Promise<void>
   onDeleteMilestone: (milestoneId: string) => Promise<void>
   onUpdateMilestoneDate: (milestoneId: string, newDate: string) => Promise<void>
+  onUpdateMilestoneName?: (milestoneId: string, name: string) => Promise<void>
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
 }
@@ -81,7 +82,7 @@ export function BoardView({
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
   onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn, onReorderColumn,
   onUpdateFilePanelUrl, onUpdateBoardName,
-  onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onLinkTask, onUnlinkTask,
+  onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onUpdateMilestoneName, onLinkTask, onUnlinkTask,
 }: Props) {
   const [addTaskColumnId, setAddTaskColumnId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -101,12 +102,24 @@ export function BoardView({
   const [showNotes, setShowNotes] = useState(true)
   const [showWhiteboard, setShowWhiteboard] = useState(false)
   const [noteTaskDraft, setNoteTaskDraft] = useState<string | null>(null)
-  // Cloud storage settings (Google Apps Script URL, per board, stored in localStorage)
+  // Cloud storage settings — Apps Script URL stored per board in localStorage
   const [cloudScriptUrl, setCloudScriptUrl] = useState<string>(() => {
     try { return localStorage.getItem(`cloud_script_${board.id}`) ?? '' } catch { return '' }
   })
-  const [showCloudSettings, setShowCloudSettings] = useState(false)
-  const [cloudScriptDraft, setCloudScriptDraft] = useState('')
+  function saveCloudScriptUrl(url: string) {
+    setCloudScriptUrl(url)
+    try {
+      if (url) localStorage.setItem(`cloud_script_${board.id}`, url)
+      else localStorage.removeItem(`cloud_script_${board.id}`)
+    } catch { /* ignore */ }
+  }
+
+  // Extract Google Drive folder ID from the linked file_panel_url (if it's a Drive folder)
+  const driveFolderId = useMemo(() => {
+    if (!board.file_panel_url) return undefined
+    const m = board.file_panel_url.match(/drive\.google\.com\/drive(?:\/u\/\d+)?\/folders\/([a-zA-Z0-9_-]+)/)
+    return m ? m[1] : undefined
+  }, [board.file_panel_url])
 
   // Sensors: require 8px movement before drag starts — clicks still work
   const sensors = useSensors(
@@ -246,13 +259,6 @@ export function BoardView({
           <button className="btn-ghost" onClick={() => setShowWhiteboard(true)} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }} title="Open whiteboard">
             🎨 Whiteboard
           </button>
-          <button
-            onClick={() => { setCloudScriptDraft(cloudScriptUrl); setShowCloudSettings(true) }}
-            title={cloudScriptUrl ? 'Cloud storage connected' : 'Configure Drive upload'}
-            style={{ padding: '0.375rem 0.5rem', fontSize: '0.8125rem', background: 'none', border: '1.5px solid #E8E5E0', borderRadius: 8, cursor: 'pointer', color: cloudScriptUrl ? '#22c55e' : '#c4bfb9' }}
-          >
-            ☁
-          </button>
         </div>
       </header>
 
@@ -267,6 +273,7 @@ export function BoardView({
             onAdd={onAddMilestone}
             onDelete={onDeleteMilestone}
             onUpdateDate={onUpdateMilestoneDate}
+            onUpdateName={onUpdateMilestoneName}
             onLinkTask={onLinkTask}
             onUnlinkTask={onUnlinkTask}
             onCollapse={() => setShowTimeline(false)}
@@ -374,6 +381,7 @@ export function BoardView({
               authorName={currentMember.nickname}
               onCollapse={() => setShowNotes(false)}
               cloudScriptUrl={cloudScriptUrl || undefined}
+              driveFolderId={driveFolderId}
               onConvertToTask={content => {
                 setNoteTaskDraft(content)
                 setAddTaskColumnId(columns[0]?.id ?? null)
@@ -398,7 +406,13 @@ export function BoardView({
                 </button>
               </div>
               <div style={{ flex: 1, overflow: 'hidden' }}>
-                <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} />
+                <FilePanel
+                  filePanelUrl={board.file_panel_url}
+                  isCreator={isCreator}
+                  onUpdate={onUpdateFilePanelUrl}
+                  cloudScriptUrl={cloudScriptUrl}
+                  onCloudScriptUrlChange={saveCloudScriptUrl}
+                />
               </div>
             </div>
           ) : (
@@ -442,101 +456,7 @@ export function BoardView({
 
       {/* Whiteboard modal */}
       {showWhiteboard && (
-        <Whiteboard boardId={board.id} onClose={() => setShowWhiteboard(false)} cloudScriptUrl={cloudScriptUrl || undefined} />
-      )}
-
-      {/* Cloud storage settings modal */}
-      {showCloudSettings && (
-        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowCloudSettings(false) }}>
-          <div className="modal-card" style={{ padding: '1.75rem', maxWidth: 500 }}>
-            <h2 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1a1a1a', marginBottom: '0.25rem' }}>☁ Drive Upload Settings</h2>
-            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '1.25rem', lineHeight: 1.5 }}>
-              Paste your Google Apps Script Web App URL below. Whiteboard saves go to a <strong>whiteboard/</strong> subfolder and note exports go to <strong>notes/</strong>.
-            </p>
-
-            {/* Apps Script setup instructions */}
-            <details style={{ marginBottom: '1rem', fontSize: '0.78rem', color: '#6b7280', background: '#F9F7F5', borderRadius: 10, padding: '0.625rem 0.75rem' }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 600, color: '#9ca3af' }}>How to set up (one-time)</summary>
-              <ol style={{ margin: '0.625rem 0 0', paddingLeft: '1.25rem', lineHeight: 1.8 }}>
-                <li>Go to <strong>script.google.com</strong> → New project</li>
-                <li>Replace the default code with the script below</li>
-                <li>Click <strong>Deploy → New deployment → Web App</strong></li>
-                <li>Set <em>Execute as</em>: Me, <em>Who has access</em>: Anyone</li>
-                <li>Copy the Web App URL and paste it here</li>
-              </ol>
-              <pre style={{ marginTop: '0.75rem', background: '#fff', padding: '0.625rem', borderRadius: 8, fontSize: '0.7rem', overflowX: 'auto', border: '1px solid #E8E5E0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{`function doPost(e) {
-  try {
-    var d = JSON.parse(e.postData.contents);
-    var root = DriveApp.getRootFolder();
-    var app = getOrCreate(root, 'TaskApp');
-    var sub = getOrCreate(app, d.folder || 'files');
-    var blob;
-    if (d.data && d.data.indexOf('base64,') > -1) {
-      var b64 = d.data.split('base64,')[1];
-      blob = Utilities.newBlob(
-        Utilities.base64Decode(b64), 'image/png', d.fileName);
-    } else {
-      blob = Utilities.newBlob(
-        d.data || '', 'text/plain', d.fileName);
-    }
-    var file = sub.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,
-      DriveApp.Permission.VIEW);
-    return ContentService
-      .createTextOutput(JSON.stringify(
-        {success:true, url:file.getUrl()}))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify(
-        {success:false, error:err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}
-function getOrCreate(parent, name) {
-  var it = parent.getFoldersByName(name);
-  return it.hasNext() ? it.next() : parent.createFolder(name);
-}`}</pre>
-            </details>
-
-            <input
-              value={cloudScriptDraft}
-              onChange={e => setCloudScriptDraft(e.target.value)}
-              placeholder="https://script.google.com/macros/s/…/exec"
-              style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1.5px solid #E8E5E0', fontSize: '0.8rem', outline: 'none', boxSizing: 'border-box', marginBottom: '0.875rem', fontFamily: 'monospace' }}
-              onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#c9a96e' }}
-              onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#E8E5E0' }}
-            />
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button
-                onClick={() => {
-                  const url = cloudScriptDraft.trim()
-                  setCloudScriptUrl(url)
-                  try { localStorage.setItem(`cloud_script_${board.id}`, url) } catch { /* ignore */ }
-                  setShowCloudSettings(false)
-                }}
-                style={{ flex: 1, padding: '0.55rem', borderRadius: 10, border: 'none', background: '#c9a96e', color: '#fff', fontSize: '0.825rem', fontWeight: 600, cursor: 'pointer' }}
-              >
-                Save
-              </button>
-              {cloudScriptUrl && (
-                <button
-                  onClick={() => {
-                    setCloudScriptUrl('')
-                    try { localStorage.removeItem(`cloud_script_${board.id}`) } catch { /* ignore */ }
-                    setShowCloudSettings(false)
-                  }}
-                  style={{ padding: '0.55rem 0.875rem', borderRadius: 10, border: '1.5px solid #E8E5E0', background: '#fff', color: '#ef4444', fontSize: '0.825rem', cursor: 'pointer' }}
-                >
-                  Disconnect
-                </button>
-              )}
-              <button onClick={() => setShowCloudSettings(false)} style={{ padding: '0.55rem 0.875rem', borderRadius: 10, border: '1.5px solid #E8E5E0', background: '#fff', fontSize: '0.825rem', cursor: 'pointer' }}>
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <Whiteboard boardId={board.id} onClose={() => setShowWhiteboard(false)} cloudScriptUrl={cloudScriptUrl || undefined} driveFolderId={driveFolderId} />
       )}
 
       {/* Delete column confirmation */}
