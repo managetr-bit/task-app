@@ -566,10 +566,10 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             )}
           </div>
 
-          {/* Today marker — faint full-height guide + TODAY chip inside the bar */}
+          {/* Today marker — guide line extends same distance above and below the bar */}
           <div style={{
             position: 'absolute', left: `${todayPct}%`,
-            top: 0, bottom: 0, width: 1.5,
+            top: 0, height: LINE_Y * 2, width: 1.5,
             background: '#c9a96e30', transform: 'translateX(-50%)',
             borderRadius: 1, pointerEvents: 'none',
           }} />
