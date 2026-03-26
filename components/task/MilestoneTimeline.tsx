@@ -51,7 +51,7 @@ function getMilestoneStatus(ms: Milestone, linkedTasks: Task[], completedCount: 
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 const LINE_Y    = 56  // px from top of bar div
-const TRACK_H   = 8   // track bar height
+const TRACK_H   = 24  // track bar height (tall enough for TODAY text)
 const L_SPACING = 30  // px between label levels
 const CHAR_PX   = 7.5 // approx px per char at 0.65rem font
 
@@ -464,15 +464,15 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
               fontSize: t.isYearBoundary ? '0.6rem' : '0.55rem',
               color: t.isYearBoundary ? '#9ca3af' : '#d1cdc7',
               fontWeight: t.isYearBoundary ? 600 : 400,
-              whiteSpace: 'nowrap', pointerEvents: 'none',
+              whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 40,
             }}>{t.label}</div>
           ))}
 
-          {/* Tick hairlines */}
+          {/* Tick hairlines — sit just above the bar */}
           {monthTicks.map((t, i) => (
             <div key={`l${i}`} style={{
               position: 'absolute', left: `${t.pct}%`,
-              top: LINE_Y - 6, width: 1, height: 12,
+              top: LINE_Y - Math.floor(TRACK_H / 2) - 6, width: 1, height: 6,
               background: t.isYearBoundary ? '#d1cdc7' : '#E8E5E0',
               transform: 'translateX(-50%)', pointerEvents: 'none',
             }} />
@@ -494,7 +494,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             }} />
           )}
 
-          {/* Today marker */}
+          {/* Today marker — faint full-height guide + TODAY chip inside the bar */}
           <div style={{
             position: 'absolute', left: `${todayPct}%`,
             top: 0, bottom: 0, width: 1.5,
@@ -503,15 +503,10 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           }} />
           <div style={{
             position: 'absolute', left: `${todayPct}%`,
-            top: LINE_Y - 14, width: 1.5, height: 28,
-            background: '#c9a96e', transform: 'translateX(-50%)',
-            borderRadius: 1, pointerEvents: 'none',
-          }} />
-          <div style={{
-            position: 'absolute', left: `${todayPct}%`, top: LINE_Y - 13,
+            top: LINE_Y - Math.floor(TRACK_H / 2) + 1,
             transform: 'translateX(-50%)', background: '#c9a96e', color: '#fff',
             fontSize: '0.5rem', fontWeight: 800, padding: '0.1rem 0.35rem',
-            borderRadius: 4, whiteSpace: 'nowrap', letterSpacing: '0.05em',
+            borderRadius: 3, whiteSpace: 'nowrap', letterSpacing: '0.05em',
             pointerEvents: 'none', zIndex: 5,
           }}>TODAY</div>
 
