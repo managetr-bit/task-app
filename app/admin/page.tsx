@@ -21,6 +21,7 @@ function fmt(iso: string) {
 // ── Login screen ────────────────────────────────────────────────────────────
 function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
   const [pw, setPw]       = useState('')
+  const [show, setShow]   = useState(false)
   const [err, setErr]     = useState('')
   const [busy, setBusy]   = useState(false)
 
@@ -55,17 +56,27 @@ function LoginForm({ onSuccess }: { onSuccess: (token: string) => void }) {
       >
         <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#1a1a1a', marginBottom: '0.25rem' }}>Admin Girişi</div>
         <div style={{ fontSize: '0.78rem', color: '#9ca3af', marginBottom: '1.5rem' }}>task.omercimen.com</div>
-        <input
-          type="password"
-          value={pw}
-          onChange={e => setPw(e.target.value)}
-          placeholder="Şifre"
-          autoFocus
-          required
-          style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: 10, border: '1.5px solid #E8E5E0', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', marginBottom: '0.75rem', fontFamily: 'inherit' }}
-          onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
-          onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
-        />
+        <div style={{ position: 'relative', marginBottom: '0.75rem' }}>
+          <input
+            type={show ? 'text' : 'password'}
+            value={pw}
+            onChange={e => setPw(e.target.value)}
+            placeholder="Şifre"
+            autoFocus
+            required
+            style={{ width: '100%', padding: '0.6rem 2.5rem 0.6rem 0.75rem', borderRadius: 10, border: '1.5px solid #E8E5E0', fontSize: '0.875rem', outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+            onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
+            onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
+          />
+          <button
+            type="button"
+            onClick={() => setShow(p => !p)}
+            style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#9ca3af', fontSize: '0.85rem', lineHeight: 1 }}
+            title={show ? 'Gizle' : 'Göster'}
+          >
+            {show ? '🙈' : '👁'}
+          </button>
+        </div>
         {err && <div style={{ fontSize: '0.75rem', color: '#ef4444', marginBottom: '0.625rem' }}>{err}</div>}
         <button
           type="submit"
