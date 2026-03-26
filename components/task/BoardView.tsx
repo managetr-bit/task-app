@@ -94,6 +94,8 @@ export function BoardView({
   const [boardNameDraft, setBoardNameDraft] = useState(board.name)
   // Column delete confirmation state
   const [deleteColConfirm, setDeleteColConfirm] = useState<{ columnId: string; columnName: string } | null>(null)
+  const [showTimeline, setShowTimeline] = useState(true)
+  const [showKanban, setShowKanban] = useState(true)
 
   // Sensors: require 8px movement before drag starts — clicks still work
   const sensors = useSensors(
@@ -241,20 +243,37 @@ export function BoardView({
 
       {/* Board body */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        {/* Timeline — full width above all columns */}
-        <MilestoneTimeline
-          milestones={milestones}
-          milestoneTasks={milestoneTasks}
-          tasks={tasks}
-          onAdd={onAddMilestone}
-          onDelete={onDeleteMilestone}
-          onUpdateDate={onUpdateMilestoneDate}
-          onLinkTask={onLinkTask}
-          onUnlinkTask={onUnlinkTask}
-        />
+        {/* Timeline — collapsible */}
+        {showTimeline ? (
+          <MilestoneTimeline
+            milestones={milestones}
+            milestoneTasks={milestoneTasks}
+            tasks={tasks}
+            onAdd={onAddMilestone}
+            onDelete={onDeleteMilestone}
+            onUpdateDate={onUpdateMilestoneDate}
+            onLinkTask={onLinkTask}
+            onUnlinkTask={onUnlinkTask}
+            onCollapse={() => setShowTimeline(false)}
+          />
+        ) : (
+          <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', padding: '0.4rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+            <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Timeline</span>
+            {milestones.length > 0 && <span style={{ fontSize: '0.6rem', color: '#c4bfb9', background: '#F3F4F6', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>{milestones.length}</span>}
+            <button onClick={() => setShowTimeline(true)} style={{ marginLeft: '0.25rem', fontSize: '0.6rem', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>▸ expand</button>
+          </div>
+        )}
+
+        {/* Kanban — collapsible */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1.5rem', background: '#FAF9F7', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
+          <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Board</span>
+          <button onClick={() => setShowKanban(p => !p)} style={{ fontSize: '0.6rem', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: '0.25rem' }}>
+            {showKanban ? '▾ collapse' : '▸ expand'}
+          </button>
+        </div>
 
         {/* Kanban + file panel */}
-        <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+        <div style={{ flex: 1, display: showKanban ? 'flex' : 'none', minHeight: 0 }}>
         <DndContext
           sensors={sensors}
           collisionDetection={columnAwareCollision}

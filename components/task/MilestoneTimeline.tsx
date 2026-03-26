@@ -12,6 +12,7 @@ type Props = {
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUpdateDate: (milestoneId: string, newDate: string) => Promise<void>
+  onCollapse?: () => void
 }
 
 function toDateStr(d: Date) {
@@ -58,7 +59,7 @@ function labelOffset(level: 1 | 2 | 3): number {
   return 6 + (level - 1) * L_SPACING  // L1=6, L2=36, L3=66
 }
 
-export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate }: Props) {
+export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onCollapse }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
 
   // ── Bar width tracking for accurate label-width estimation ──
@@ -98,6 +99,14 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   })
   // Track whether mouse actually moved during drag (to distinguish click from drag)
   const hasDraggedRef = useRef(false)
+
+  // ── Label drag (manual repositioning) ──
+  const [labelOffsets, setLabelOffsets] = useState<Record<string, { dx: number; dy: number }>>({})
+  const labelDragRef = useRef<{ id: string; startX: number; startY: number; startDx: number; startDy: number } | null>(null)
+  const labelMovedRef = useRef(false)
+
+  // ── Date editing in panel ──
+  const [editingDateId, setEditingDateId] = useState<string | null>(null)
 
   // ── Date range ──
   const today = new Date(); today.setHours(0,0,0,0)
@@ -328,6 +337,23 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
     }
   }, [draggingId])
 
+  // Label drag — always active, lightweight
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!labelDragRef.current) return
+      labelMovedRef.current = true
+      const { id, startX, startY, startDx, startDy } = labelDragRef.current
+      setLabelOffsets(prev => ({
+        ...prev,
+        [id]: { dx: startDx + e.clientX - startX, dy: startDy + e.clientY - startY },
+      }))
+    }
+    const onUp = () => { labelDragRef.current = null }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
+  }, [])
+
   const handleAddSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     if (!pendingName.trim() || !pendingDate) return
@@ -357,6 +383,9 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           <span style={{ fontSize: '0.6rem', color: '#c4bfb9', background: '#F3F4F6', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>
             {milestones.length}
           </span>
+        )}
+        {onCollapse && (
+          <button onClick={onCollapse} style={{ fontSize: '0.6rem', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: '0.25rem' }}>▾ collapse</button>
         )}
 
         {/* ── Inline date range editor ── */}
@@ -466,16 +495,22 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           {/* Today marker */}
           <div style={{
             position: 'absolute', left: `${todayPct}%`,
+            top: 0, bottom: 0, width: 1.5,
+            background: '#c9a96e30', transform: 'translateX(-50%)',
+            borderRadius: 1, pointerEvents: 'none',
+          }} />
+          <div style={{
+            position: 'absolute', left: `${todayPct}%`,
             top: LINE_Y - 14, width: 1.5, height: 28,
             background: '#c9a96e', transform: 'translateX(-50%)',
             borderRadius: 1, pointerEvents: 'none',
           }} />
           <div style={{
-            position: 'absolute', left: `${todayPct}%`, top: LINE_Y - 26,
+            position: 'absolute', left: `${todayPct}%`, top: 2,
             transform: 'translateX(-50%)', background: '#c9a96e', color: '#fff',
             fontSize: '0.5rem', fontWeight: 800, padding: '0.1rem 0.35rem',
             borderRadius: 4, whiteSpace: 'nowrap', letterSpacing: '0.05em',
-            pointerEvents: 'none', zIndex: 2,
+            pointerEvents: 'none', zIndex: 5,
           }}>TODAY</div>
 
           {/* Hover ghost (only when not dragging) */}
@@ -542,7 +577,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                   top: LINE_Y + 0.5,
                   transform: 'translate(-50%, -50%)',
                   cursor: isDragging ? 'grabbing' : 'grab',
-                  zIndex: isHovered || isSelected || isDragging ? 100 : 4,
+                  zIndex: isHovered || isSelected || isDragging ? 100 : 25,
                   width: 24, height: 24,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
@@ -562,23 +597,40 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                   }} />
                 )}
 
-                {/* Static label — name only */}
-                <div style={{
-                  position: 'absolute',
-                  ...(isAbove ? { bottom: `calc(100% + ${offset}px)` } : { top: `calc(100% + ${offset}px)` }),
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  whiteSpace: 'nowrap',
-                  textAlign: 'center',
-                  pointerEvents: 'none',
-                  zIndex: 1,
-                }}>
-                  <div style={{
-                    fontSize: '0.65rem', fontWeight: 600,
-                    color: isSelected ? status.color : isDragging ? '#c9a96e' : '#374151',
-                    opacity: isDragging ? 0.7 : 1,
-                  }}>{ms.name}</div>
-                </div>
+                {/* Static label — draggable, name only */}
+                {(() => {
+                  const lOff = labelOffsets[ms.id] ?? { dx: 0, dy: 0 }
+                  return (
+                    <div
+                      title="Drag to reposition"
+                      onMouseDown={e => {
+                        e.stopPropagation()
+                        labelMovedRef.current = false
+                        labelDragRef.current = { id: ms.id, startX: e.clientX, startY: e.clientY, startDx: lOff.dx, startDy: lOff.dy }
+                      }}
+                      onClick={e => {
+                        if (labelMovedRef.current) { e.stopPropagation(); return }
+                        // let click bubble to parent milestone div to open panel
+                      }}
+                      style={{
+                        position: 'absolute',
+                        ...(isAbove ? { bottom: `calc(100% + ${offset}px)` } : { top: `calc(100% + ${offset}px)` }),
+                        left: '50%',
+                        transform: `translateX(calc(-50% + ${lOff.dx}px)) translateY(${lOff.dy}px)`,
+                        whiteSpace: 'nowrap',
+                        textAlign: 'center',
+                        cursor: labelDragRef.current?.id === ms.id ? 'grabbing' : 'grab',
+                        zIndex: 1,
+                      }}
+                    >
+                      <div style={{
+                        fontSize: '0.65rem', fontWeight: 600,
+                        color: isSelected ? status.color : isDragging ? '#c9a96e' : '#374151',
+                        opacity: isDragging ? 0.7 : 1,
+                      }}>{ms.name}</div>
+                    </div>
+                  )
+                })()}
 
                 {/* Diamond */}
                 <div style={{
@@ -740,9 +792,28 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
                 <div style={{ minWidth: 0, flex: 1 }}>
                   <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selectedMs.name}</div>
-                  <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 2 }}>
-                    {formatLabel(selectedMs.target_date)}
-                    {linked.length > 0 && <span style={{ marginLeft: '0.375rem', fontWeight: 600, color: status.color }}>· {done}/{linked.length} done</span>}
+                  <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 2, display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
+                    {editingDateId === selectedMs.id ? (
+                      <input
+                        type="date"
+                        defaultValue={selectedMs.target_date}
+                        autoFocus
+                        onBlur={async e => {
+                          const val = e.target.value
+                          if (val && val !== selectedMs.target_date) await onUpdateDate(selectedMs.id, val)
+                          setEditingDateId(null)
+                        }}
+                        onKeyDown={e => { if (e.key === 'Escape') setEditingDateId(null) }}
+                        style={{ fontSize: '0.65rem', color: '#6b7280', border: '1px solid #E8E5E0', borderRadius: 4, padding: '0.05rem 0.25rem', outline: 'none', background: '#fff' }}
+                      />
+                    ) : (
+                      <button
+                        onClick={() => setEditingDateId(selectedMs.id)}
+                        title="Click to edit date"
+                        style={{ fontSize: '0.65rem', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline dotted' }}
+                      >{formatLabel(selectedMs.target_date)}</button>
+                    )}
+                    {linked.length > 0 && <span style={{ fontWeight: 600, color: status.color }}>· {done}/{linked.length} done</span>}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center', flexShrink: 0, marginLeft: '0.5rem' }}>
