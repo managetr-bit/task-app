@@ -50,7 +50,7 @@ function getMilestoneStatus(ms: Milestone, linkedTasks: Task[], completedCount: 
 }
 
 // ── Layout constants ──────────────────────────────────────────────────────────
-const LINE_Y    = 50  // px from top of bar div — set to barHeightPx/2 for center
+const LINE_Y    = 30  // px from top of bar div — upper portion leaves room for labels below
 const TRACK_H   = 36  // track bar height (fits TODAY text)
 const L_SPACING = 26  // px between label levels
 const CHAR_PX   = 7.5 // approx px per char at 0.65rem font
@@ -148,15 +148,14 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   ]
 
   const milestoneLayout: Map<string, { row: 'above' | 'below'; level: 1 | 2 | 3 }> = (() => {
-    const MIN_PX = 44  // minimum label half-width in px
-    const DATE_CHARS = 7  // e.g. "15 Jan" is ~6-7 chars
+    const MIN_PX = 44
+    const DATE_CHARS = 7
     const sorted = [...milestones]
       .map(ms => ({
         id:  ms.id,
         pct: pctOf(new Date(ms.target_date + 'T00:00:00')),
-        // hw = half of the wider of name vs date label, in pct
-        hw: Math.max(MIN_PX / barWidth * 100,
-          (Math.max(ms.name.length, DATE_CHARS) * CHAR_PX * 0.5) / barWidth * 100),
+        hw:  Math.max(MIN_PX / barWidth * 100,
+               (Math.max(ms.name.length, DATE_CHARS) * CHAR_PX * 0.5) / barWidth * 100),
       }))
       .sort((a, b) => a.pct - b.pct)
 
@@ -169,47 +168,33 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
       'below-1': 0, 'below-2': 0, 'below-3': 0,
     }
     const layout = new Map<string, { row: 'above' | 'below'; level: 1 | 2 | 3 }>()
-    let lastRow: 'above' | 'below' = 'below'  // first will prefer 'above'
+
+    // Priority: below-1 → below-2 → below-3 → above-1 → above-2 → above-3
+    // Labels default to below the bar; above is only used when below is crowded.
+    const priority: SlotDef[] = [
+      ...SLOTS.filter(s => s.row === 'below').sort((a, b) => a.level - b.level),
+      ...SLOTS.filter(s => s.row === 'above').sort((a, b) => a.level - b.level),
+    ]
 
     for (const ms of sorted) {
-      const preferRow: 'above' | 'below' = lastRow === 'above' ? 'below' : 'above'
-
-      // Ordered: preferred row (L1, L2, L3), then other row (L1, L2, L3)
-      const ordered: SlotDef[] = [
-        ...SLOTS.filter(s => s.row === preferRow).sort((a, b) => a.level - b.level),
-        ...SLOTS.filter(s => s.row !== preferRow).sort((a, b) => a.level - b.level),
-      ]
-
       let chosen: SlotDef | null = null
-
-      // Pass 1: first slot (preferred row) with sufficient clearance
-      for (const slot of ordered.filter(s => s.row === preferRow)) {
+      for (const slot of priority) {
         const gap = ms.pct - lastPct[slot.key]
         if (gap >= ms.hw + lastHW[slot.key]) { chosen = slot; break }
       }
-      // Pass 2: other row with sufficient clearance
-      if (!chosen) {
-        for (const slot of ordered.filter(s => s.row !== preferRow)) {
-          const gap = ms.pct - lastPct[slot.key]
-          if (gap >= ms.hw + lastHW[slot.key]) { chosen = slot; break }
-        }
-      }
-      // Pass 3: all 6 slots crowded → force preferred row L1 (opposite row from last)
-      // This GUARANTEES visual separation: above ↔ below labels never overlap
-      if (!chosen) chosen = ordered[0]
+      if (!chosen) chosen = priority[0]  // fallback: below-1
 
       layout.set(ms.id, { row: chosen.row, level: chosen.level })
       lastPct[chosen.key] = ms.pct
       lastHW[chosen.key]  = ms.hw
-      lastRow = chosen.row
     }
     return layout
   })()
 
-  // Fixed container sizing — bar is vertically centered.
-  // Formula: paddingTopPx = barHeightPx − 2×LINE_Y + 12  →  bar center = track-area center.
-  const paddingTopPx = 32   // = 120 − 2×50 + 12
-  const barHeightPx  = 120  // LINE_Y=50 is exactly the midpoint
+  // Fixed sizing: bar sits near the top of barDiv, labels flow below into the space.
+  // paddingTopPx gives room for month-name labels that appear just above the track.
+  const paddingTopPx = 20
+  const barHeightPx  = 130  // LINE_Y=30 → track top at 12px, 82px free below track for labels
 
   // ── Tick marks ──
   const useWeekly = totalDays <= 60
@@ -469,10 +454,13 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             overflow: 'visible',
           }}
         >
-          {/* Tick labels */}
+          {/* Tick labels — above the track */}
           {monthTicks.map((t, i) => (
             <div key={i} style={{
-              position: 'absolute', left: `${t.pct}%`, top: 0, transform: 'translateX(-50%)',
+              position: 'absolute',
+              left: `${t.pct}%`,
+              top: LINE_Y - Math.floor(TRACK_H / 2) - 18,
+              transform: 'translateX(-50%)',
               fontSize: t.isYearBoundary ? '0.6rem' : '0.55rem',
               color: t.isYearBoundary ? '#9ca3af' : '#d1cdc7',
               fontWeight: t.isYearBoundary ? 600 : 400,
