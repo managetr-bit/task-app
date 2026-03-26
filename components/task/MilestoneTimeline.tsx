@@ -131,7 +131,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
     return Math.min(100, Math.max(0, (diffDays(startDate, d) / totalDays) * 100))
   }
   const todayPct = pctOf(today)
-  const todayLabel = `TODAY · ${today.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+  const todayLabel = 'TODAY'
 
   // ── 6-slot label layout (accurate pixel-based) ──
   type SlotKey = 'above-1' | 'above-2' | 'above-3' | 'below-1' | 'below-2' | 'below-3'
@@ -492,21 +492,25 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             }} />
           ))}
 
-          {/* Track background */}
+          {/* Track: notched-start left + arrowhead right, clip-path wrapper */}
           <div style={{
             position: 'absolute', left: 0, right: 0,
             top: LINE_Y - Math.floor(TRACK_H / 2),
-            height: TRACK_H, background: '#F0EDE8', borderRadius: 5,
-          }} />
-
-          {/* Progress fill: start → today */}
-          {todayPct > 0 && (
-            <div style={{
-              position: 'absolute', left: 0, width: `${todayPct}%`,
-              top: LINE_Y - Math.floor(TRACK_H / 2), height: TRACK_H,
-              background: 'linear-gradient(90deg, #f0e4d0 0%, #c9a96e 100%)', borderRadius: 5,
-            }} />
-          )}
+            height: TRACK_H,
+            clipPath: 'polygon(10px 0%, 0% 50%, 10px 100%, calc(100% - 14px) 100%, 100% 50%, calc(100% - 14px) 0%)',
+            overflow: 'hidden',
+          }}>
+            {/* Track background */}
+            <div style={{ position: 'absolute', inset: 0, background: '#F0EDE8' }} />
+            {/* Progress fill: start → today */}
+            {todayPct > 0 && (
+              <div style={{
+                position: 'absolute', left: 0, width: `${todayPct}%`,
+                top: 0, bottom: 0,
+                background: 'linear-gradient(90deg, #f0e4d0 0%, #c9a96e 100%)',
+              }} />
+            )}
+          </div>
 
           {/* Today marker — faint full-height guide + TODAY chip inside the bar */}
           <div style={{
