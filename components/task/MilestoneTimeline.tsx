@@ -403,51 +403,6 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           </button>
         )}
 
-        {/* ── Inline date range editor ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginLeft: '0.5rem' }}>
-          {editingField === 'start' ? (
-            <input
-              type="date"
-              value={customStart ?? toDateStr(startDate)}
-              onChange={e => setCustomStart(e.target.value)}
-              onBlur={() => setEditingField(null)}
-              autoFocus
-              style={{ fontSize: '0.6rem', color: '#6b7280', border: '1px solid #E8E5E0', borderRadius: 4, padding: '0.1rem 0.25rem', background: '#fff', outline: 'none' }}
-            />
-          ) : (
-            <button
-              onClick={() => setEditingField('start')}
-              title="Click to change start date"
-              style={{ fontSize: '0.6rem', color: '#9ca3af', background: 'none', border: '1px solid transparent', borderRadius: 4, padding: '0.1rem 0.35rem', cursor: 'pointer', lineHeight: 1.4 }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5E0'; (e.currentTarget as HTMLButtonElement).style.color = '#6b7280' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af' }}
-            >
-              {formatLabel(toDateStr(startDate))}
-            </button>
-          )}
-          <span style={{ fontSize: '0.55rem', color: '#d1cdc7' }}>→</span>
-          {editingField === 'end' ? (
-            <input
-              type="date"
-              value={customEnd ?? toDateStr(endDate)}
-              onChange={e => setCustomEnd(e.target.value)}
-              onBlur={() => setEditingField(null)}
-              autoFocus
-              style={{ fontSize: '0.6rem', color: '#6b7280', border: '1px solid #E8E5E0', borderRadius: 4, padding: '0.1rem 0.25rem', background: '#fff', outline: 'none' }}
-            />
-          ) : (
-            <button
-              onClick={() => setEditingField('end')}
-              title="Click to change end date"
-              style={{ fontSize: '0.6rem', color: '#9ca3af', background: 'none', border: '1px solid transparent', borderRadius: 4, padding: '0.1rem 0.35rem', cursor: 'pointer', lineHeight: 1.4 }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5E0'; (e.currentTarget as HTMLButtonElement).style.color = '#6b7280' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af' }}
-            >
-              {formatLabel(toDateStr(endDate))}
-            </button>
-          )}
-        </div>
-
         <div style={{ flex: 1 }} />
         {milestones.length > 1 && (
           <button
@@ -469,7 +424,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
       </div>
 
       {/* ── Track area ── */}
-      <div style={{ padding: `${paddingTopPx}px 1.5rem 0.75rem`, position: 'relative' }}>
+      <div style={{ padding: `${paddingTopPx}px 7.5% 0.75rem`, position: 'relative' }}>
         <div
           ref={barRef}
           onMouseMove={handleMouseMove}
@@ -504,6 +459,62 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
               transform: 'translateX(-50%)', pointerEvents: 'none',
             }} />
           ))}
+
+          {/* Start date label — left edge of bar, clickable to edit range start */}
+          <div
+            onClick={e => { e.stopPropagation(); setEditingField(editingField === 'start' ? null : 'start') }}
+            title="Click to change start date"
+            style={{
+              position: 'absolute', left: 18,
+              top: LINE_Y - Math.floor(TRACK_H / 2), height: TRACK_H,
+              display: 'flex', alignItems: 'center',
+              zIndex: 8, cursor: 'pointer',
+            }}
+          >
+            {editingField === 'start' ? (
+              <input
+                type="date"
+                value={customStart ?? toDateStr(startDate)}
+                onChange={e => setCustomStart(e.target.value)}
+                onBlur={() => setEditingField(null)}
+                autoFocus
+                onClick={e => e.stopPropagation()}
+                style={{ fontSize: '0.5rem', border: '1px solid #c9a96e', borderRadius: 3, padding: '0.05rem 0.2rem', background: '#fff', outline: 'none', color: '#374151', width: 88 }}
+              />
+            ) : (
+              <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#ffffffcc', letterSpacing: '0.03em', pointerEvents: 'none' }}>
+                {formatLabel(toDateStr(startDate))}
+              </span>
+            )}
+          </div>
+
+          {/* End date label — right edge of bar, clickable to edit range end */}
+          <div
+            onClick={e => { e.stopPropagation(); setEditingField(editingField === 'end' ? null : 'end') }}
+            title="Click to change end date"
+            style={{
+              position: 'absolute', right: 22,
+              top: LINE_Y - Math.floor(TRACK_H / 2), height: TRACK_H,
+              display: 'flex', alignItems: 'center',
+              zIndex: 8, cursor: 'pointer',
+            }}
+          >
+            {editingField === 'end' ? (
+              <input
+                type="date"
+                value={customEnd ?? toDateStr(endDate)}
+                onChange={e => setCustomEnd(e.target.value)}
+                onBlur={() => setEditingField(null)}
+                autoFocus
+                onClick={e => e.stopPropagation()}
+                style={{ fontSize: '0.5rem', border: '1px solid #c9a96e', borderRadius: 3, padding: '0.05rem 0.2rem', background: '#fff', outline: 'none', color: '#374151', width: 88 }}
+              />
+            ) : (
+              <span style={{ fontSize: '0.5rem', fontWeight: 700, color: '#c9a96ecc', letterSpacing: '0.03em', pointerEvents: 'none' }}>
+                {formatLabel(toDateStr(endDate))}
+              </span>
+            )}
+          </div>
 
           {/* Track: notched-start left + arrowhead right, clip-path wrapper */}
           <div style={{
