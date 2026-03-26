@@ -50,13 +50,13 @@ function getMilestoneStatus(ms: Milestone, linkedTasks: Task[], completedCount: 
 }
 
 // ── Layout constants ──────────────────────────────────────────────────────────
-const LINE_Y    = 56  // px from top of bar div
-const TRACK_H   = 24  // track bar height (tall enough for TODAY text)
-const L_SPACING = 30  // px between label levels
+const LINE_Y    = 60  // px from top of bar div
+const TRACK_H   = 48  // track bar height (double-thick, fits TODAY text)
+const L_SPACING = 34  // px between label levels
 const CHAR_PX   = 7.5 // approx px per char at 0.65rem font
 
 function labelOffset(level: 1 | 2 | 3): number {
-  return 6 + (level - 1) * L_SPACING  // L1=6, L2=36, L3=66
+  return 8 + (level - 1) * L_SPACING  // L1=8, L2=42, L3=76
 }
 
 export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onCollapse }: Props) {
@@ -147,13 +147,15 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   ]
 
   const milestoneLayout: Map<string, { row: 'above' | 'below'; level: 1 | 2 | 3 }> = (() => {
-    const MIN_PX = 40  // minimum label half-width in px
+    const MIN_PX = 44  // minimum label half-width in px
+    const DATE_CHARS = 7  // e.g. "15 Jan" is ~6-7 chars
     const sorted = [...milestones]
       .map(ms => ({
         id:  ms.id,
         pct: pctOf(new Date(ms.target_date + 'T00:00:00')),
-        // hw = half-label-width in pct (using actual bar width)
-        hw: Math.max(MIN_PX / barWidth * 100, (ms.name.length * CHAR_PX * 0.5) / barWidth * 100),
+        // hw = half of the wider of name vs date label, in pct
+        hw: Math.max(MIN_PX / barWidth * 100,
+          (Math.max(ms.name.length, DATE_CHARS) * CHAR_PX * 0.5) / barWidth * 100),
       }))
       .sort((a, b) => a.pct - b.pct)
 
@@ -203,13 +205,10 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
     return layout
   })()
 
-  // Dynamic container sizing based on max level used
-  const maxLevel: 1 | 2 | 3 = milestones.length === 0 ? 1 :
-    (Math.max(1, ...[...milestoneLayout.values()].map(v => v.level)) as 1 | 2 | 3)
-  const aboveNeed   = 11 + labelOffset(maxLevel) + 20 + 12  // div-radius + offset + label-h + breathing
-  const belowNeed   = 11 + labelOffset(maxLevel) + 20 + 8
-  const paddingTopPx = Math.max(52, aboveNeed)
-  const barHeightPx  = Math.max(120, LINE_Y + belowNeed)
+  // Fixed container sizing — always allocates space for 3 levels above & below.
+  // Never grows when milestones are added, giving a stable frame height.
+  const paddingTopPx = 130  // room for 3 label rows above the track
+  const barHeightPx  = 200  // LINE_Y + room for 3 label rows below the track
 
   // ── Tick marks ──
   const useWeekly = totalDays <= 60
@@ -388,7 +387,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   const selectedMs = milestones.find(m => m.id === selectedId)
 
   return (
-    <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
+    <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', flexShrink: 0, position: 'relative', zIndex: 10, overflow: 'hidden' }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.5rem 0', flexWrap: 'wrap' }}>
@@ -450,6 +449,20 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
         </div>
 
         <div style={{ flex: 1 }} />
+        {milestones.length > 1 && (
+          <button
+            onClick={() => setLabelOffsets({})}
+            title="Reset all label positions to auto-layout"
+            style={{
+              fontSize: '0.58rem', fontWeight: 600, padding: '0.15rem 0.5rem',
+              border: '1px solid #E8E5E0', borderRadius: 6, background: '#fff',
+              color: '#9ca3af', cursor: 'pointer', whiteSpace: 'nowrap',
+              transition: 'all 0.12s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c9a96e'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#c9a96e' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5E0' }}
+          >⊞ Auto Arrange</button>
+        )}
         <span style={{ fontSize: '0.58rem', color: '#d1cdc7', fontStyle: 'italic' }}>
           {milestones.length === 0 ? 'Click track to add' : 'Click to manage · Drag to reschedule'}
         </span>
@@ -521,10 +534,13 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           }} />
           <div style={{
             position: 'absolute', left: `${todayPct}%`,
-            top: LINE_Y - Math.floor(TRACK_H / 2) + 1,
-            transform: 'translateX(calc(-100% - 4px))', background: '#c9a96e', color: '#fff',
-            fontSize: '0.5rem', fontWeight: 800, padding: '0.1rem 0.35rem',
-            borderRadius: 3, whiteSpace: 'nowrap', letterSpacing: '0.05em',
+            top: LINE_Y - Math.floor(TRACK_H / 2),
+            height: TRACK_H,
+            transform: 'translateX(calc(-100% - 4px))',
+            display: 'flex', alignItems: 'center',
+            background: '#c9a96e', color: '#fff',
+            fontSize: '0.5rem', fontWeight: 800, padding: '0 0.4rem',
+            borderRadius: 4, whiteSpace: 'nowrap', letterSpacing: '0.05em',
             pointerEvents: 'none', zIndex: 5,
           }}>{todayLabel}</div>
 
@@ -647,7 +663,15 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                         fontSize: '0.65rem', fontWeight: 600,
                         color: isSelected ? status.color : isDragging ? '#c9a96e' : '#374151',
                         opacity: isDragging ? 0.7 : 1,
+                        lineHeight: 1.3,
                       }}>{ms.name}</div>
+                      <div style={{
+                        fontSize: '0.55rem', fontWeight: 500,
+                        color: status.color,
+                        opacity: isDragging ? 0.6 : 0.9,
+                        marginTop: 1,
+                        lineHeight: 1.2,
+                      }}>{formatLabel(ms.target_date)}</div>
                     </div>
                   )
                 })()}
