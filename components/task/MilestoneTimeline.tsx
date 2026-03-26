@@ -69,16 +69,20 @@ function computeAutoArrangeOffsets(
 ): Record<string, { dx: number; dy: number }> {
   if (milestones.length === 0) return {}
 
-  const MIN_HW = 40     // minimum label half-width in px
-  const H_GAP  = 10     // minimum horizontal gap between adjacent labels
-  const NUM_ROWS = 3    // rows: dy = 0, L_SPACING, 2×L_SPACING
+  // Label font is 0.65rem (~10.4px at 16px base), weight 600.
+  // Measured avg char width ≈ 5.5px; date sub-line is narrower so name is the bottleneck.
+  const LABEL_CHAR_PX = 5.5
+  const MIN_HW = 28    // minimum label half-width in px (~7 chars centred)
+  const H_GAP  = 4     // minimum horizontal gap between adjacent label edges
+  const NUM_ROWS = 3   // rows: dy = 0, L_SPACING, 2×L_SPACING
 
   // Build items sorted by horizontal position
   const items = milestones.map(ms => {
     const d   = new Date(ms.target_date + 'T00:00:00')
     const pct = Math.min(100, Math.max(0, diffDays(startDate, d) / totalDays * 100))
     const cx  = pct / 100 * barWidthPx
-    const hw  = Math.max(MIN_HW, Math.max(ms.name.length, 7) * CHAR_PX * 0.5)
+    // half-width = half of the wider between name and "dd Mon" date string
+    const hw  = Math.max(MIN_HW, Math.max(ms.name.length, 6) * LABEL_CHAR_PX * 0.5)
     return { id: ms.id, cx, hw, dx: 0, dy: 0 }
   }).sort((a, b) => a.cx - b.cx)
 
@@ -87,12 +91,12 @@ function computeAutoArrangeOffsets(
 
   for (const item of items) {
     let placed = false
-    // Try each row: pick first one with enough clearance
+    // Try each row in order: pick first one with enough clearance
     for (let r = 0; r < NUM_ROWS; r++) {
       if (item.cx - item.hw >= rowRight[r] + H_GAP) {
-        item.dy      = r * L_SPACING
-        rowRight[r]  = item.cx + item.hw
-        placed       = true
+        item.dy     = r * L_SPACING
+        rowRight[r] = item.cx + item.hw
+        placed      = true
         break
       }
     }
