@@ -385,7 +385,9 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           </span>
         )}
         {onCollapse && (
-          <button onClick={onCollapse} style={{ fontSize: '0.6rem', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: '0.25rem' }}>▾ collapse</button>
+          <button onClick={onCollapse} title="Collapse timeline" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8.5L10 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
         )}
 
         {/* ── Inline date range editor ── */}
@@ -506,7 +508,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             borderRadius: 1, pointerEvents: 'none',
           }} />
           <div style={{
-            position: 'absolute', left: `${todayPct}%`, top: 2,
+            position: 'absolute', left: `${todayPct}%`, top: LINE_Y - 26,
             transform: 'translateX(-50%)', background: '#c9a96e', color: '#fff',
             fontSize: '0.5rem', fontWeight: 800, padding: '0.1rem 0.35rem',
             borderRadius: 4, whiteSpace: 'nowrap', letterSpacing: '0.05em',
@@ -582,20 +584,25 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
-                {/* Connector stem for L2/L3 labels */}
-                {level > 1 && (
-                  <div style={{
-                    position: 'absolute',
-                    left: '50%', transform: 'translateX(-50%)',
-                    width: 1,
-                    height: (level - 1) * L_SPACING,
-                    background: `${status.color}60`,
-                    ...(isAbove
-                      ? { bottom: `calc(100% + 6px)` }
-                      : { top:    `calc(100% + 6px)` }),
-                    pointerEvents: 'none',
-                  }} />
-                )}
+                {/* Dynamic connector: always connects diamond to label, updates on drag */}
+                {(() => {
+                  const lOff = labelOffsets[ms.id] ?? { dx: 0, dy: 0 }
+                  // Label center relative to hit-area center (0,0)
+                  const autoY = isAbove ? -(12 + offset + 7) : (12 + offset + 7)
+                  const x2 = lOff.dx
+                  const y2 = autoY + lOff.dy
+                  const y1 = isAbove ? -8 : 8  // diamond surface
+                  const isDragged = lOff.dx !== 0 || lOff.dy !== 0
+                  return (
+                    <svg style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', overflow: 'visible', pointerEvents: 'none', zIndex: 0 }} width={0} height={0}>
+                      <line x1={0} y1={y1} x2={x2} y2={y2}
+                        stroke={`${status.color}${isDragged ? 'b0' : '60'}`}
+                        strokeWidth={isDragged ? 1.5 : 1}
+                        strokeDasharray={isDragged ? '4 3' : '3 3'}
+                      />
+                    </svg>
+                  )
+                })()}
 
                 {/* Static label — draggable, name only */}
                 {(() => {

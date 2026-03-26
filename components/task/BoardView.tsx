@@ -232,12 +232,6 @@ export function BoardView({
           <button className="btn-ghost" onClick={copyLink} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }}>
             {copiedLink ? '✓ Copied' : '🔗 Share'}
           </button>
-          <button
-            onClick={() => setShowFilePanel(p => !p)}
-            style={{ padding: '0.375rem 0.5rem', background: showFilePanel ? '#fdf6ed' : 'transparent', border: `1.5px solid ${showFilePanel ? '#f0e4d0' : '#E8E5E0'}`, borderRadius: '8px', color: showFilePanel ? '#c9a96e' : '#9ca3af', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1, transition: 'all 0.15s ease' }}
-          >
-            📁
-          </button>
         </div>
       </header>
 
@@ -257,98 +251,123 @@ export function BoardView({
             onCollapse={() => setShowTimeline(false)}
           />
         ) : (
-          <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', padding: '0.4rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+          <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', padding: '0.35rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
             <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Timeline</span>
             {milestones.length > 0 && <span style={{ fontSize: '0.6rem', color: '#c4bfb9', background: '#F3F4F6', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>{milestones.length}</span>}
-            <button onClick={() => setShowTimeline(true)} style={{ marginLeft: '0.25rem', fontSize: '0.6rem', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>▸ expand</button>
+            <button onClick={() => setShowTimeline(true)} title="Expand timeline" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>
           </div>
         )}
 
-        {/* Kanban — collapsible */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1.5rem', background: '#FAF9F7', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
-          <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Board</span>
-          <button onClick={() => setShowKanban(p => !p)} style={{ fontSize: '0.6rem', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginLeft: '0.25rem' }}>
-            {showKanban ? '▾ collapse' : '▸ expand'}
-          </button>
-        </div>
-
-        {/* Kanban + file panel */}
-        <div style={{ flex: 1, display: showKanban ? 'flex' : 'none', minHeight: 0 }}>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={columnAwareCollision}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: '1rem 1.5rem 1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-            <SortableContext items={columns.map(c => `col-${c.id}`)} strategy={horizontalListSortingStrategy}>
-            {columns.map(col => {
-              const colTasks = tasks.filter(t => t.column_id === col.id).sort((a, b) => a.position - b.position)
-              return (
-                <KanbanColumn
-                  key={col.id}
-                  column={col}
-                  tasks={colTasks}
-                  members={members}
-                  currentMember={currentMember}
-                  isDoneColumn={col.name === 'Done'}
-                  onAddTask={() => setAddTaskColumnId(col.id)}
-                  onAssignTask={onAssignTask}
-                  onTaskClick={setSelectedTask}
-                  onRenameColumn={(name) => onRenameColumn(col.id, name)}
-                  onDeleteColumn={columns.length > 1 ? () => setDeleteColConfirm({ columnId: col.id, columnName: col.name }) : undefined}
-                />
-              )
-            })}
-            </SortableContext>
-
-            {/* Add column */}
-            {columns.length < 6 && (
-              <div style={{ flexShrink: 0, width: 240 }}>
-                {showAddColumn ? (
-                  <form onSubmit={handleAddColumn} className="animate-slideDown" style={{ background: '#FFFFFF', border: '1.5px solid #E8E5E0', borderRadius: '14px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                    <input className="input-base" type="text" placeholder="Column name" value={newColumnName} onChange={e => setNewColumnName(e.target.value)} maxLength={24} autoFocus required />
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <button type="submit" className="btn-primary" disabled={addingColumn || !newColumnName.trim()} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Add</button>
-                      <button type="button" className="btn-ghost" onClick={() => { setShowAddColumn(false); setNewColumnName('') }} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Cancel</button>
-                    </div>
-                  </form>
-                ) : (
-                  <button className="btn-ghost" onClick={() => setShowAddColumn(true)} style={{ fontSize: '0.8rem', color: '#c4bfb9', padding: '0.375rem 0.5rem' }}>
-                    + Add column
-                  </button>
-                )}
-              </div>
-            )}
+        {/* Kanban + Files — flex row */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+          {/* Board section header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 1.5rem', background: '#FAF9F7', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
+            <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Board</span>
+            <button onClick={() => setShowKanban(p => !p)} title={showKanban ? 'Collapse board' : 'Expand board'} style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d={showKanban ? "M2 4.5L6 8.5L10 4.5" : "M4.5 2L8.5 6L4.5 10"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
           </div>
 
-          {/* Drag overlay — floating card/column while dragging */}
-          <DragOverlay>
-            {activeTask && (
-              <div style={{ transform: 'rotate(2deg)', opacity: 0.95, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))' }}>
-                <TaskCard
-                  task={activeTask}
-                  members={members}
-                  currentMember={currentMember}
-                  isDoneColumn={false}
-                  onAssign={async () => {}}
-                  onClick={() => {}}
-                />
-              </div>
-            )}
-            {activeColumn && (
-              <div style={{ width: 280, background: '#FFFFFF', borderRadius: 14, padding: '0.5rem 0.75rem', opacity: 0.9, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', transform: 'rotate(1deg)' }}>
-                <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1a1a1a' }}>{activeColumn.name}</div>
-              </div>
-            )}
-          </DragOverlay>
-        </DndContext>
+          {/* Board + Files content row */}
+          <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={columnAwareCollision}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            {showKanban && (
+            <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: '1rem 1.5rem 1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
+              <SortableContext items={columns.map(c => `col-${c.id}`)} strategy={horizontalListSortingStrategy}>
+              {columns.map(col => {
+                const colTasks = tasks.filter(t => t.column_id === col.id).sort((a, b) => a.position - b.position)
+                return (
+                  <KanbanColumn
+                    key={col.id}
+                    column={col}
+                    tasks={colTasks}
+                    members={members}
+                    currentMember={currentMember}
+                    isDoneColumn={col.name === 'Done'}
+                    onAddTask={() => setAddTaskColumnId(col.id)}
+                    onAssignTask={onAssignTask}
+                    onTaskClick={setSelectedTask}
+                    onRenameColumn={(name) => onRenameColumn(col.id, name)}
+                    onDeleteColumn={columns.length > 1 ? () => setDeleteColConfirm({ columnId: col.id, columnName: col.name }) : undefined}
+                  />
+                )
+              })}
+              </SortableContext>
 
-        {showFilePanel && (
-          <div style={{ flexShrink: 0, alignSelf: 'stretch', display: 'flex' }}>
-            <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} />
+              {/* Add column */}
+              {columns.length < 6 && (
+                <div style={{ flexShrink: 0, width: 240 }}>
+                  {showAddColumn ? (
+                    <form onSubmit={handleAddColumn} className="animate-slideDown" style={{ background: '#FFFFFF', border: '1.5px solid #E8E5E0', borderRadius: '14px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                      <input className="input-base" type="text" placeholder="Column name" value={newColumnName} onChange={e => setNewColumnName(e.target.value)} maxLength={24} autoFocus required />
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button type="submit" className="btn-primary" disabled={addingColumn || !newColumnName.trim()} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Add</button>
+                        <button type="button" className="btn-ghost" onClick={() => { setShowAddColumn(false); setNewColumnName('') }} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Cancel</button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button className="btn-ghost" onClick={() => setShowAddColumn(true)} style={{ fontSize: '0.8rem', color: '#c4bfb9', padding: '0.375rem 0.5rem' }}>
+                      + Add column
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            )}
+
+            {/* Drag overlay — floating card/column while dragging */}
+            <DragOverlay>
+              {activeTask && (
+                <div style={{ transform: 'rotate(2deg)', opacity: 0.95, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))' }}>
+                  <TaskCard
+                    task={activeTask}
+                    members={members}
+                    currentMember={currentMember}
+                    isDoneColumn={false}
+                    onAssign={async () => {}}
+                    onClick={() => {}}
+                  />
+                </div>
+              )}
+              {activeColumn && (
+                <div style={{ width: 280, background: '#FFFFFF', borderRadius: 14, padding: '0.5rem 0.75rem', opacity: 0.9, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', transform: 'rotate(1deg)' }}>
+                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1a1a1a' }}>{activeColumn.name}</div>
+                </div>
+              )}
+            </DragOverlay>
+          </DndContext>
+
+          {/* Files — independently collapsible */}
+          {showFilePanel ? (
+            <div style={{ flexShrink: 0, alignSelf: 'stretch', display: 'flex', flexDirection: 'column', borderLeft: '1.5px solid #E8E5E0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.75rem', background: '#FAFAFA', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
+                <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Files</span>
+                <button onClick={() => setShowFilePanel(false)} title="Collapse files" style={{ marginLeft: 'auto', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6L7.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </div>
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ flexShrink: 0, width: 36, borderLeft: '1.5px solid #E8E5E0', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0.5rem 0', gap: '0.5rem', background: '#FAFAFA' }}>
+              <span style={{ fontSize: '0.8rem' }}>📁</span>
+              <button onClick={() => setShowFilePanel(true)} title="Expand files" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            </div>
+          )}
           </div>
-        )}
         </div>
       </div>
 
