@@ -96,6 +96,8 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
   const dragRef = useRef<{ pct: number | null; milestones: Milestone[]; startDate: Date; totalDays: number }>({
     pct: null, milestones: [], startDate: new Date(), totalDays: 1,
   })
+  // Track whether mouse actually moved during drag (to distinguish click from drag)
+  const hasDraggedRef = useRef(false)
 
   // ── Date range ──
   const today = new Date(); today.setHours(0,0,0,0)
@@ -311,6 +313,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
     }
     const onMove = (e: MouseEvent) => {
       if (!barRef.current) return
+      hasDraggedRef.current = true
       const rect = barRef.current.getBoundingClientRect()
       const p = Math.min(100, Math.max(0, (e.clientX - rect.left) / rect.width * 100))
       dragRef.current.pct = p
@@ -516,7 +519,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                 key={ms.id}
                 data-ms-dot="1"
                 onClick={e => {
-                  if (isDragging) return
+                  if (hasDraggedRef.current) return
                   e.stopPropagation()
                   setPendingPct(null)
                   setSelectedId(isSelected ? null : ms.id)
@@ -525,8 +528,8 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                 onMouseEnter={() => { if (!draggingId) setHoveredId(ms.id) }}
                 onMouseLeave={() => setHoveredId(null)}
                 onMouseDown={e => {
-                  e.preventDefault()
                   e.stopPropagation()
+                  hasDraggedRef.current = false
                   setDraggingId(ms.id)
                   setDragPct(pct)
                   dragRef.current.pct = pct
