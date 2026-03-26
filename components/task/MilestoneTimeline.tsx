@@ -522,7 +522,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
           <div style={{
             position: 'absolute', left: `${todayPct}%`,
             top: LINE_Y - Math.floor(TRACK_H / 2) + 1,
-            transform: 'translateX(-100%)', background: '#c9a96e', color: '#fff',
+            transform: 'translateX(calc(-100% - 4px))', background: '#c9a96e', color: '#fff',
             fontSize: '0.5rem', fontWeight: 800, padding: '0.1rem 0.35rem',
             borderRadius: 3, whiteSpace: 'nowrap', letterSpacing: '0.05em',
             pointerEvents: 'none', zIndex: 5,
