@@ -60,6 +60,56 @@ function labelOffset(level: 1 | 2 | 3): number {
   return 8 + (level - 1) * L_SPACING  // L1=8, L2=34, L3=60
 }
 
+// ── Auto-arrange: resolve overlaps by staggering rows then pushing horizontally ─
+function computeAutoArrangeOffsets(
+  milestones: Milestone[],
+  barWidthPx: number,
+  startDate: Date,
+  totalDays: number,
+): Record<string, { dx: number; dy: number }> {
+  if (milestones.length === 0) return {}
+
+  const MIN_HW = 40     // minimum label half-width in px
+  const H_GAP  = 10     // minimum horizontal gap between adjacent labels
+  const NUM_ROWS = 3    // rows: dy = 0, L_SPACING, 2×L_SPACING
+
+  // Build items sorted by horizontal position
+  const items = milestones.map(ms => {
+    const d   = new Date(ms.target_date + 'T00:00:00')
+    const pct = Math.min(100, Math.max(0, diffDays(startDate, d) / totalDays * 100))
+    const cx  = pct / 100 * barWidthPx
+    const hw  = Math.max(MIN_HW, Math.max(ms.name.length, 7) * CHAR_PX * 0.5)
+    return { id: ms.id, cx, hw, dx: 0, dy: 0 }
+  }).sort((a, b) => a.cx - b.cx)
+
+  // rowRight[r] = right edge of the last label placed in row r
+  const rowRight = Array.from({ length: NUM_ROWS }, () => -Infinity) as number[]
+
+  for (const item of items) {
+    let placed = false
+    // Try each row: pick first one with enough clearance
+    for (let r = 0; r < NUM_ROWS; r++) {
+      if (item.cx - item.hw >= rowRight[r] + H_GAP) {
+        item.dy      = r * L_SPACING
+        rowRight[r]  = item.cx + item.hw
+        placed       = true
+        break
+      }
+    }
+    if (!placed) {
+      // All rows crowded — stay in row 0, push label right until it clears
+      const needed = rowRight[0] + H_GAP + item.hw
+      if (item.cx < needed) item.dx = needed - item.cx
+      item.dy     = 0
+      rowRight[0] = item.cx + item.dx + item.hw
+    }
+  }
+
+  const result: Record<string, { dx: number; dy: number }> = {}
+  for (const item of items) result[item.id] = { dx: item.dx, dy: item.dy }
+  return result
+}
+
 export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onCollapse }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
 
@@ -127,6 +177,17 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
     dragRef.current.startDate  = startDate
     dragRef.current.totalDays  = totalDays
   }, [milestones, startDate, totalDays])
+
+  // Auto-arrange whenever milestones or bar size changes (skip if user has manual offsets)
+  const prevMsIds = useRef<string>('')
+  useEffect(() => {
+    if (barWidth <= 0) return
+    const ids = milestones.map(m => m.id).sort().join(',')
+    if (ids === prevMsIds.current) return   // only re-run when milestone set changes
+    prevMsIds.current = ids
+    setLabelOffsets(computeAutoArrangeOffsets(milestones, barWidth, startDate, totalDays))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [milestones, barWidth])
 
   function pctOf(d: Date) {
     return Math.min(100, Math.max(0, (diffDays(startDate, d) / totalDays) * 100))
@@ -392,8 +453,8 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
         <div style={{ flex: 1 }} />
         {milestones.length > 1 && (
           <button
-            onClick={() => setLabelOffsets({})}
-            title="Reset all label positions to auto-layout"
+            onClick={() => setLabelOffsets(computeAutoArrangeOffsets(milestones, barWidth, startDate, totalDays))}
+            title="Auto-arrange labels to avoid overlaps"
             style={{
               fontSize: '0.58rem', fontWeight: 600, padding: '0.15rem 0.5rem',
               border: '1px solid #E8E5E0', borderRadius: 6, background: '#fff',
