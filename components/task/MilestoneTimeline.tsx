@@ -131,6 +131,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
     return Math.min(100, Math.max(0, (diffDays(startDate, d) / totalDays) * 100))
   }
   const todayPct = pctOf(today)
+  const todayLabel = `TODAY · ${today.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
 
   // ── 6-slot label layout (accurate pixel-based) ──
   type SlotKey = 'above-1' | 'above-2' | 'above-3' | 'below-1' | 'below-2' | 'below-3'
@@ -337,16 +338,29 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
     }
   }, [draggingId])
 
-  // Label drag — always active, lightweight
+  // Label drag — always active, lightweight, with snap
+  const SNAP_THRESH = 14
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
       if (!labelDragRef.current) return
       labelMovedRef.current = true
       const { id, startX, startY, startDx, startDy } = labelDragRef.current
-      setLabelOffsets(prev => ({
-        ...prev,
-        [id]: { dx: startDx + e.clientX - startX, dy: startDy + e.clientY - startY },
-      }))
+      let newDx = startDx + e.clientX - startX
+      let newDy = startDy + e.clientY - startY
+      // Snap: vertical axis (dx → 0)
+      if (Math.abs(newDx) < SNAP_THRESH) newDx = 0
+      // Snap: horizontal axis (dy → 0)
+      if (Math.abs(newDy) < SNAP_THRESH) newDy = 0
+      // Snap: 45° diagonal (dx = dy) — only when not already axis-snapped
+      if (newDx !== 0 && newDy !== 0 && Math.abs(Math.abs(newDx) - Math.abs(newDy)) < SNAP_THRESH) {
+        const sign = newDx * newDy > 0 ? 1 : -1
+        const avg = (Math.abs(newDx) + Math.abs(newDy)) / 2
+        newDx = Math.sign(newDx) * avg
+        newDy = Math.sign(newDy) * avg
+        // round to same magnitude
+        newDy = sign * newDx
+      }
+      setLabelOffsets(prev => ({ ...prev, [id]: { dx: newDx, dy: newDy } }))
     }
     const onUp = () => { labelDragRef.current = null }
     window.addEventListener('mousemove', onMove)
@@ -508,7 +522,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
             fontSize: '0.5rem', fontWeight: 800, padding: '0.1rem 0.35rem',
             borderRadius: 3, whiteSpace: 'nowrap', letterSpacing: '0.05em',
             pointerEvents: 'none', zIndex: 5,
-          }}>TODAY</div>
+          }}>{todayLabel}</div>
 
           {/* Hover ghost (only when not dragging) */}
           {hoverPct !== null && hoverDate && pendingPct === null && !draggingId && (

@@ -51,6 +51,14 @@ export type MilestoneTask = {
   task_id: string
 }
 
+export type BoardNote = {
+  id: string
+  board_id: string
+  content: string
+  author_name: string | null
+  created_at: string
+}
+
 export type BoardImage = {
   id: string
   board_id: string

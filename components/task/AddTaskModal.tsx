@@ -8,6 +8,7 @@ type Props = {
   columns: Column[]
   members: Member[]
   currentMember: Member
+  initialTitle?: string
   onClose: () => void
   onSubmit: (params: {
     columnId: string
@@ -18,8 +19,8 @@ type Props = {
   }) => Promise<void>
 }
 
-export function AddTaskModal({ columnId, columns, onClose, onSubmit }: Props) {
-  const [title, setTitle] = useState('')
+export function AddTaskModal({ columnId, columns, initialTitle, onClose, onSubmit }: Props) {
+  const [title, setTitle] = useState(initialTitle ?? '')
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [submitting, setSubmitting] = useState(false)

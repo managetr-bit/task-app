@@ -14,7 +14,7 @@ import {
   type CollisionDetection,
 } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable'
-import { type Board, type Column, type Member, type Task, type Milestone, type MilestoneTask, type Priority } from '@/lib/types'
+import { type Board, type Column, type Member, type Task, type Milestone, type MilestoneTask, type Priority, type BoardNote } from '@/lib/types'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCard } from './TaskCard'
 import { AddTaskModal } from './AddTaskModal'
@@ -23,6 +23,8 @@ import { ProgressArc } from './ProgressArc'
 import { MembersBar } from './MembersBar'
 import { FilePanel } from './FilePanel'
 import { MilestoneTimeline } from './MilestoneTimeline'
+import { NotesPanel } from './NotesPanel'
+import { Whiteboard } from './Whiteboard'
 
 type Props = {
   board: Board
@@ -56,6 +58,9 @@ type Props = {
   onUpdateMilestoneDate: (milestoneId: string, newDate: string) => Promise<void>
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
+  notes: BoardNote[]
+  onAddNote: (content: string) => Promise<void>
+  onDeleteNote: (noteId: string) => Promise<void>
 }
 
 // Custom collision: column drags only collide with col-* targets; task drags ignore col-* targets
@@ -76,6 +81,7 @@ const columnAwareCollision: CollisionDetection = (args) => {
 export function BoardView({
   board, columns, members, tasks, currentMember, isCreator,
   milestones, milestoneTasks,
+  notes, onAddNote, onDeleteNote,
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
   onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn, onReorderColumn,
   onUpdateFilePanelUrl, onUpdateBoardName,
@@ -96,6 +102,9 @@ export function BoardView({
   const [deleteColConfirm, setDeleteColConfirm] = useState<{ columnId: string; columnName: string } | null>(null)
   const [showTimeline, setShowTimeline] = useState(true)
   const [showKanban, setShowKanban] = useState(true)
+  const [showNotes, setShowNotes] = useState(true)
+  const [showWhiteboard, setShowWhiteboard] = useState(false)
+  const [noteTaskDraft, setNoteTaskDraft] = useState<string | null>(null)
 
   // Sensors: require 8px movement before drag starts — clicks still work
   const sensors = useSensors(
@@ -232,6 +241,9 @@ export function BoardView({
           <button className="btn-ghost" onClick={copyLink} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }}>
             {copiedLink ? '✓ Copied' : '🔗 Share'}
           </button>
+          <button className="btn-ghost" onClick={() => setShowWhiteboard(true)} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }} title="Open whiteboard">
+            🎨 Whiteboard
+          </button>
         </div>
       </header>
 
@@ -346,6 +358,30 @@ export function BoardView({
             </DragOverlay>
           </DndContext>
 
+          {/* Notes — independently collapsible */}
+          {showNotes ? (
+            <NotesPanel
+              notes={notes}
+              columns={columns}
+              boardId={board.id}
+              authorName={currentMember.nickname}
+              onAddNote={onAddNote}
+              onDeleteNote={onDeleteNote}
+              onCollapse={() => setShowNotes(false)}
+              onConvertToTask={content => {
+                setNoteTaskDraft(content)
+                setAddTaskColumnId(columns[0]?.id ?? null)
+              }}
+            />
+          ) : (
+            <div style={{ flexShrink: 0, width: 36, borderLeft: '1.5px solid #E8E5E0', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0.5rem 0', gap: '0.5rem', background: '#FAFAFA' }}>
+              <span style={{ fontSize: '0.8rem' }}>📝</span>
+              <button onClick={() => setShowNotes(true)} title="Expand notes" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            </div>
+          )}
+
           {/* Files — independently collapsible */}
           {showFilePanel ? (
             <div style={{ flexShrink: 0, alignSelf: 'stretch', display: 'flex', flexDirection: 'column', borderLeft: '1.5px solid #E8E5E0' }}>
@@ -378,8 +414,9 @@ export function BoardView({
           columns={columns}
           members={members}
           currentMember={currentMember}
-          onClose={() => setAddTaskColumnId(null)}
-          onSubmit={async params => { await onCreateTask(params); setAddTaskColumnId(null) }}
+          initialTitle={noteTaskDraft ?? undefined}
+          onClose={() => { setAddTaskColumnId(null); setNoteTaskDraft(null) }}
+          onSubmit={async params => { await onCreateTask(params); setAddTaskColumnId(null); setNoteTaskDraft(null) }}
         />
       )}
 
@@ -395,6 +432,11 @@ export function BoardView({
           onUpdate={onUpdateTask}
           onDelete={async id => { await onDeleteTask(id); setSelectedTask(null) }}
         />
+      )}
+
+      {/* Whiteboard modal */}
+      {showWhiteboard && (
+        <Whiteboard boardId={board.id} onClose={() => setShowWhiteboard(false)} />
       )}
 
       {/* Delete column confirmation */}

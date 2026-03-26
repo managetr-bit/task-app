@@ -11,6 +11,7 @@ import {
   type MilestoneTask,
   type LocalSession,
   type Priority,
+  type BoardNote,
   MEMBER_COLORS,
   DEFAULT_COLUMNS,
 } from '@/lib/types'
@@ -58,6 +59,7 @@ export function BoardPageClient({ boardId }: Props) {
   const [isCreator, setIsCreator] = useState(false)
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [milestoneTasks, setMilestoneTasks] = useState<MilestoneTask[]>([])
+  const [notes, setNotes] = useState<BoardNote[]>([])
 
   // ── Initial load ──
   useEffect(() => {
@@ -76,13 +78,14 @@ export function BoardPageClient({ boardId }: Props) {
       }
       setBoard(boardData)
 
-      // Fetch columns, members, tasks, milestones in parallel
-      const [colRes, memRes, taskRes, msRes, mtRes] = await Promise.all([
+      // Fetch columns, members, tasks, milestones, notes in parallel
+      const [colRes, memRes, taskRes, msRes, mtRes, notesRes] = await Promise.all([
         supabase.from('columns').select('*').eq('board_id', boardId).order('position'),
         supabase.from('members').select('*').eq('board_id', boardId).order('joined_at'),
         supabase.from('tasks').select('*').eq('board_id', boardId).order('position'),
         supabase.from('milestones').select('*').eq('board_id', boardId).order('target_date'),
         supabase.from('milestone_tasks').select('*'),
+        supabase.from('board_notes').select('*').eq('board_id', boardId).order('created_at', { ascending: false }),
       ])
 
       setColumns(colRes.data ?? [])
@@ -90,6 +93,7 @@ export function BoardPageClient({ boardId }: Props) {
       setTasks(taskRes.data ?? [])
       setMilestones(msRes.data ?? [])
       setMilestoneTasks(mtRes.data ?? [])
+      setNotes(notesRes.data ?? [])
 
       // Check if current user created this board
       try {
@@ -194,6 +198,20 @@ export function BoardPageClient({ boardId }: Props) {
           } else if (payload.eventType === 'DELETE') {
             const old = payload.old as MilestoneTask
             setMilestoneTasks(prev => prev.filter(mt => !(mt.milestone_id === old.milestone_id && mt.task_id === old.task_id)))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'board_notes', filter: `board_id=eq.${boardId}` },
+        payload => {
+          if (payload.eventType === 'INSERT') {
+            setNotes(prev => {
+              if (prev.some(n => n.id === (payload.new as BoardNote).id)) return prev
+              return [payload.new as BoardNote, ...prev]
+            })
+          } else if (payload.eventType === 'DELETE') {
+            setNotes(prev => prev.filter(n => n.id !== (payload.old as BoardNote).id))
           }
         }
       )
@@ -407,6 +425,22 @@ export function BoardPageClient({ boardId }: Props) {
     if (error) console.error('updateMilestoneDate error:', error)
   }, [])
 
+  const addNote = useCallback(async (content: string) => {
+    if (!currentMember) return
+    const { data, error } = await supabase
+      .from('board_notes')
+      .insert({ board_id: boardId, content, author_name: currentMember.nickname })
+      .select()
+      .single()
+    if (error) console.error('addNote error:', error)
+    if (data) setNotes(prev => [data, ...prev])
+  }, [boardId, currentMember])
+
+  const deleteNote = useCallback(async (noteId: string) => {
+    setNotes(prev => prev.filter(n => n.id !== noteId))
+    await supabase.from('board_notes').delete().eq('id', noteId)
+  }, [])
+
   const deleteColumn = useCallback(
     async (columnId: string, targetColumnId?: string) => {
       if (targetColumnId) {
@@ -509,6 +543,7 @@ export function BoardPageClient({ boardId }: Props) {
           isCreator={isCreator}
           milestones={milestones}
           milestoneTasks={milestoneTasks}
+          notes={notes}
           onCreateTask={createTask}
           onMoveTask={moveTask}
           onReorderTask={reorderTask}
@@ -526,6 +561,8 @@ export function BoardPageClient({ boardId }: Props) {
           onUpdateMilestoneDate={updateMilestoneDate}
           onLinkTask={linkTask}
           onUnlinkTask={unlinkTask}
+          onAddNote={addNote}
+          onDeleteNote={deleteNote}
         />
       )}
     </>
