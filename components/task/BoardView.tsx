@@ -25,6 +25,8 @@ import { FilePanel } from './FilePanel'
 import { MilestoneTimeline } from './MilestoneTimeline'
 import { NotesPanel } from './NotesPanel'
 import { Whiteboard } from './Whiteboard'
+import { InviteManager } from './InviteManager'
+import { getLocalProfile } from '@/lib/profile'
 
 type Props = {
   board: Board
@@ -101,6 +103,7 @@ export function BoardView({
   const [showKanban, setShowKanban] = useState(true)
   const [showNotes, setShowNotes] = useState(true)
   const [showWhiteboard, setShowWhiteboard] = useState(false)
+  const [showInviteManager, setShowInviteManager] = useState(false)
   const [noteTaskDraft, setNoteTaskDraft] = useState<string | null>(null)
   // Cloud storage settings — Apps Script URL stored per board in localStorage
   const [cloudScriptUrl, setCloudScriptUrl] = useState<string>(() => {
@@ -253,8 +256,8 @@ export function BoardView({
             </span>
           )}
           <ProgressArc pct={progressPct} size={36} />
-          <button className="btn-ghost" onClick={copyLink} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }}>
-            {copiedLink ? '✓ Copied' : '🔗 Share'}
+          <button className="btn-ghost" onClick={() => setShowInviteManager(true)} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }} title="Invite people">
+            👥 Invite
           </button>
           <button className="btn-ghost" onClick={() => setShowWhiteboard(true)} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }} title="Open whiteboard">
             🎨 Whiteboard
@@ -457,6 +460,15 @@ export function BoardView({
       {/* Whiteboard modal */}
       {showWhiteboard && (
         <Whiteboard boardId={board.id} onClose={() => setShowWhiteboard(false)} cloudScriptUrl={cloudScriptUrl || undefined} driveFolderId={driveFolderId} />
+      )}
+
+      {/* Invite manager modal */}
+      {showInviteManager && (
+        <InviteManager
+          boardId={board.id}
+          profile={getLocalProfile()}
+          onClose={() => setShowInviteManager(false)}
+        />
       )}
 
       {/* Delete column confirmation */}

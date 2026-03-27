@@ -14,8 +14,10 @@ import {
   MEMBER_COLORS,
   DEFAULT_COLUMNS,
 } from '@/lib/types'
-import { NicknameModal } from './NicknameModal'
 import { BoardView } from './BoardView'
+import { ProfileSetupModal } from '@/components/ProfileSetupModal'
+import { getLocalProfile, saveLocalProfile, generateProfileId } from '@/lib/profile'
+import { type Profile } from '@/lib/types'
 
 type Props = { boardId: string }
 
@@ -52,7 +54,7 @@ export function BoardPageClient({ boardId }: Props) {
   const [members, setMembers] = useState<Member[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [currentMember, setCurrentMember] = useState<Member | null>(null)
-  const [showNicknameModal, setShowNicknameModal] = useState(false)
+  const [showProfileModal, setShowProfileModal] = useState(false)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [isCreator, setIsCreator] = useState(false)
@@ -96,18 +98,36 @@ export function BoardPageClient({ boardId }: Props) {
         setIsCreator(localStorage.getItem(`task_creator_${boardId}`) === 'true')
       } catch { /* ignore */ }
 
-      // Check for existing session
+      // ── Resolve identity ──
+      // 1. Check existing session for this board
       const session = getSession(boardId)
       if (session) {
         const match = (memRes.data ?? []).find(m => m.id === session.memberId)
         if (match) {
           setCurrentMember(match)
           saveRecentBoard(boardId, boardData.name, match.nickname)
-        } else {
-          setShowNicknameModal(true)
+          setLoading(false)
+          return
         }
+      }
+
+      // 2. Check for persistent profile
+      const profile = getLocalProfile()
+      if (profile) {
+        // Already a member via profile_id?
+        const profileMember = (memRes.data ?? []).find(m => m.profile_id === profile.id)
+        if (profileMember) {
+          setCurrentMember(profileMember)
+          saveRecentBoard(boardId, boardData.name, profile.display_name)
+          saveSession({ boardId, memberId: profileMember.id, nickname: profileMember.nickname, color: profileMember.color })
+          setLoading(false)
+          return
+        }
+        // Auto-join with profile
+        await joinBoardWithProfile(boardData.id, boardData.name, profile, memRes.data ?? [])
       } else {
-        setShowNicknameModal(true)
+        // No profile yet → show setup modal
+        setShowProfileModal(true)
       }
 
       setLoading(false)
@@ -205,31 +225,31 @@ export function BoardPageClient({ boardId }: Props) {
   }, [boardId, board])
 
   // ── Actions ──
-  const joinBoard = useCallback(
-    async (nickname: string) => {
-      const existingColors = members.map(m => m.color)
-      const color = MEMBER_COLORS.find(c => !existingColors.includes(c)) ?? MEMBER_COLORS[members.length % MEMBER_COLORS.length]
+  async function joinBoardWithProfile(bId: string, bName: string, profile: Profile, existingMembers: Member[]) {
+    const existingColors = existingMembers.map(m => m.color)
+    const color = MEMBER_COLORS.find(c => !existingColors.includes(c)) ?? MEMBER_COLORS[existingMembers.length % MEMBER_COLORS.length]
 
-      const { data: member, error } = await supabase
-        .from('members')
-        .insert({ board_id: boardId, nickname, color })
-        .select()
-        .single()
+    const { data: member, error } = await supabase
+      .from('members')
+      .insert({ board_id: bId, nickname: profile.display_name, color, profile_id: profile.id })
+      .select()
+      .single()
 
-      if (error || !member) return
+    if (error || !member) return
 
-      const session: LocalSession = {
-        boardId,
-        memberId: member.id,
-        nickname: member.nickname,
-        color: member.color,
-      }
-      saveSession(session)
-      saveRecentBoard(boardId, board!.name, nickname)
-      setCurrentMember(member)
-      setShowNicknameModal(false)
+    saveSession({ boardId: bId, memberId: member.id, nickname: member.nickname, color: member.color })
+    saveRecentBoard(bId, bName, profile.display_name)
+    setCurrentMember(member)
+    setShowProfileModal(false)
+  }
+
+  const handleProfileComplete = useCallback(
+    async (profile: Profile) => {
+      if (!board) return
+      await joinBoardWithProfile(board.id, board.name, profile, members)
     },
-    [boardId, board, members]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [board, members]
   )
 
   const createTask = useCallback(
@@ -500,13 +520,13 @@ export function BoardPageClient({ boardId }: Props) {
 
   return (
     <>
-      {showNicknameModal && (
-        <NicknameModal
-          boardName={board?.name ?? ''}
-          onJoin={joinBoard}
+      {showProfileModal && board && (
+        <ProfileSetupModal
+          boardName={board.name}
+          onComplete={handleProfileComplete}
         />
       )}
-      {!showNicknameModal && board && currentMember && (
+      {!showProfileModal && board && currentMember && (
         <BoardView
           board={board}
           columns={columns}

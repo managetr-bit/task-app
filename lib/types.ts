@@ -19,6 +19,24 @@ export type Member = {
   nickname: string
   color: string
   joined_at: string
+  profile_id: string | null
+}
+
+export type Profile = {
+  id: string          // client-generated UUID, stored in localStorage
+  display_name: string
+  email?: string
+}
+
+export type InviteToken = {
+  id: string
+  board_id: string
+  created_by: string | null
+  label: string
+  max_uses: number | null
+  uses: number
+  expires_at: string | null
+  created_at: string
 }
 
 export type Priority = 'normal' | 'high'
