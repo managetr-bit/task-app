@@ -414,7 +414,13 @@ export function CostPanel({
           milestones={milestones}
           editing={editingTx}
           onClose={() => { setShowTxModal(false); setEditingTx(null) }}
-          onSave={onAddTransaction}
+          onSave={async (data) => {
+            if (editingTx) {
+              await onUpdateTransaction(editingTx.id, data)
+            } else {
+              await onAddTransaction(data)
+            }
+          }}
           onDelete={editingTx ? onDeleteTransaction : undefined}
         />
       )}
