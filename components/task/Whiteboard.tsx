@@ -173,7 +173,6 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
           scriptUrl: cloudScriptUrl,
           fileName,
           data: canvas.toDataURL('image/png'),
-          folder: 'whiteboard',
           parentFolderId: driveFolderId,
         }),
       })

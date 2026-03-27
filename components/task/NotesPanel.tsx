@@ -102,7 +102,6 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
           scriptUrl: cloudScriptUrl,
           fileName: `notes-${date}.txt`,
           data: text,
-          folder: 'notes',
           parentFolderId: driveFolderId,
         }),
       })
