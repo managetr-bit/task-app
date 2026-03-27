@@ -50,10 +50,10 @@ export default function LandingPage() {
       DEFAULT_COLUMNS.map(c => ({ board_id: board.id, name: c.name, position: c.position }))
     )
 
-    // Auto-join as member
+    // Auto-join as creator
     const { data: member } = await supabase
       .from('members')
-      .insert({ board_id: board.id, nickname: p.display_name, color: '#c9a96e', profile_id: p.id })
+      .insert({ board_id: board.id, nickname: p.display_name, color: '#c9a96e', profile_id: p.id, role: 'creator' })
       .select().single()
 
     if (member) {

@@ -14,7 +14,7 @@ import {
   type CollisionDetection,
 } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable'
-import { type Board, type Column, type Member, type Task, type Milestone, type MilestoneTask, type Priority } from '@/lib/types'
+import { type Board, type Column, type Member, type Task, type Milestone, type MilestoneTask, type Priority, type BudgetLine, type CostTransaction } from '@/lib/types'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCard } from './TaskCard'
 import { AddTaskModal } from './AddTaskModal'
@@ -26,6 +26,7 @@ import { MilestoneTimeline } from './MilestoneTimeline'
 import { NotesPanel } from './NotesPanel'
 import { Whiteboard } from './Whiteboard'
 import { InviteManager } from './InviteManager'
+import { CostPanel } from './CostPanel'
 import { getLocalProfile } from '@/lib/profile'
 
 type Props = {
@@ -61,6 +62,17 @@ type Props = {
   onUpdateMilestoneName?: (milestoneId: string, name: string) => Promise<void>
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
+  // Cost module
+  budgetLines: BudgetLine[]
+  costTransactions: CostTransaction[]
+  onAddTransaction:    (data: Omit<CostTransaction, 'id' | 'board_id' | 'created_at'>) => Promise<void>
+  onUpdateTransaction: (id: string, updates: Partial<CostTransaction>) => Promise<void>
+  onDeleteTransaction: (id: string) => Promise<void>
+  onAddBudgetLine:     (data: Omit<BudgetLine, 'id' | 'board_id' | 'created_at'>) => Promise<void>
+  onUpdateBudgetLine:  (id: string, updates: Partial<BudgetLine>) => Promise<void>
+  onDeleteBudgetLine:  (id: string) => Promise<void>
+  onImportBudgetLines: (lines: Omit<BudgetLine, 'id' | 'board_id' | 'created_at'>[]) => Promise<void>
+  onChangeCurrency:    (c: 'TRY' | 'USD') => Promise<void>
 }
 
 // Custom collision: column drags only collide with col-* targets; task drags ignore col-* targets
@@ -81,10 +93,13 @@ const columnAwareCollision: CollisionDetection = (args) => {
 export function BoardView({
   board, columns, members, tasks, currentMember, isCreator,
   milestones, milestoneTasks,
+  budgetLines, costTransactions,
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
   onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn, onReorderColumn,
   onUpdateFilePanelUrl, onUpdateBoardName,
   onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onUpdateMilestoneName, onLinkTask, onUnlinkTask,
+  onAddTransaction, onUpdateTransaction, onDeleteTransaction,
+  onAddBudgetLine, onUpdateBudgetLine, onDeleteBudgetLine, onImportBudgetLines, onChangeCurrency,
 }: Props) {
   const [addTaskColumnId, setAddTaskColumnId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -105,6 +120,10 @@ export function BoardView({
   const [showWhiteboard, setShowWhiteboard] = useState(false)
   const [showInviteManager, setShowInviteManager] = useState(false)
   const [noteTaskDraft, setNoteTaskDraft] = useState<string | null>(null)
+  type SidebarTab = 'notes' | 'files' | 'cost'
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('notes')
+  // canEditCosts: board creator OR admin role
+  const canEditCosts = isCreator || currentMember.role === 'creator' || currentMember.role === 'admin'
   // Responsive
   const [winW, setWinW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1440)
   useEffect(() => {
@@ -115,7 +134,7 @@ export function BoardView({
   const isMobile  = winW < 768
   const isTablet  = winW >= 768 && winW < 1100
   const sidebarW  = isTablet ? 220 : 280
-  type MobileTab = 'board' | 'timeline' | 'notes' | 'files'
+  type MobileTab = 'board' | 'timeline' | 'cost' | 'notes' | 'files'
   const [mobileTab, setMobileTab] = useState<MobileTab>('board')
   // Cloud storage settings — Apps Script URL stored per board in localStorage
   const [cloudScriptUrl, setCloudScriptUrl] = useState<string>(() => {
@@ -385,55 +404,67 @@ export function BoardView({
           )}
         </div>
 
-        {/* ── RIGHT SIDEBAR: Notes (top) + Files (bottom) — desktop & tablet only ── */}
+        {/* ── RIGHT SIDEBAR: Tabbed (Notes | Files | Cost) — desktop & tablet ── */}
         {!isMobile && (
           <div style={{ width: sidebarW, flexShrink: 0, borderLeft: '1.5px solid #E8E5E0', display: 'flex', flexDirection: 'column', minHeight: 0, background: '#FAFAFA' }}>
-            {/* Notes */}
-            <div style={{ flex: showNotes ? 1 : '0 0 auto', minHeight: 0, borderBottom: '1px solid #E8E5E0', display: 'flex', flexDirection: 'column' }}>
-              {showNotes ? (
+            {/* Tab bar */}
+            <div style={{ display: 'flex', borderBottom: '1.5px solid #E8E5E0', background: '#fff', flexShrink: 0 }}>
+              {([
+                { id: 'notes', icon: '📝', label: 'Notes' },
+                { id: 'files', icon: '📁', label: 'Files' },
+                { id: 'cost',  icon: '💰', label: 'Cost'  },
+              ] as { id: SidebarTab; icon: string; label: string }[]).map(tab => (
+                <button key={tab.id} onClick={() => setSidebarTab(tab.id)} style={{
+                  flex: 1, padding: '0.45rem 0.25rem', border: 'none', background: 'none', cursor: 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  color: sidebarTab === tab.id ? '#c9a96e' : '#9ca3af',
+                  borderBottom: sidebarTab === tab.id ? '2px solid #c9a96e' : '2px solid transparent',
+                }}>
+                  <span style={{ fontSize: '0.875rem', lineHeight: 1 }}>{tab.icon}</span>
+                  <span style={{ fontSize: '0.55rem', fontWeight: sidebarTab === tab.id ? 700 : 500, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Tab content */}
+            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              {sidebarTab === 'notes' && (
                 <NotesPanel
                   boardId={board.id}
                   authorName={currentMember.nickname}
-                  onCollapse={() => setShowNotes(false)}
                   cloudScriptUrl={cloudScriptUrl || undefined}
                   driveFolderId={driveFolderId}
                   onConvertToTask={content => { setNoteTaskDraft(content); setAddTaskColumnId(columns[0]?.id ?? null) }}
                 />
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.75rem', cursor: 'pointer' }} onClick={() => setShowNotes(true)}>
-                  <span style={{ fontSize: '0.75rem' }}>📝</span>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notes</span>
-                  <svg style={{ marginLeft: 'auto' }} width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8.5L10 4.5" stroke="#c9a96e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              )}
+              {sidebarTab === 'files' && (
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                  <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} cloudScriptUrl={cloudScriptUrl} onCloudScriptUrlChange={saveCloudScriptUrl} />
                 </div>
               )}
-            </div>
-
-            {/* Files */}
-            <div style={{ flex: showFilePanel ? 1 : '0 0 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-              {showFilePanel ? (
-                <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.75rem', background: '#FAFAFA', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
-                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Files</span>
-                    <button onClick={() => setShowFilePanel(false)} title="Collapse files" style={{ marginLeft: 'auto', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8.5L10 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </button>
-                  </div>
-                  <div style={{ flex: 1, overflow: 'hidden' }}>
-                    <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} cloudScriptUrl={cloudScriptUrl} onCloudScriptUrlChange={saveCloudScriptUrl} />
-                  </div>
-                </>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.75rem', cursor: 'pointer' }} onClick={() => setShowFilePanel(true)}>
-                  <span style={{ fontSize: '0.75rem' }}>📁</span>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Files</span>
-                  <svg style={{ marginLeft: 'auto' }} width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8.5L10 4.5" stroke="#c9a96e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
+              {sidebarTab === 'cost' && (
+                <CostPanel
+                  boardId={board.id}
+                  currency={board.currency ?? 'USD'}
+                  budgetLines={budgetLines}
+                  transactions={costTransactions}
+                  milestones={milestones}
+                  canEdit={canEditCosts}
+                  onAddTransaction={onAddTransaction}
+                  onUpdateTransaction={onUpdateTransaction}
+                  onDeleteTransaction={onDeleteTransaction}
+                  onAddBudgetLine={onAddBudgetLine}
+                  onUpdateBudgetLine={onUpdateBudgetLine}
+                  onDeleteBudgetLine={onDeleteBudgetLine}
+                  onImportBudgetLines={onImportBudgetLines}
+                  onChangeCurrency={onChangeCurrency}
+                />
               )}
             </div>
           </div>
         )}
 
-        {/* ── MOBILE: Notes / Files as full-screen tab panels ── */}
+        {/* ── MOBILE: tab panels ── */}
         {isMobile && mobileTab === 'notes' && (
           <div style={{ position: 'absolute', inset: '60px 0 56px 0', display: 'flex', flexDirection: 'column', background: '#FAFAFA', zIndex: 5 }}>
             <NotesPanel
@@ -455,6 +486,26 @@ export function BoardView({
             </div>
           </div>
         )}
+        {isMobile && mobileTab === 'cost' && (
+          <div style={{ position: 'absolute', inset: '60px 0 56px 0', display: 'flex', flexDirection: 'column', background: '#FAFAFA', zIndex: 5, overflow: 'hidden' }}>
+            <CostPanel
+              boardId={board.id}
+              currency={board.currency ?? 'USD'}
+              budgetLines={budgetLines}
+              transactions={costTransactions}
+              milestones={milestones}
+              canEdit={canEditCosts}
+              onAddTransaction={onAddTransaction}
+              onUpdateTransaction={onUpdateTransaction}
+              onDeleteTransaction={onDeleteTransaction}
+              onAddBudgetLine={onAddBudgetLine}
+              onUpdateBudgetLine={onUpdateBudgetLine}
+              onDeleteBudgetLine={onDeleteBudgetLine}
+              onImportBudgetLines={onImportBudgetLines}
+              onChangeCurrency={onChangeCurrency}
+            />
+          </div>
+        )}
       </div>
 
       {/* ── MOBILE: Bottom tab bar ── */}
@@ -463,6 +514,7 @@ export function BoardView({
           {([
             { id: 'board',    icon: '📋', label: 'Board' },
             { id: 'timeline', icon: '📅', label: 'Timeline' },
+            { id: 'cost',     icon: '💰', label: 'Cost' },
             { id: 'notes',    icon: '📝', label: 'Notes' },
             { id: 'files',    icon: '📁', label: 'Files' },
           ] as { id: MobileTab; icon: string; label: string }[]).map(tab => (

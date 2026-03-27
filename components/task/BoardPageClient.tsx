@@ -11,6 +11,8 @@ import {
   type MilestoneTask,
   type LocalSession,
   type Priority,
+  type BudgetLine,
+  type CostTransaction,
   MEMBER_COLORS,
   DEFAULT_COLUMNS,
 } from '@/lib/types'
@@ -60,6 +62,8 @@ export function BoardPageClient({ boardId }: Props) {
   const [isCreator, setIsCreator] = useState(false)
   const [milestones, setMilestones] = useState<Milestone[]>([])
   const [milestoneTasks, setMilestoneTasks] = useState<MilestoneTask[]>([])
+  const [budgetLines, setBudgetLines] = useState<BudgetLine[]>([])
+  const [costTransactions, setCostTransactions] = useState<CostTransaction[]>([])
 
   // ── Initial load ──
   useEffect(() => {
@@ -78,13 +82,15 @@ export function BoardPageClient({ boardId }: Props) {
       }
       setBoard(boardData)
 
-      // Fetch columns, members, tasks, milestones in parallel
-      const [colRes, memRes, taskRes, msRes, mtRes] = await Promise.all([
+      // Fetch columns, members, tasks, milestones, cost data in parallel
+      const [colRes, memRes, taskRes, msRes, mtRes, blRes, ctRes] = await Promise.all([
         supabase.from('columns').select('*').eq('board_id', boardId).order('position'),
         supabase.from('members').select('*').eq('board_id', boardId).order('joined_at'),
         supabase.from('tasks').select('*').eq('board_id', boardId).order('position'),
         supabase.from('milestones').select('*').eq('board_id', boardId).order('target_date'),
         supabase.from('milestone_tasks').select('*'),
+        supabase.from('budget_lines').select('*').eq('board_id', boardId).order('position'),
+        supabase.from('cost_transactions').select('*').eq('board_id', boardId).order('date', { ascending: false }),
       ])
 
       setColumns(colRes.data ?? [])
@@ -92,6 +98,8 @@ export function BoardPageClient({ boardId }: Props) {
       setTasks(taskRes.data ?? [])
       setMilestones(msRes.data ?? [])
       setMilestoneTasks(mtRes.data ?? [])
+      setBudgetLines(blRes.data ?? [])
+      setCostTransactions(ctRes.data ?? [])
 
       // Check if current user created this board
       try {
@@ -433,6 +441,64 @@ export function BoardPageClient({ boardId }: Props) {
     if (error) console.error('updateMilestoneName error:', error)
   }, [])
 
+  // ── Cost actions ──────────────────────────────────────────────────────────
+  const addTransaction = useCallback(async (data: Omit<CostTransaction, 'id' | 'board_id' | 'created_at'>) => {
+    const { data: tx, error } = await supabase
+      .from('cost_transactions')
+      .insert({ ...data, board_id: boardId })
+      .select().single()
+    if (error) { console.error('addTransaction error:', error); return }
+    if (tx) setCostTransactions(prev => [tx, ...prev])
+  }, [boardId])
+
+  const updateTransaction = useCallback(async (id: string, updates: Partial<CostTransaction>) => {
+    const { data: tx, error } = await supabase
+      .from('cost_transactions')
+      .update(updates)
+      .eq('id', id).select().single()
+    if (error) { console.error('updateTransaction error:', error); return }
+    if (tx) setCostTransactions(prev => prev.map(t => t.id === id ? tx : t))
+  }, [])
+
+  const deleteTransaction = useCallback(async (id: string) => {
+    await supabase.from('cost_transactions').delete().eq('id', id)
+    setCostTransactions(prev => prev.filter(t => t.id !== id))
+  }, [])
+
+  const addBudgetLine = useCallback(async (data: Omit<BudgetLine, 'id' | 'board_id' | 'created_at'>) => {
+    const { data: line, error } = await supabase
+      .from('budget_lines')
+      .insert({ ...data, board_id: boardId })
+      .select().single()
+    if (error) { console.error('addBudgetLine error:', error); return }
+    if (line) setBudgetLines(prev => [...prev, line])
+  }, [boardId])
+
+  const updateBudgetLine = useCallback(async (id: string, updates: Partial<BudgetLine>) => {
+    const { data: line, error } = await supabase
+      .from('budget_lines')
+      .update(updates).eq('id', id).select().single()
+    if (error) { console.error('updateBudgetLine error:', error); return }
+    if (line) setBudgetLines(prev => prev.map(l => l.id === id ? line : l))
+  }, [])
+
+  const deleteBudgetLine = useCallback(async (id: string) => {
+    await supabase.from('budget_lines').delete().eq('id', id)
+    setBudgetLines(prev => prev.filter(l => l.id !== id))
+  }, [])
+
+  const importBudgetLines = useCallback(async (lines: Omit<BudgetLine, 'id' | 'board_id' | 'created_at'>[]) => {
+    const rows = lines.map(l => ({ ...l, board_id: boardId }))
+    const { data, error } = await supabase.from('budget_lines').insert(rows).select()
+    if (error) { console.error('importBudgetLines error:', error); return }
+    if (data) setBudgetLines(prev => [...prev, ...data])
+  }, [boardId])
+
+  const changeCurrency = useCallback(async (currency: 'TRY' | 'USD') => {
+    const { data } = await supabase.from('boards').update({ currency }).eq('id', boardId).select().single()
+    if (data) setBoard(data)
+  }, [boardId])
+
 
   const deleteColumn = useCallback(
     async (columnId: string, targetColumnId?: string) => {
@@ -536,6 +602,8 @@ export function BoardPageClient({ boardId }: Props) {
           isCreator={isCreator}
           milestones={milestones}
           milestoneTasks={milestoneTasks}
+          budgetLines={budgetLines}
+          costTransactions={costTransactions}
           onCreateTask={createTask}
           onMoveTask={moveTask}
           onReorderTask={reorderTask}
@@ -554,6 +622,14 @@ export function BoardPageClient({ boardId }: Props) {
           onUpdateMilestoneName={updateMilestoneName}
           onLinkTask={linkTask}
           onUnlinkTask={unlinkTask}
+          onAddTransaction={addTransaction}
+          onUpdateTransaction={updateTransaction}
+          onDeleteTransaction={deleteTransaction}
+          onAddBudgetLine={addBudgetLine}
+          onUpdateBudgetLine={updateBudgetLine}
+          onDeleteBudgetLine={deleteBudgetLine}
+          onImportBudgetLines={importBudgetLines}
+          onChangeCurrency={changeCurrency}
         />
       )}
     </>
