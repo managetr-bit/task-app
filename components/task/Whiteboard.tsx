@@ -51,7 +51,7 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
     ctx.lineJoin = 'round'
   }, [])
 
-  function getPos(e: React.MouseEvent<HTMLCanvasElement>) {
+  function getPos(e: React.PointerEvent<HTMLCanvasElement>) {
     const canvas = canvasRef.current!
     const rect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
@@ -59,20 +59,32 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
     return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY }
   }
 
-  function startDrawing(e: React.MouseEvent<HTMLCanvasElement>) {
+  // Resolve effective line width — Apple Pencil sends pressure 0..1, finger/mouse sends 0.5
+  function effectiveWidth(e: React.PointerEvent<HTMLCanvasElement>) {
+    const base = tool === 'eraser' ? strokeWidth * 4 : strokeWidth
+    // Apply pressure only for actual stylus to avoid weird behaviour with mouse/touch
+    if (e.pointerType === 'pen' && e.pressure > 0) {
+      return Math.max(1, base * e.pressure * 2)
+    }
+    return base
+  }
+
+  function startDrawing(e: React.PointerEvent<HTMLCanvasElement>) {
     e.preventDefault()
+    // Capture pointer so move/up fire even if cursor leaves the element
+    ;(e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId)
     const pos = getPos(e)
     setIsDrawing(true)
     lastPoint.current = pos
     const ctx = canvasRef.current?.getContext('2d')
     if (!ctx) return
     ctx.beginPath()
-    ctx.arc(pos.x, pos.y, (tool === 'eraser' ? strokeWidth * 4 : strokeWidth) / 2, 0, Math.PI * 2)
+    ctx.arc(pos.x, pos.y, effectiveWidth(e) / 2, 0, Math.PI * 2)
     ctx.fillStyle = tool === 'eraser' ? '#ffffff' : color
     ctx.fill()
   }
 
-  function draw(e: React.MouseEvent<HTMLCanvasElement>) {
+  function draw(e: React.PointerEvent<HTMLCanvasElement>) {
     if (!isDrawing) return
     e.preventDefault()
     const canvas = canvasRef.current
@@ -83,7 +95,7 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
     ctx.moveTo(lastPoint.current.x, lastPoint.current.y)
     ctx.lineTo(pos.x, pos.y)
     ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color
-    ctx.lineWidth = tool === 'eraser' ? strokeWidth * 4 : strokeWidth
+    ctx.lineWidth = effectiveWidth(e)
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.stroke()
@@ -293,11 +305,16 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
             ref={canvasRef}
             width={1600}
             height={900}
-            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block', background: '#fff', boxShadow: '0 2px 16px rgba(0,0,0,0.1)' }}
-            onMouseDown={startDrawing}
-            onMouseMove={draw}
-            onMouseUp={stopDrawing}
-            onMouseLeave={stopDrawing}
+            style={{
+              maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block',
+              background: '#fff', boxShadow: '0 2px 16px rgba(0,0,0,0.1)',
+              touchAction: 'none',   // prevent iOS scroll/zoom while drawing
+              userSelect: 'none',
+            }}
+            onPointerDown={startDrawing}
+            onPointerMove={draw}
+            onPointerUp={stopDrawing}
+            onPointerCancel={stopDrawing}
           />
         </div>
 
