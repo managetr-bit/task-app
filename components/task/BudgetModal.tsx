@@ -41,7 +41,79 @@ export function BudgetModal({ currency, budgetLines, milestones, onClose, onAdd,
   const [importError, setImportError] = useState('')
   const [importing, setImporting] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [downloading, setDownloading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+
+  async function downloadSample() {
+    setDownloading(true)
+    try {
+      const XLSX = await import('xlsx')
+
+      // ── Sheet 1: Budget Template ─────────────────────────────────────────
+      const headers = ['Name', 'Category', 'Type', 'Amount', 'Milestone', 'Notes']
+      const sampleRows = [
+        ['Foundation & Earthworks',  'materials',         'expense', 250000, milestones[0]?.name ?? 'Phase 1', 'Excavation and concrete works'],
+        ['Structural Steel',          'materials',         'expense', 480000, milestones[0]?.name ?? 'Phase 1', ''],
+        ['Site Labor',                'labor',             'expense', 320000, milestones[0]?.name ?? 'Phase 1', 'Monthly payroll'],
+        ['Mechanical & Electrical',   'subcontractor',     'expense', 190000, milestones[1]?.name ?? 'Phase 2', 'MEP subcontractor'],
+        ['Architectural Supervision', 'professional_fees', 'expense',  60000, '',                               'Monthly retainer'],
+        ['Contingency Reserve',       'contingency',       'expense',  80000, '',                               '5% of total budget'],
+        ['Client Advance Payment',    'revenue',           'income',  400000, '',                               'Contract milestone payment'],
+        ['Progress Payment – Phase 1','revenue',           'income',  300000, milestones[1]?.name ?? 'Phase 2', ''],
+      ]
+
+      const ws1Data = [headers, ...sampleRows]
+      const ws1 = XLSX.utils.aoa_to_sheet(ws1Data)
+
+      // Column widths
+      ws1['!cols'] = [
+        { wch: 36 }, // Name
+        { wch: 20 }, // Category
+        { wch: 10 }, // Type
+        { wch: 14 }, // Amount
+        { wch: 24 }, // Milestone
+        { wch: 36 }, // Notes
+      ]
+
+      // Style the header row (bold + light gold background)
+      // SheetJS CE doesn't support cell styles, but we mark the range
+      ws1['!ref'] = XLSX.utils.encode_range({ s: { c: 0, r: 0 }, e: { c: 5, r: sampleRows.length } })
+
+      // ── Sheet 2: Valid Categories Reference ───────────────────────────────
+      const catHeaders  = ['Category Key (use in Column B)', 'Label', 'Default Type']
+      const catRows = Object.entries(COST_CATEGORIES).map(([key, v]) => [key, v.label, v.defaultType])
+      const ws2 = XLSX.utils.aoa_to_sheet([catHeaders, ...catRows])
+      ws2['!cols'] = [{ wch: 30 }, { wch: 22 }, { wch: 14 }]
+
+      // ── Sheet 3: Instructions ─────────────────────────────────────────────
+      const instructions = [
+        ['BUDGET IMPORT — INSTRUCTIONS'],
+        [''],
+        ['1.  Fill in the "Budget Template" sheet. Do not change column order.'],
+        ['2.  Name (required)      — any descriptive name for the budget line.'],
+        ['3.  Category (required)  — must be one of the keys listed in the "Categories" sheet.'],
+        ['4.  Type (required)      — "expense" or "income".'],
+        ['5.  Amount (required)    — numeric value only, no currency symbols.'],
+        ['6.  Milestone (optional) — must match exactly the milestone name in your project.'],
+        ['7.  Notes (optional)     — any free-text note.'],
+        [''],
+        ['Save the file and upload it via the "Upload Excel" button in the Cost panel.'],
+        ['CSV export also works — make sure to keep the same column order.'],
+      ]
+      const ws3 = XLSX.utils.aoa_to_sheet(instructions)
+      ws3['!cols'] = [{ wch: 70 }]
+
+      // ── Workbook ──────────────────────────────────────────────────────────
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws1, 'Budget Template')
+      XLSX.utils.book_append_sheet(wb, ws2, 'Categories')
+      XLSX.utils.book_append_sheet(wb, ws3, 'Instructions')
+
+      XLSX.writeFile(wb, 'budget_import_template.xlsx')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const totalExpense = budgetLines.filter(l => l.type === 'expense').reduce((s, l) => s + l.budgeted_amount, 0)
   const totalIncome  = budgetLines.filter(l => l.type === 'income').reduce((s, l) => s + l.budgeted_amount, 0)
@@ -280,18 +352,44 @@ export function BudgetModal({ currency, budgetLines, milestones, onClose, onAdd,
           {/* ── Import tab ── */}
           {tab === 'import' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Template hint */}
-              <div style={{ background: '#F8F6F2', borderRadius: 10, padding: '0.875rem', border: '1px solid #E8E5E0' }}>
-                <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6b7280', marginBottom: '0.5rem' }}>📋 Expected format (columns A–F):</p>
-                <div style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#4b5563', lineHeight: 1.7 }}>
-                  <div style={{ color: '#9ca3af', borderBottom: '1px solid #E8E5E0', paddingBottom: '0.25rem', marginBottom: '0.25rem' }}>Name | Category | Type | Amount | Milestone | Notes</div>
-                  <div>Foundation Works | materials | expense | 500000 | Phase 1 |</div>
-                  <div>Consulting Fees | professional_fees | expense | 80000 | | Initial</div>
-                  <div>Down Payment | revenue | income | 200000 | |</div>
+
+              {/* Download sample — prominent CTA */}
+              <div style={{ background: 'linear-gradient(135deg, #fdf6ed 0%, #fef9f3 100%)', borderRadius: 12, border: '1.5px solid #e8d5b0', padding: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '1.75rem', lineHeight: 1, flexShrink: 0 }}>📥</span>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: '0.8125rem', fontWeight: 700, color: '#1a1a1a', marginBottom: '0.2rem' }}>Download Sample Excel</p>
+                    <p style={{ fontSize: '0.72rem', color: '#6b7280', lineHeight: 1.5, marginBottom: '0.625rem' }}>
+                      Pre-formatted template with sample rows, valid category list, and import instructions — ready to fill in Excel or Numbers.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={downloadSample}
+                      disabled={downloading}
+                      style={{
+                        padding: '0.5rem 1rem', borderRadius: 8, border: 'none',
+                        background: downloading ? '#e8d5b0' : '#c9a96e',
+                        color: '#fff', fontWeight: 700, fontSize: '0.8125rem',
+                        cursor: downloading ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', gap: '0.375rem',
+                      }}
+                    >
+                      {downloading ? '⏳ Generating…' : '⬇ budget_import_template.xlsx'}
+                    </button>
+                  </div>
                 </div>
-                <p style={{ fontSize: '0.7rem', color: '#9ca3af', marginTop: '0.5rem' }}>
-                  Categories: labor, materials, equipment, subcontractor, professional_fees, revenue, contingency, other
-                </p>
+                {milestones.length > 0 && (
+                  <p style={{ fontSize: '0.68rem', color: '#9ca3af', marginTop: '0.625rem', borderTop: '1px solid #e8d5b0', paddingTop: '0.5rem' }}>
+                    ✓ Your {milestones.length} milestone{milestones.length !== 1 ? 's' : ''} ({milestones.slice(0, 3).map(m => m.name).join(', ')}{milestones.length > 3 ? '…' : ''}) are pre-filled in the sample rows.
+                  </p>
+                )}
+              </div>
+
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <div style={{ flex: 1, height: 1, background: '#E8E5E0' }} />
+                <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 500 }}>then upload your filled file</span>
+                <div style={{ flex: 1, height: 1, background: '#E8E5E0' }} />
               </div>
 
               {/* File upload */}
@@ -300,15 +398,15 @@ export function BudgetModal({ currency, budgetLines, milestones, onClose, onAdd,
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: 10, border: '1.5px dashed #c9a96e', background: '#fdf6ed', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600, color: '#c9a96e' }}
+                  style={{ width: '100%', padding: '0.75rem', borderRadius: 10, border: '1.5px dashed #c4bfb9', background: '#FAFAFA', cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600, color: '#6b7280', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
                 >
-                  📂 Upload Excel (.xlsx) or CSV file
+                  <span>📂</span> Upload filled Excel (.xlsx) or CSV
                 </button>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <div style={{ flex: 1, height: 1, background: '#E8E5E0' }} />
-                <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>or paste CSV text</span>
+                <span style={{ fontSize: '0.7rem', color: '#9ca3af' }}>or paste CSV data directly</span>
                 <div style={{ flex: 1, height: 1, background: '#E8E5E0' }} />
               </div>
 
