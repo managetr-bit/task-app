@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -105,6 +105,18 @@ export function BoardView({
   const [showWhiteboard, setShowWhiteboard] = useState(false)
   const [showInviteManager, setShowInviteManager] = useState(false)
   const [noteTaskDraft, setNoteTaskDraft] = useState<string | null>(null)
+  // Responsive
+  const [winW, setWinW] = useState(typeof window !== 'undefined' ? window.innerWidth : 1440)
+  useEffect(() => {
+    const onResize = () => setWinW(window.innerWidth)
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  const isMobile  = winW < 768
+  const isTablet  = winW >= 768 && winW < 1100
+  const sidebarW  = isTablet ? 220 : 280
+  type MobileTab = 'board' | 'timeline' | 'notes' | 'files'
+  const [mobileTab, setMobileTab] = useState<MobileTab>('board')
   // Cloud storage settings — Apps Script URL stored per board in localStorage
   const [cloudScriptUrl, setCloudScriptUrl] = useState<string>(() => {
     try { return localStorage.getItem(`cloud_script_${board.id}`) ?? '' } catch { return '' }
@@ -265,170 +277,211 @@ export function BoardView({
         </div>
       </header>
 
-      {/* Board body */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        {/* Timeline — collapsible */}
-        {showTimeline ? (
-          <MilestoneTimeline
-            milestones={milestones}
-            milestoneTasks={milestoneTasks}
-            tasks={tasks}
-            onAdd={onAddMilestone}
-            onDelete={onDeleteMilestone}
-            onUpdateDate={onUpdateMilestoneDate}
-            onUpdateName={onUpdateMilestoneName}
-            onLinkTask={onLinkTask}
-            onUnlinkTask={onUnlinkTask}
-            onCollapse={() => setShowTimeline(false)}
-          />
-        ) : (
-          <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', padding: '0.35rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-            <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Timeline</span>
-            {milestones.length > 0 && <span style={{ fontSize: '0.6rem', color: '#c4bfb9', background: '#F3F4F6', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>{milestones.length}</span>}
-            <button onClick={() => setShowTimeline(true)} title="Expand timeline" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
+      {/* ── Board body ── */}
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, paddingBottom: isMobile ? 56 : 0 }}>
+
+        {/* ── LEFT: Timeline + Kanban ── */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
+
+          {/* Timeline (hidden on mobile when not active tab) */}
+          {(!isMobile || mobileTab === 'timeline') && (
+            showTimeline ? (
+              <MilestoneTimeline
+                milestones={milestones}
+                milestoneTasks={milestoneTasks}
+                tasks={tasks}
+                onAdd={onAddMilestone}
+                onDelete={onDeleteMilestone}
+                onUpdateDate={onUpdateMilestoneDate}
+                onUpdateName={onUpdateMilestoneName}
+                onLinkTask={onLinkTask}
+                onUnlinkTask={onUnlinkTask}
+                onCollapse={() => setShowTimeline(false)}
+              />
+            ) : (
+              !isMobile && (
+                <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', padding: '0.35rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Timeline</span>
+                  {milestones.length > 0 && <span style={{ fontSize: '0.6rem', color: '#c4bfb9', background: '#F3F4F6', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>{milestones.length}</span>}
+                  <button onClick={() => setShowTimeline(true)} title="Expand timeline" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </button>
+                </div>
+              )
+            )
+          )}
+
+          {/* Kanban board (hidden on mobile when not active tab) */}
+          {(!isMobile || mobileTab === 'board') && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              {/* Board section header */}
+              {!isMobile && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 1.5rem', background: '#FAF9F7', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Board</span>
+                  <button onClick={() => setShowKanban(p => !p)} title={showKanban ? 'Collapse board' : 'Expand board'} style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                      <path d={showKanban ? 'M2 4.5L6 8.5L10 4.5' : 'M4.5 2L8.5 6L4.5 10'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+                <DndContext sensors={sensors} collisionDetection={columnAwareCollision} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                  {showKanban && (
+                    <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: isMobile ? '0.75rem' : '1rem 1.5rem 1.5rem', display: 'flex', gap: isMobile ? '0.75rem' : '1rem', alignItems: 'flex-start' }}>
+                      <SortableContext items={columns.map(c => `col-${c.id}`)} strategy={horizontalListSortingStrategy}>
+                        {columns.map(col => {
+                          const colTasks = tasks.filter(t => t.column_id === col.id).sort((a, b) => a.position - b.position)
+                          return (
+                            <KanbanColumn
+                              key={col.id}
+                              column={col}
+                              tasks={colTasks}
+                              members={members}
+                              currentMember={currentMember}
+                              isDoneColumn={col.name === 'Done'}
+                              onAddTask={() => setAddTaskColumnId(col.id)}
+                              onAssignTask={onAssignTask}
+                              onTaskClick={setSelectedTask}
+                              onRenameColumn={(name) => onRenameColumn(col.id, name)}
+                              onDeleteColumn={columns.length > 1 ? () => setDeleteColConfirm({ columnId: col.id, columnName: col.name }) : undefined}
+                            />
+                          )
+                        })}
+                      </SortableContext>
+                      {columns.length < 6 && (
+                        <div style={{ flexShrink: 0, width: 220 }}>
+                          {showAddColumn ? (
+                            <form onSubmit={handleAddColumn} className="animate-slideDown" style={{ background: '#FFFFFF', border: '1.5px solid #E8E5E0', borderRadius: '14px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                              <input className="input-base" type="text" placeholder="Column name" value={newColumnName} onChange={e => setNewColumnName(e.target.value)} maxLength={24} autoFocus required />
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button type="submit" className="btn-primary" disabled={addingColumn || !newColumnName.trim()} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Add</button>
+                                <button type="button" className="btn-ghost" onClick={() => { setShowAddColumn(false); setNewColumnName('') }} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Cancel</button>
+                              </div>
+                            </form>
+                          ) : (
+                            <button className="btn-ghost" onClick={() => setShowAddColumn(true)} style={{ fontSize: '0.8rem', color: '#c4bfb9', padding: '0.375rem 0.5rem' }}>+ Add column</button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <DragOverlay>
+                    {activeTask && (
+                      <div style={{ transform: 'rotate(2deg)', opacity: 0.95, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))' }}>
+                        <TaskCard task={activeTask} members={members} currentMember={currentMember} isDoneColumn={false} onAssign={async () => {}} onClick={() => {}} />
+                      </div>
+                    )}
+                    {activeColumn && (
+                      <div style={{ width: 280, background: '#FFFFFF', borderRadius: 14, padding: '0.5rem 0.75rem', opacity: 0.9, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', transform: 'rotate(1deg)' }}>
+                        <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1a1a1a' }}>{activeColumn.name}</div>
+                      </div>
+                    )}
+                  </DragOverlay>
+                </DndContext>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── RIGHT SIDEBAR: Notes (top) + Files (bottom) — desktop & tablet only ── */}
+        {!isMobile && (
+          <div style={{ width: sidebarW, flexShrink: 0, borderLeft: '1.5px solid #E8E5E0', display: 'flex', flexDirection: 'column', minHeight: 0, background: '#FAFAFA' }}>
+            {/* Notes */}
+            <div style={{ flex: showNotes ? 1 : '0 0 auto', minHeight: 0, borderBottom: '1px solid #E8E5E0', display: 'flex', flexDirection: 'column' }}>
+              {showNotes ? (
+                <NotesPanel
+                  boardId={board.id}
+                  authorName={currentMember.nickname}
+                  onCollapse={() => setShowNotes(false)}
+                  cloudScriptUrl={cloudScriptUrl || undefined}
+                  driveFolderId={driveFolderId}
+                  onConvertToTask={content => { setNoteTaskDraft(content); setAddTaskColumnId(columns[0]?.id ?? null) }}
+                />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.75rem', cursor: 'pointer' }} onClick={() => setShowNotes(true)}>
+                  <span style={{ fontSize: '0.75rem' }}>📝</span>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Notes</span>
+                  <svg style={{ marginLeft: 'auto' }} width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8.5L10 4.5" stroke="#c9a96e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              )}
+            </div>
+
+            {/* Files */}
+            <div style={{ flex: showFilePanel ? 1 : '0 0 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+              {showFilePanel ? (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.75rem', background: '#FAFAFA', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
+                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Files</span>
+                    <button onClick={() => setShowFilePanel(false)} title="Collapse files" style={{ marginLeft: 'auto', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8.5L10 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </button>
+                  </div>
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} cloudScriptUrl={cloudScriptUrl} onCloudScriptUrlChange={saveCloudScriptUrl} />
+                  </div>
+                </>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.75rem', cursor: 'pointer' }} onClick={() => setShowFilePanel(true)}>
+                  <span style={{ fontSize: '0.75rem' }}>📁</span>
+                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Files</span>
+                  <svg style={{ marginLeft: 'auto' }} width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8.5L10 4.5" stroke="#c9a96e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Kanban + Files — flex row */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {/* Board section header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 1.5rem', background: '#FAF9F7', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
-            <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Board</span>
-            <button onClick={() => setShowKanban(p => !p)} title={showKanban ? 'Collapse board' : 'Expand board'} style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                <path d={showKanban ? "M2 4.5L6 8.5L10 4.5" : "M4.5 2L8.5 6L4.5 10"} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </button>
-          </div>
-
-          {/* Board + Files content row */}
-          <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
-          <DndContext
-            sensors={sensors}
-            collisionDetection={columnAwareCollision}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-          >
-            {showKanban && (
-            <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: '1rem 1.5rem 1.5rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              <SortableContext items={columns.map(c => `col-${c.id}`)} strategy={horizontalListSortingStrategy}>
-              {columns.map(col => {
-                const colTasks = tasks.filter(t => t.column_id === col.id).sort((a, b) => a.position - b.position)
-                return (
-                  <KanbanColumn
-                    key={col.id}
-                    column={col}
-                    tasks={colTasks}
-                    members={members}
-                    currentMember={currentMember}
-                    isDoneColumn={col.name === 'Done'}
-                    onAddTask={() => setAddTaskColumnId(col.id)}
-                    onAssignTask={onAssignTask}
-                    onTaskClick={setSelectedTask}
-                    onRenameColumn={(name) => onRenameColumn(col.id, name)}
-                    onDeleteColumn={columns.length > 1 ? () => setDeleteColConfirm({ columnId: col.id, columnName: col.name }) : undefined}
-                  />
-                )
-              })}
-              </SortableContext>
-
-              {/* Add column */}
-              {columns.length < 6 && (
-                <div style={{ flexShrink: 0, width: 240 }}>
-                  {showAddColumn ? (
-                    <form onSubmit={handleAddColumn} className="animate-slideDown" style={{ background: '#FFFFFF', border: '1.5px solid #E8E5E0', borderRadius: '14px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                      <input className="input-base" type="text" placeholder="Column name" value={newColumnName} onChange={e => setNewColumnName(e.target.value)} maxLength={24} autoFocus required />
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button type="submit" className="btn-primary" disabled={addingColumn || !newColumnName.trim()} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Add</button>
-                        <button type="button" className="btn-ghost" onClick={() => { setShowAddColumn(false); setNewColumnName('') }} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Cancel</button>
-                      </div>
-                    </form>
-                  ) : (
-                    <button className="btn-ghost" onClick={() => setShowAddColumn(true)} style={{ fontSize: '0.8rem', color: '#c4bfb9', padding: '0.375rem 0.5rem' }}>
-                      + Add column
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            )}
-
-            {/* Drag overlay — floating card/column while dragging */}
-            <DragOverlay>
-              {activeTask && (
-                <div style={{ transform: 'rotate(2deg)', opacity: 0.95, filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))' }}>
-                  <TaskCard
-                    task={activeTask}
-                    members={members}
-                    currentMember={currentMember}
-                    isDoneColumn={false}
-                    onAssign={async () => {}}
-                    onClick={() => {}}
-                  />
-                </div>
-              )}
-              {activeColumn && (
-                <div style={{ width: 280, background: '#FFFFFF', borderRadius: 14, padding: '0.5rem 0.75rem', opacity: 0.9, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', transform: 'rotate(1deg)' }}>
-                  <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1a1a1a' }}>{activeColumn.name}</div>
-                </div>
-              )}
-            </DragOverlay>
-          </DndContext>
-
-          {/* Notes — independently collapsible */}
-          {showNotes ? (
+        {/* ── MOBILE: Notes / Files as full-screen tab panels ── */}
+        {isMobile && mobileTab === 'notes' && (
+          <div style={{ position: 'absolute', inset: '60px 0 56px 0', display: 'flex', flexDirection: 'column', background: '#FAFAFA', zIndex: 5 }}>
             <NotesPanel
               boardId={board.id}
               authorName={currentMember.nickname}
-              onCollapse={() => setShowNotes(false)}
               cloudScriptUrl={cloudScriptUrl || undefined}
               driveFolderId={driveFolderId}
-              onConvertToTask={content => {
-                setNoteTaskDraft(content)
-                setAddTaskColumnId(columns[0]?.id ?? null)
-              }}
+              onConvertToTask={content => { setNoteTaskDraft(content); setAddTaskColumnId(columns[0]?.id ?? null); setMobileTab('board') }}
             />
-          ) : (
-            <div style={{ flexShrink: 0, width: 36, borderLeft: '1.5px solid #E8E5E0', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0.5rem 0', gap: '0.5rem', background: '#FAFAFA' }}>
-              <span style={{ fontSize: '0.8rem' }}>📝</span>
-              <button onClick={() => setShowNotes(true)} title="Expand notes" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            </div>
-          )}
-
-          {/* Files — independently collapsible */}
-          {showFilePanel ? (
-            <div style={{ flexShrink: 0, alignSelf: 'stretch', display: 'flex', flexDirection: 'column', borderLeft: '1.5px solid #E8E5E0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 0.75rem', background: '#FAFAFA', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
-                <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Files</span>
-                <button onClick={() => setShowFilePanel(false)} title="Collapse files" style={{ marginLeft: 'auto', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6L7.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </button>
-              </div>
-              <div style={{ flex: 1, overflow: 'hidden' }}>
-                <FilePanel
-                  filePanelUrl={board.file_panel_url}
-                  isCreator={isCreator}
-                  onUpdate={onUpdateFilePanelUrl}
-                  cloudScriptUrl={cloudScriptUrl}
-                  onCloudScriptUrlChange={saveCloudScriptUrl}
-                />
-              </div>
-            </div>
-          ) : (
-            <div style={{ flexShrink: 0, width: 36, borderLeft: '1.5px solid #E8E5E0', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0.5rem 0', gap: '0.5rem', background: '#FAFAFA' }}>
-              <span style={{ fontSize: '0.8rem' }}>📁</span>
-              <button onClick={() => setShowFilePanel(true)} title="Expand files" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            </div>
-          )}
           </div>
-        </div>
+        )}
+        {isMobile && mobileTab === 'files' && (
+          <div style={{ position: 'absolute', inset: '60px 0 56px 0', display: 'flex', flexDirection: 'column', background: '#FAFAFA', zIndex: 5 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderBottom: '1px solid #E8E5E0', background: '#fff' }}>
+              <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Files</span>
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} cloudScriptUrl={cloudScriptUrl} onCloudScriptUrlChange={saveCloudScriptUrl} />
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* ── MOBILE: Bottom tab bar ── */}
+      {isMobile && (
+        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 56, background: '#fff', borderTop: '1.5px solid #E8E5E0', display: 'flex', zIndex: 30 }}>
+          {([
+            { id: 'board',    icon: '📋', label: 'Board' },
+            { id: 'timeline', icon: '📅', label: 'Timeline' },
+            { id: 'notes',    icon: '📝', label: 'Notes' },
+            { id: 'files',    icon: '📁', label: 'Files' },
+          ] as { id: MobileTab; icon: string; label: string }[]).map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setMobileTab(tab.id)}
+              style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: 2, border: 'none', background: 'none', cursor: 'pointer',
+                color: mobileTab === tab.id ? '#c9a96e' : '#9ca3af',
+                borderTop: mobileTab === tab.id ? '2px solid #c9a96e' : '2px solid transparent',
+              }}
+            >
+              <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{tab.icon}</span>
+              <span style={{ fontSize: '0.6rem', fontWeight: mobileTab === tab.id ? 700 : 500, letterSpacing: '0.04em' }}>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
+      )}
 
       {/* Modals */}
       {addTaskColumnId && (
