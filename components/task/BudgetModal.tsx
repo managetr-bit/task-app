@@ -8,6 +8,7 @@ type Props = {
   currency: 'TRY' | 'USD'
   budgetLines: BudgetLine[]
   milestones: Milestone[]
+  defaultLineType?: 'expense' | 'income'
   onClose: () => void
   onAdd: (data: Omit<BudgetLine, 'id' | 'board_id' | 'created_at'>) => Promise<void>
   onUpdate: (id: string, updates: Partial<BudgetLine>) => Promise<void>
@@ -33,8 +34,8 @@ const blank = (): EditingLine => ({
   name: '', category: 'other', type: 'expense', budgeted_amount: '', milestone_id: '', notes: '',
 })
 
-export function BudgetModal({ currency, budgetLines, milestones, onClose, onAdd, onUpdate, onDelete, onImportLines }: Props) {
-  const [editing, setEditing] = useState<EditingLine | null>(null)
+export function BudgetModal({ currency, budgetLines, milestones, defaultLineType, onClose, onAdd, onUpdate, onDelete, onImportLines }: Props) {
+  const [editing, setEditing] = useState<EditingLine | null>(defaultLineType ? { ...blank(), type: defaultLineType, category: defaultLineType === 'income' ? 'revenue' : 'other' } : null)
   const [saving, setSaving]   = useState(false)
   const [tab, setTab]         = useState<'lines' | 'import'>('lines')
   const [importText, setImportText] = useState('')

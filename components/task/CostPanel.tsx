@@ -200,6 +200,7 @@ export function CostPanel({
   const [showTxModal, setShowTxModal]       = useState(false)
   const [editingTx, setEditingTx]           = useState<CostTransaction | null>(null)
   const [showBudgetModal, setShowBudgetModal] = useState(false)
+  const [budgetModalDefaultType, setBudgetModalDefaultType] = useState<'expense' | 'income' | undefined>(undefined)
   const [showChart, setShowChart]           = useState(true)
   const [showBudgetSection, setShowBudgetSection] = useState(false)
   const [txFilter, setTxFilter]             = useState<'all' | 'cash_in' | 'cash_out' | 'forecast'>('all')
@@ -352,44 +353,66 @@ export function CostPanel({
         )}
 
         {/* ── Payment Schedules ── */}
-        {budgetLines.some(l => l.type === 'expense') && (
-          <Section title="Payment Schedules" emoji="📅" open={showSchedules} onToggle={() => setShowSchedules(p => !p)}>
-            <div style={{ padding: '0 0.75rem 0.5rem' }}>
-              {budgetLines.filter(l => l.type === 'expense').map(line => (
-                <PaymentScheduleGroup
-                  key={line.id}
-                  line={line}
-                  allTransactions={transactions}
-                  milestones={milestones}
-                  currency={currency}
-                  canEdit={canEdit}
-                  onAddPayment={() => openNewPayment(line.id, 'cash_out')}
-                  onEditTransaction={tx => { setEditingTx(tx); setShowTxModal(true) }}
-                />
-              ))}
-            </div>
-          </Section>
-        )}
+        <Section title="Payment Schedules" emoji="📅" open={showSchedules} onToggle={() => setShowSchedules(p => !p)}>
+          <div style={{ padding: '0 0.75rem 0.5rem' }}>
+            {budgetLines.filter(l => l.type === 'expense').map(line => (
+              <PaymentScheduleGroup
+                key={line.id}
+                line={line}
+                allTransactions={transactions}
+                milestones={milestones}
+                currency={currency}
+                canEdit={canEdit}
+                onAddPayment={() => openNewPayment(line.id, 'cash_out')}
+                onEditTransaction={tx => { setEditingTx(tx); setShowTxModal(true) }}
+              />
+            ))}
+            {budgetLines.filter(l => l.type === 'expense').length === 0 && (
+              <p style={{ fontSize: '0.68rem', color: '#c4bfb9', margin: '0.25rem 0 0.375rem' }}>
+                Define budget items (contracts, labor, materials…) to schedule their payment installments — date-based or tied to milestones.
+              </p>
+            )}
+            {canEdit && (
+              <button
+                onClick={() => { setBudgetModalDefaultType('expense'); setShowBudgetModal(true) }}
+                style={{ fontSize: '0.65rem', color: '#c9a96e', background: 'none', border: '1px dashed #c9a96e60', borderRadius: 6, cursor: 'pointer', padding: '4px 10px', fontWeight: 600, marginTop: 4 }}
+              >
+                + Add budget item
+              </button>
+            )}
+          </div>
+        </Section>
 
         {/* ── Income Plan ── */}
-        {budgetLines.some(l => l.type === 'income') && (
-          <Section title="Income Plan" emoji="💵" open={showIncome} onToggle={() => setShowIncome(p => !p)}>
-            <div style={{ padding: '0 0.75rem 0.5rem' }}>
-              {budgetLines.filter(l => l.type === 'income').map(line => (
-                <PaymentScheduleGroup
-                  key={line.id}
-                  line={line}
-                  allTransactions={transactions}
-                  milestones={milestones}
-                  currency={currency}
-                  canEdit={canEdit}
-                  onAddPayment={() => openNewPayment(line.id, 'cash_in')}
-                  onEditTransaction={tx => { setEditingTx(tx); setShowTxModal(true) }}
-                />
-              ))}
-            </div>
-          </Section>
-        )}
+        <Section title="Income Plan" emoji="💵" open={showIncome} onToggle={() => setShowIncome(p => !p)}>
+          <div style={{ padding: '0 0.75rem 0.5rem' }}>
+            {budgetLines.filter(l => l.type === 'income').map(line => (
+              <PaymentScheduleGroup
+                key={line.id}
+                line={line}
+                allTransactions={transactions}
+                milestones={milestones}
+                currency={currency}
+                canEdit={canEdit}
+                onAddPayment={() => openNewPayment(line.id, 'cash_in')}
+                onEditTransaction={tx => { setEditingTx(tx); setShowTxModal(true) }}
+              />
+            ))}
+            {budgetLines.filter(l => l.type === 'income').length === 0 && (
+              <p style={{ fontSize: '0.68rem', color: '#c4bfb9', margin: '0.25rem 0 0.375rem' }}>
+                Plan expected income — unit sales, advance payments, grants — and tie them to project milestones.
+              </p>
+            )}
+            {canEdit && (
+              <button
+                onClick={() => { setBudgetModalDefaultType('income'); setShowBudgetModal(true) }}
+                style={{ fontSize: '0.65rem', color: '#6ACA9A', background: 'none', border: '1px dashed #6ACA9A60', borderRadius: 6, cursor: 'pointer', padding: '4px 10px', fontWeight: 600, marginTop: 4 }}
+              >
+                + Add income source
+              </button>
+            )}
+          </div>
+        </Section>
 
         {/* ── Transactions ── */}
         <Section title={`Transactions${transactions.length > 0 ? ` (${transactions.length})` : ''}`} emoji="🧾" open alwaysOpen>
@@ -482,7 +505,8 @@ export function CostPanel({
           currency={currency}
           budgetLines={budgetLines}
           milestones={milestones}
-          onClose={() => setShowBudgetModal(false)}
+          defaultLineType={budgetModalDefaultType}
+          onClose={() => { setShowBudgetModal(false); setBudgetModalDefaultType(undefined) }}
           onAdd={onAddBudgetLine}
           onUpdate={onUpdateBudgetLine}
           onDelete={onDeleteBudgetLine}
