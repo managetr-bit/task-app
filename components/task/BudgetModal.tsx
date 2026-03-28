@@ -322,15 +322,19 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
                       <input className="input-base" type="text" inputMode="decimal" placeholder="0" value={editing.budgeted_amount} onChange={e => setEditing(p => p ? { ...p, budgeted_amount: e.target.value } : p)} required style={{ fontSize: '0.8125rem' }} />
                     </div>
                   </div>
-                  {milestones.length > 0 && (
-                    <div>
-                      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 3 }}>Phase / Milestone</label>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 3 }}>Linked Milestone / Phase</label>
+                    {milestones.length > 0 ? (
                       <select className="input-base" value={editing.milestone_id} onChange={e => setEditing(p => p ? { ...p, milestone_id: e.target.value } : p)} style={{ fontSize: '0.8125rem' }}>
-                        <option value="">— none —</option>
-                        {milestones.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                        <option value="">— not linked —</option>
+                        {milestones.map(m => <option key={m.id} value={m.id}>{m.name} ({m.target_date})</option>)}
                       </select>
-                    </div>
-                  )}
+                    ) : (
+                      <div style={{ fontSize: '0.72rem', color: '#c4bfb9', padding: '0.45rem 0.625rem', border: '1.5px solid #E8E5E0', borderRadius: 8, background: '#FAFAFA' }}>
+                        No milestones yet — add them from the <strong>Timeline</strong> tab to link budget items to project phases.
+                      </div>
+                    )}
+                  </div>
                   <div>
                     <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 3 }}>Notes</label>
                     <input className="input-base" type="text" placeholder="Optional note" value={editing.notes} onChange={e => setEditing(p => p ? { ...p, notes: e.target.value } : p)} maxLength={200} style={{ fontSize: '0.8125rem' }} />
