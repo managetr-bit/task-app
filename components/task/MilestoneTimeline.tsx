@@ -1104,9 +1104,18 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
               <div style={{ flex: 1 }} />
               {/* Legend */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                {[
+                  { color: '#22c55e', label: 'In' },
+                  { color: '#ef4444', label: 'Out' },
+                ].map(({ color, label }) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: color, opacity: 0.5 }} />
+                    <span style={{ fontSize: '0.55rem', color: '#9ca3af' }}>{label}</span>
+                  </div>
+                ))}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                   <div style={{ width: 14, height: 1.5, background: '#c9a96e', borderRadius: 1 }} />
-                  <span style={{ fontSize: '0.55rem', color: '#9ca3af' }}>Cumulative balance</span>
+                  <span style={{ fontSize: '0.55rem', color: '#9ca3af' }}>Balance</span>
                 </div>
                 {/* Final running total */}
                 {cfRunning !== 0 && (
@@ -1153,7 +1162,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   }} />
                 )}
 
-                {/* Invisible hover hit areas per month (for tooltips) */}
+                {/* Bars + hover areas per month */}
                 {cfMonthKeys.map(key => {
                   const [yr, mo] = key.split('-').map(Number)
                   const leftPct  = Math.max(0, pctOf(new Date(yr, mo - 1, 1)))
@@ -1163,7 +1172,10 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   const data   = cfByMonth[key]
                   const inAmt  = cfIn(data)
                   const outAmt = cfOut(data)
+                  const inH    = cfMaxAmount > 0 ? (inAmt  / cfMaxAmount) * CF_BAR_MAX : 0
+                  const outH   = cfMaxAmount > 0 ? (outAmt / cfMaxAmount) * CF_BAR_MAX : 0
                   const net    = inAmt - outAmt
+                  const faded  = isForecastOnly(data)
                   const hovered = cfHoverMonth === key
 
                   return (
@@ -1173,6 +1185,30 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                       onMouseLeave={() => setCfHoverMonth(null)}
                       style={{ position: 'absolute', left: `${leftPct}%`, width: `${wPct}%`, top: 0, height: CF_H, zIndex: hovered ? 50 : 1 }}
                     >
+                      {/* Cash-in bar (above zero line) */}
+                      {inH > 0.5 && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: CF_H - CF_CENTER,
+                          left: '8%', right: '8%',
+                          height: inH,
+                          background: '#22c55e',
+                          borderRadius: '3px 3px 0 0',
+                          opacity: faded ? 0.15 : 0.28,
+                        }} />
+                      )}
+                      {/* Cash-out bar (below zero line) */}
+                      {outH > 0.5 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: CF_CENTER,
+                          left: '8%', right: '8%',
+                          height: outH,
+                          background: '#ef4444',
+                          borderRadius: '0 0 3px 3px',
+                          opacity: faded ? 0.15 : 0.28,
+                        }} />
+                      )}
 
                       {/* Hover tooltip */}
                       {hovered && (
@@ -1210,7 +1246,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   <svg
                     viewBox={`0 0 100 ${CF_H}`}
                     preserveAspectRatio="none"
-                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 10 }}
                   >
                     <polyline
                       vectorEffect="non-scaling-stroke"
