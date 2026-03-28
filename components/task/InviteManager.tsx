@@ -160,11 +160,12 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
   const roleBadge = (role: MemberRole) => {
     if (role === 'creator') return { label: 'Creator', bg: '#fdf6ed', color: '#c9a96e', border: '#f0d9a8' }
     if (role === 'admin')   return { label: 'Admin',   bg: '#eff6ff', color: '#3b82f6', border: '#bfdbfe' }
+    if (role === 'visitor') return { label: 'Visitor', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' }
     return                         { label: 'Member',  bg: '#F3F4F6', color: '#6b7280', border: '#E8E5E0' }
   }
 
   const sortedMembers = [...members].sort((a, b) => {
-    const order = { creator: 0, admin: 1, member: 2 }
+    const order: Record<MemberRole, number> = { creator: 0, admin: 1, member: 2, visitor: 3 }
     return order[a.role] - order[b.role]
   })
 
@@ -215,8 +216,13 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
                     </span>
                     {canChange ? (
                       <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-                        <button onClick={() => changeRole(m.id, 'admin')} disabled={updatingRole === m.id} style={{ padding: '0.2rem 0.55rem', borderRadius: 6, fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', border: m.role === 'admin' ? '1.5px solid #3b82f6' : '1.5px solid #E8E5E0', background: m.role === 'admin' ? '#eff6ff' : '#fff', color: m.role === 'admin' ? '#3b82f6' : '#9ca3af' }}>Admin</button>
-                        <button onClick={() => changeRole(m.id, 'member')} disabled={updatingRole === m.id} style={{ padding: '0.2rem 0.55rem', borderRadius: 6, fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', border: m.role === 'member' ? '1.5px solid #9ca3af' : '1.5px solid #E8E5E0', background: m.role === 'member' ? '#F3F4F6' : '#fff', color: m.role === 'member' ? '#6b7280' : '#c4bfb9' }}>Member</button>
+                        {([
+                          { r: 'admin' as MemberRole,   label: 'Admin',   ac: '#3b82f6', ab: '#eff6ff' },
+                          { r: 'member' as MemberRole,  label: 'Member',  ac: '#6b7280', ab: '#F3F4F6' },
+                          { r: 'visitor' as MemberRole, label: 'Visitor', ac: '#16a34a', ab: '#f0fdf4' },
+                        ]).map(({ r, label, ac, ab }) => (
+                          <button key={r} onClick={() => changeRole(m.id, r)} disabled={updatingRole === m.id || m.role === r} style={{ padding: '0.2rem 0.55rem', borderRadius: 6, fontSize: '0.68rem', fontWeight: 600, cursor: m.role === r ? 'default' : 'pointer', fontFamily: 'inherit', border: m.role === r ? `1.5px solid ${ac}` : '1.5px solid #E8E5E0', background: m.role === r ? ab : '#fff', color: m.role === r ? ac : '#9ca3af' }}>{label}</button>
+                        ))}
                         {updatingRole === m.id && <span style={{ fontSize: '0.7rem', color: '#c9a96e', alignSelf: 'center' }}>…</span>}
                       </div>
                     ) : (

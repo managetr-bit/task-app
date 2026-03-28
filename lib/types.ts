@@ -14,7 +14,7 @@ export type Column = {
   created_at: string
 }
 
-export type MemberRole = 'member' | 'admin' | 'creator'
+export type MemberRole = 'visitor' | 'member' | 'admin' | 'creator'
 
 export type Member = {
   id: string

@@ -14,6 +14,7 @@ const ROLE_BADGE = {
   creator: { label: 'Creator', bg: '#fdf6ed', color: '#c9a96e', border: '#f0d9a8' },
   admin:   { label: 'Admin',   bg: '#eff6ff', color: '#3b82f6', border: '#bfdbfe' },
   member:  { label: 'Member',  bg: '#F3F4F6', color: '#6b7280', border: '#E8E5E0' },
+  visitor: { label: 'Visitor', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
 }
 
 export function MembersBar({ members, currentMember, isCreator, onUpdateMemberRole }: Props) {
@@ -197,37 +198,35 @@ export function MembersBar({ members, currentMember, isCreator, onUpdateMemberRo
               <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#c4bfb9', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.375rem' }}>
                 Change role
               </div>
-              <div style={{ display: 'flex', gap: '0.375rem' }}>
-                <button
-                  onClick={() => changeRole(openMember.id, 'admin')}
-                  disabled={updating || openMember.role === 'admin'}
-                  title="Full access except deleting the project"
-                  style={{
-                    flex: 1, padding: '0.35rem 0', borderRadius: 8, fontSize: '0.72rem', fontWeight: 600,
-                    cursor: updating || openMember.role === 'admin' ? 'default' : 'pointer', fontFamily: 'inherit',
-                    border: openMember.role === 'admin' ? '1.5px solid #3b82f6' : '1.5px solid #E8E5E0',
-                    background: openMember.role === 'admin' ? '#eff6ff' : '#fff',
-                    color: openMember.role === 'admin' ? '#3b82f6' : '#6b7280',
-                    opacity: updating ? 0.6 : 1,
-                  }}
-                >
-                  Admin
-                </button>
-                <button
-                  onClick={() => changeRole(openMember.id, 'member')}
-                  disabled={updating || openMember.role === 'member'}
-                  title="Read-only on costs"
-                  style={{
-                    flex: 1, padding: '0.35rem 0', borderRadius: 8, fontSize: '0.72rem', fontWeight: 600,
-                    cursor: updating || openMember.role === 'member' ? 'default' : 'pointer', fontFamily: 'inherit',
-                    border: openMember.role === 'member' ? '1.5px solid #9ca3af' : '1.5px solid #E8E5E0',
-                    background: openMember.role === 'member' ? '#F3F4F6' : '#fff',
-                    color: openMember.role === 'member' ? '#6b7280' : '#9ca3af',
-                    opacity: updating ? 0.6 : 1,
-                  }}
-                >
-                  Member
-                </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {([
+                  { role: 'admin',   label: 'Admin',   desc: 'Full access except deleting the project', active: '#3b82f6', activeBg: '#eff6ff', inactiveC: '#6b7280' },
+                  { role: 'member',  label: 'Member',  desc: 'Can add and edit tasks, read-only on costs', active: '#6b7280', activeBg: '#F3F4F6', inactiveC: '#9ca3af' },
+                  { role: 'visitor', label: 'Visitor', desc: 'View only — cannot add or edit anything', active: '#16a34a', activeBg: '#f0fdf4', inactiveC: '#9ca3af' },
+                ] as const).map(({ role, label, desc, active, activeBg, inactiveC }) => {
+                  const isActive = openMember.role === role
+                  return (
+                    <button
+                      key={role}
+                      onClick={() => changeRole(openMember.id, role)}
+                      disabled={updating || isActive}
+                      title={desc}
+                      style={{
+                        width: '100%', padding: '0.35rem 0.625rem', borderRadius: 8,
+                        fontSize: '0.72rem', fontWeight: 600, textAlign: 'left',
+                        cursor: updating || isActive ? 'default' : 'pointer', fontFamily: 'inherit',
+                        border: isActive ? `1.5px solid ${active}` : '1.5px solid #E8E5E0',
+                        background: isActive ? activeBg : '#fff',
+                        color: isActive ? active : inactiveC,
+                        opacity: updating ? 0.6 : 1,
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      }}
+                    >
+                      <span>{label}</span>
+                      <span style={{ fontSize: '0.6rem', fontWeight: 400, color: isActive ? active : '#c4bfb9', maxWidth: 130, textAlign: 'right' }}>{desc}</span>
+                    </button>
+                  )
+                })}
               </div>
               {updating && (
                 <div style={{ fontSize: '0.65rem', color: '#c9a96e', marginTop: '0.375rem', textAlign: 'center' }}>Saving…</div>
