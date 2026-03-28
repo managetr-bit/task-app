@@ -144,6 +144,7 @@ export function MembersBar({ members, currentMember, isCreator, onUpdateMemberRo
       {/* Popover — rendered fixed so it escapes any stacking context */}
       {openMember && popoverPos && (
         <div
+          onMouseDown={e => e.stopPropagation()}
           style={{
             position: 'fixed',
             top: popoverPos.top,
