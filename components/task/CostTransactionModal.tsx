@@ -10,6 +10,8 @@ type Props = {
   budgetLines: BudgetLine[]
   milestones: Milestone[]
   editing?: CostTransaction | null
+  defaultBudgetLineId?: string
+  defaultType?: 'cash_in' | 'cash_out'
   onClose: () => void
   onSave: (data: Omit<CostTransaction, 'id' | 'board_id' | 'created_at'>) => Promise<void>
   onDelete?: (id: string) => Promise<void>
@@ -18,14 +20,14 @@ type Props = {
 const currencySymbol = (c: 'TRY' | 'USD') => (c === 'TRY' ? '₺' : '$')
 
 export function CostTransactionModal({
-  currency, budgetLines, milestones, editing, onClose, onSave, onDelete,
+  currency, budgetLines, milestones, editing, defaultBudgetLineId, defaultType, onClose, onSave, onDelete,
 }: Props) {
   const today = new Date().toISOString().slice(0, 10)
-  const [type, setType]               = useState<'cash_in' | 'cash_out'>(editing?.type ?? 'cash_out')
+  const [type, setType]               = useState<'cash_in' | 'cash_out'>(editing?.type ?? defaultType ?? 'cash_out')
   const [amount, setAmount]           = useState(editing ? String(editing.amount) : '')
   const [date, setDate]               = useState(editing?.date ?? today)
   const [description, setDescription] = useState(editing?.description ?? '')
-  const [budgetLineId, setBudgetLineId] = useState<string>(editing?.budget_line_id ?? '')
+  const [budgetLineId, setBudgetLineId] = useState<string>(editing?.budget_line_id ?? defaultBudgetLineId ?? '')
   const [milestoneId, setMilestoneId] = useState<string>(editing?.milestone_id ?? '')
   const [isForecast, setIsForecast]   = useState(editing?.is_forecast ?? false)
   const [saving, setSaving]           = useState(false)
@@ -171,7 +173,14 @@ export function CostTransactionModal({
               <select
                 className="input-base"
                 value={milestoneId}
-                onChange={e => setMilestoneId(e.target.value)}
+                onChange={e => {
+                  const id = e.target.value
+                  setMilestoneId(id)
+                  if (id && !editing) {
+                    const ms = milestones.find(m => m.id === id)
+                    if (ms) { setDate(ms.target_date); setIsForecast(true) }
+                  }
+                }}
                 style={{ fontSize: '0.8125rem' }}
               >
                 <option value="">— none —</option>

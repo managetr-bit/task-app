@@ -1241,6 +1241,32 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   )
                 })}
 
+                {/* Milestone trigger diamonds on zero line */}
+                {milestones.map(ms => {
+                  if (!costTransactions?.some(tx => tx.milestone_id === ms.id)) return null
+                  const msPct = pctOf(new Date(ms.target_date + 'T00:00:00'))
+                  if (msPct < 0 || msPct > 100) return null
+                  return (
+                    <div
+                      key={ms.id}
+                      title={ms.name}
+                      style={{
+                        position: 'absolute',
+                        left: `${msPct}%`,
+                        top: CF_CENTER - 5,
+                        width: 10, height: 10,
+                        transform: 'translateX(-50%) rotate(45deg)',
+                        background: '#c9a96e',
+                        border: '2px solid #fff',
+                        borderRadius: 2,
+                        zIndex: 8,
+                        pointerEvents: 'none',
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
+                      }}
+                    />
+                  )
+                })}
+
                 {/* Cumulative balance polyline */}
                 {cfCumPoints.length > 1 && (
                   <svg

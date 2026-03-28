@@ -203,6 +203,17 @@ export function CostPanel({
   const [showChart, setShowChart]           = useState(true)
   const [showBudgetSection, setShowBudgetSection] = useState(false)
   const [txFilter, setTxFilter]             = useState<'all' | 'cash_in' | 'cash_out' | 'forecast'>('all')
+  const [showSchedules, setShowSchedules]   = useState(true)
+  const [showIncome, setShowIncome]         = useState(true)
+  const [newPaymentLineId, setNewPaymentLineId] = useState<string | null>(null)
+  const [newPaymentType, setNewPaymentType]     = useState<'cash_in' | 'cash_out'>('cash_out')
+
+  function openNewPayment(lineId: string, type: 'cash_in' | 'cash_out') {
+    setNewPaymentLineId(lineId)
+    setNewPaymentType(type)
+    setEditingTx(null)
+    setShowTxModal(true)
+  }
 
   // ── Summaries ────────────────────────────────────────────────────────────
   const totalBudgetExpense = useMemo(() => budgetLines.filter(l => l.type === 'expense').reduce((s, l) => s + l.budgeted_amount, 0), [budgetLines])
@@ -340,6 +351,46 @@ export function CostPanel({
           </Section>
         )}
 
+        {/* ── Payment Schedules ── */}
+        {budgetLines.some(l => l.type === 'expense') && (
+          <Section title="Payment Schedules" emoji="📅" open={showSchedules} onToggle={() => setShowSchedules(p => !p)}>
+            <div style={{ padding: '0 0.75rem 0.5rem' }}>
+              {budgetLines.filter(l => l.type === 'expense').map(line => (
+                <PaymentScheduleGroup
+                  key={line.id}
+                  line={line}
+                  allTransactions={transactions}
+                  milestones={milestones}
+                  currency={currency}
+                  canEdit={canEdit}
+                  onAddPayment={() => openNewPayment(line.id, 'cash_out')}
+                  onEditTransaction={tx => { setEditingTx(tx); setShowTxModal(true) }}
+                />
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* ── Income Plan ── */}
+        {budgetLines.some(l => l.type === 'income') && (
+          <Section title="Income Plan" emoji="💵" open={showIncome} onToggle={() => setShowIncome(p => !p)}>
+            <div style={{ padding: '0 0.75rem 0.5rem' }}>
+              {budgetLines.filter(l => l.type === 'income').map(line => (
+                <PaymentScheduleGroup
+                  key={line.id}
+                  line={line}
+                  allTransactions={transactions}
+                  milestones={milestones}
+                  currency={currency}
+                  canEdit={canEdit}
+                  onAddPayment={() => openNewPayment(line.id, 'cash_in')}
+                  onEditTransaction={tx => { setEditingTx(tx); setShowTxModal(true) }}
+                />
+              ))}
+            </div>
+          </Section>
+        )}
+
         {/* ── Transactions ── */}
         <Section title={`Transactions${transactions.length > 0 ? ` (${transactions.length})` : ''}`} emoji="🧾" open alwaysOpen>
           {/* Filter bar */}
@@ -413,7 +464,9 @@ export function CostPanel({
           budgetLines={budgetLines}
           milestones={milestones}
           editing={editingTx}
-          onClose={() => { setShowTxModal(false); setEditingTx(null) }}
+          defaultBudgetLineId={newPaymentLineId ?? undefined}
+          defaultType={newPaymentType}
+          onClose={() => { setShowTxModal(false); setEditingTx(null); setNewPaymentLineId(null) }}
           onSave={async (data) => {
             if (editingTx) {
               await onUpdateTransaction(editingTx.id, data)
@@ -441,6 +494,99 @@ export function CostPanel({
 }
 
 // ── Helper sub-components ─────────────────────────────────────────────────────
+
+// ── Payment Schedule Group ────────────────────────────────────────────────────
+function PaymentScheduleGroup({
+  line, allTransactions, milestones, currency, canEdit, onAddPayment, onEditTransaction,
+}: {
+  line: BudgetLine
+  allTransactions: CostTransaction[]
+  milestones: Milestone[]
+  currency: 'TRY' | 'USD'
+  canEdit: boolean
+  onAddPayment: () => void
+  onEditTransaction: (tx: CostTransaction) => void
+}) {
+  const [expanded, setExpanded] = useState(false)
+  const txs = allTransactions.filter(t => t.budget_line_id === line.id)
+  const totalScheduled = txs.reduce((s, t) => s + t.amount, 0)
+  const pct = line.budgeted_amount > 0 ? Math.min(100, Math.round(totalScheduled / line.budgeted_amount * 100)) : 0
+  const isIncome = line.type === 'income'
+  const accentColor = isIncome ? '#6ACA9A' : '#c9a96e'
+
+  return (
+    <div style={{ borderBottom: '1px solid #F0EDE8' }}>
+      {/* Header row */}
+      <div
+        onClick={() => setExpanded(p => !p)}
+        style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', padding: '0.45rem 0' }}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"
+          style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s', flexShrink: 0, color: '#c4bfb9' }}>
+          <path d="M2 4L5 7L8 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#1a1a1a', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {COST_CATEGORIES[line.category].emoji} {line.name}
+        </span>
+        {txs.length > 0 && (
+          <span style={{ fontSize: '0.6rem', color: pct >= 100 ? '#ef4444' : accentColor, fontWeight: 600 }}>{pct}%</span>
+        )}
+        <span style={{ fontSize: '0.6rem', color: '#9ca3af', flexShrink: 0 }}>
+          {line.budgeted_amount > 0 ? fmt(line.budgeted_amount, currency) : '—'}
+        </span>
+      </div>
+
+      {/* Progress bar */}
+      {txs.length > 0 && line.budgeted_amount > 0 && (
+        <div style={{ height: 2, background: '#F0EDE8', borderRadius: 1, marginLeft: 16, marginBottom: 2 }}>
+          <div style={{ height: '100%', width: `${pct}%`, background: pct > 100 ? '#ef4444' : accentColor, borderRadius: 1 }} />
+        </div>
+      )}
+
+      {/* Expanded: list of payments */}
+      {expanded && (
+        <div style={{ marginLeft: 16, marginBottom: 6 }}>
+          {txs.length === 0 ? (
+            <p style={{ fontSize: '0.65rem', color: '#c4bfb9', margin: '4px 0' }}>
+              {isIncome ? 'No income events planned' : 'No payments scheduled'}
+            </p>
+          ) : (
+            txs.map(tx => {
+              const ms = milestones.find(m => m.id === tx.milestone_id)
+              return (
+                <div
+                  key={tx.id}
+                  onClick={() => canEdit && onEditTransaction(tx)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '3px 0', cursor: canEdit ? 'pointer' : 'default' }}
+                >
+                  <span style={{ fontSize: '0.65rem', flexShrink: 0 }}>{ms ? '🏁' : '📅'}</span>
+                  <span style={{ flex: 1, fontSize: '0.7rem', color: '#4b5563', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {tx.description || (ms ? ms.name : tx.date)}
+                  </span>
+                  <span style={{ fontSize: '0.6rem', color: '#9ca3af', flexShrink: 0 }}>
+                    {ms ? ms.name : new Date(tx.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
+                  </span>
+                  {tx.is_forecast && <span style={{ fontSize: '0.55rem', color: '#c9a96e', fontWeight: 700, flexShrink: 0 }}>plan</span>}
+                  <span style={{ fontSize: '0.7rem', fontWeight: 700, color: isIncome ? '#6ACA9A' : '#E86A8E', flexShrink: 0 }}>
+                    {isIncome ? '+' : '-'}{fmt(tx.amount, currency)}
+                  </span>
+                </div>
+              )
+            })
+          )}
+          {canEdit && (
+            <button
+              onClick={e => { e.stopPropagation(); onAddPayment() }}
+              style={{ fontSize: '0.65rem', color: accentColor, background: 'none', border: `1px dashed ${accentColor}40`, borderRadius: 6, cursor: 'pointer', padding: '3px 8px', fontWeight: 600, marginTop: 4 }}
+            >
+              + {isIncome ? 'Plan income event' : 'Schedule payment'}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function SummaryCard({ label, value, sub, color, bar }: { label: string; value: string; sub?: string; color?: string; bar?: number | null }) {
   return (
