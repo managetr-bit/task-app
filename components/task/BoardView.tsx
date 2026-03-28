@@ -315,6 +315,8 @@ export function BoardView({
                 milestones={milestones}
                 milestoneTasks={milestoneTasks}
                 tasks={tasks}
+                costTransactions={costTransactions}
+                currency={board.currency}
                 onAdd={onAddMilestone}
                 onDelete={onDeleteMilestone}
                 onUpdateDate={onUpdateMilestoneDate}

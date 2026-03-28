@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { type Milestone, type MilestoneTask, type Task } from '@/lib/types'
+import { type Milestone, type MilestoneTask, type Task, type CostTransaction } from '@/lib/types'
 
 type Props = {
   milestones: Milestone[]
   milestoneTasks: MilestoneTask[]
   tasks: Task[]
+  costTransactions?: CostTransaction[]
+  currency?: 'TRY' | 'USD'
   onAdd: (name: string, targetDate: string) => Promise<void>
   onDelete: (milestoneId: string) => Promise<void>
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
@@ -37,6 +39,15 @@ function formatLabel(dateStr: string) {
 
 function formatFull(d: Date) {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function formatCfAmount(amount: number, currency: 'TRY' | 'USD' = 'USD') {
+  const sym  = currency === 'TRY' ? '₺' : '$'
+  const abs  = Math.abs(amount)
+  const sign = amount < 0 ? '-' : ''
+  if (abs >= 1_000_000) return `${sign}${sym}${(abs / 1_000_000).toFixed(1)}M`
+  if (abs >= 1_000)     return `${sign}${sym}${(abs / 1_000).toFixed(0)}k`
+  return `${sign}${sym}${abs.toFixed(0)}`
 }
 
 function getMilestoneStatus(ms: Milestone, linkedTasks: Task[], completedCount: number) {
@@ -115,7 +126,7 @@ function computeAutoArrangeOffsets(
   return result
 }
 
-export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onCollapse }: Props) {
+export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTransactions, currency = 'USD', onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onCollapse }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
 
   // ── Bar width tracking for accurate label-width estimation ──
@@ -165,6 +176,10 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
 
   // ── Date editing in panel ──
   const [editingDateId, setEditingDateId] = useState<string | null>(null)
+
+  // ── Cash flow panel ──
+  const [cashFlowMode, setCashFlowMode] = useState<'all' | 'actual' | 'forecast'>('all')
+  const [cfHoverMonth, setCfHoverMonth] = useState<string | null>(null)
 
   // ── Date range ──
   const today = new Date(); today.setHours(0,0,0,0)
@@ -987,6 +1002,273 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, onAdd, on
                 })}
                 {openTasks.length === 0 && <p style={{ fontSize: '0.72rem', color: '#c4bfb9', padding: '0.25rem 0.4rem' }}>No tasks yet</p>}
               </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* ── Cash Flow Panel ── */}
+      {(() => {
+        if (!costTransactions?.length) return null
+
+        const CF_H        = 110   // panel height px
+        const CF_CENTER   = 52    // y of zero line within panel
+        const CF_BAR_MAX  = 42    // max bar height in px
+
+        // Group all transactions by "YYYY-MM", split actual vs forecast
+        const cfByMonth: Record<string, { cashIn: number; cashOut: number; forecastIn: number; forecastOut: number }> = {}
+        for (const tx of costTransactions) {
+          const d = new Date(tx.date + 'T00:00:00')
+          if (d < startDate || d > endDate) continue
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          if (!cfByMonth[key]) cfByMonth[key] = { cashIn: 0, cashOut: 0, forecastIn: 0, forecastOut: 0 }
+          if (tx.type === 'cash_in') {
+            if (tx.is_forecast) cfByMonth[key].forecastIn  += tx.amount
+            else                cfByMonth[key].cashIn       += tx.amount
+          } else {
+            if (tx.is_forecast) cfByMonth[key].forecastOut += tx.amount
+            else                cfByMonth[key].cashOut      += tx.amount
+          }
+        }
+
+        // Visible in / out based on mode
+        function cfIn(m: typeof cfByMonth[string])  {
+          if (cashFlowMode === 'forecast') return m.forecastIn
+          if (cashFlowMode === 'actual')   return m.cashIn
+          return m.cashIn + m.forecastIn
+        }
+        function cfOut(m: typeof cfByMonth[string]) {
+          if (cashFlowMode === 'forecast') return m.forecastOut
+          if (cashFlowMode === 'actual')   return m.cashOut
+          return m.cashOut + m.forecastOut
+        }
+        function isForecastOnly(m: typeof cfByMonth[string]) {
+          return cashFlowMode === 'all' && m.cashIn === 0 && m.cashOut === 0
+        }
+
+        const cfMonthKeys = Object.keys(cfByMonth).sort()
+        const cfMaxAmount = cfMonthKeys.reduce(
+          (max, k) => Math.max(max, cfIn(cfByMonth[k]), cfOut(cfByMonth[k])), 0
+        )
+
+        // Cumulative balance points: start at 0 before the first month, step at each month-end
+        const cfCumPoints: { pct: number; balance: number }[] = [{ pct: 0, balance: 0 }]
+        let cfRunning = 0
+        for (const key of cfMonthKeys) {
+          const [yr, mo] = key.split('-').map(Number)
+          cfRunning += cfIn(cfByMonth[key]) - cfOut(cfByMonth[key])
+          cfCumPoints.push({ pct: pctOf(new Date(yr, mo, 0)), balance: cfRunning })
+        }
+        const cfBalanceRange = Math.max(...cfCumPoints.map(p => Math.abs(p.balance)), 1)
+
+        function cfScaleY(balance: number) {
+          return CF_CENTER - (balance / cfBalanceRange) * (CF_CENTER - 10)
+        }
+
+        return (
+          <div>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 1.5rem 0.2rem', borderTop: '1.5px solid #F0EDE8' }}>
+              <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cash Flow</span>
+              {/* Mode toggles */}
+              <div style={{ display: 'flex', gap: 3, marginLeft: 4 }}>
+                {(['all', 'actual', 'forecast'] as const).map(mode => (
+                  <button key={mode} onClick={() => setCashFlowMode(mode)} style={{
+                    fontSize: '0.55rem', fontWeight: 600, padding: '0.1rem 0.4rem',
+                    border: '1px solid', borderRadius: 5,
+                    borderColor: cashFlowMode === mode ? '#c9a96e' : '#E8E5E0',
+                    background: cashFlowMode === mode ? '#fdf6ed' : '#fff',
+                    color: cashFlowMode === mode ? '#c9a96e' : '#9ca3af',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                  }}>
+                    {mode === 'all' ? 'All' : mode === 'actual' ? 'Actuals' : 'Forecast'}
+                  </button>
+                ))}
+              </div>
+              <div style={{ flex: 1 }} />
+              {/* Legend */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+                {[
+                  { color: '#22c55e', label: 'In' },
+                  { color: '#ef4444', label: 'Out' },
+                ].map(({ color, label }) => (
+                  <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: color }} />
+                    <span style={{ fontSize: '0.55rem', color: '#9ca3af' }}>{label}</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <div style={{ width: 14, height: 1.5, background: '#c9a96e', borderRadius: 1 }} />
+                  <span style={{ fontSize: '0.55rem', color: '#9ca3af' }}>Balance</span>
+                </div>
+                {/* Final running total */}
+                {cfRunning !== 0 && (
+                  <span style={{
+                    fontSize: '0.6rem', fontWeight: 700,
+                    color: cfRunning >= 0 ? '#22c55e' : '#ef4444',
+                    marginLeft: 4,
+                  }}>
+                    {cfRunning >= 0 ? '+' : ''}{formatCfAmount(cfRunning, currency)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Chart row — matches the flex layout of the track area */}
+            <div style={{ display: 'flex', padding: '0 1rem 0.75rem' }}>
+              {/* Left spacer (matches DATE_COL) */}
+              <div style={{ width: DATE_COL, flexShrink: 0 }} />
+
+              {/* Chart */}
+              <div style={{ flex: 1, position: 'relative', height: CF_H }}>
+
+                {/* Month grid lines — same positions as tick marks */}
+                {monthTicks.map((t, i) => (
+                  <div key={i} style={{
+                    position: 'absolute', left: `${t.pct}%`,
+                    top: 0, bottom: 0, width: 1,
+                    background: t.isYearBoundary ? '#E8E5E0' : '#F5F3F0',
+                    pointerEvents: 'none',
+                  }} />
+                ))}
+
+                {/* Zero line */}
+                <div style={{
+                  position: 'absolute', left: 0, right: 0,
+                  top: CF_CENTER, height: 1, background: '#E8E5E0',
+                }} />
+
+                {/* "IN" label left of zero line */}
+                <div style={{ position: 'absolute', left: -28, top: CF_CENTER - 22, fontSize: '0.48rem', color: '#d1cdc7', fontWeight: 600 }}>IN</div>
+                <div style={{ position: 'absolute', left: -32, top: CF_CENTER + 10, fontSize: '0.48rem', color: '#d1cdc7', fontWeight: 600 }}>OUT</div>
+
+                {/* Today marker */}
+                {todayPct > 0 && todayPct < 100 && (
+                  <div style={{
+                    position: 'absolute', left: `${todayPct}%`, top: 0, bottom: 0,
+                    width: 1.5, background: '#c9a96e20', pointerEvents: 'none',
+                  }} />
+                )}
+
+                {/* Bars per month */}
+                {cfMonthKeys.map(key => {
+                  const [yr, mo] = key.split('-').map(Number)
+                  const leftPct  = Math.max(0, pctOf(new Date(yr, mo - 1, 1)))
+                  const rightPct = Math.min(100, pctOf(new Date(yr, mo, 0)))
+                  if (rightPct <= leftPct) return null
+                  const wPct   = rightPct - leftPct
+                  const data   = cfByMonth[key]
+                  const inAmt  = cfIn(data)
+                  const outAmt = cfOut(data)
+                  const inH    = cfMaxAmount > 0 ? (inAmt  / cfMaxAmount) * CF_BAR_MAX : 0
+                  const outH   = cfMaxAmount > 0 ? (outAmt / cfMaxAmount) * CF_BAR_MAX : 0
+                  const net    = inAmt - outAmt
+                  const faded  = isForecastOnly(data)
+                  const hovered = cfHoverMonth === key
+
+                  return (
+                    <div
+                      key={key}
+                      onMouseEnter={() => setCfHoverMonth(key)}
+                      onMouseLeave={() => setCfHoverMonth(null)}
+                      style={{ position: 'absolute', left: `${leftPct}%`, width: `${wPct}%`, top: 0, height: CF_H, zIndex: hovered ? 50 : 1 }}
+                    >
+                      {/* Cash-in bar (above zero line) */}
+                      {inH > 0.5 && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: CF_H - CF_CENTER,
+                          left: '12%', right: '12%',
+                          height: inH,
+                          background: '#22c55e',
+                          borderRadius: '3px 3px 0 0',
+                          opacity: faded ? 0.35 : 0.72,
+                        }} />
+                      )}
+                      {/* Cash-out bar (below zero line) */}
+                      {outH > 0.5 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: CF_CENTER,
+                          left: '12%', right: '12%',
+                          height: outH,
+                          background: '#ef4444',
+                          borderRadius: '0 0 3px 3px',
+                          opacity: faded ? 0.35 : 0.72,
+                        }} />
+                      )}
+
+                      {/* Hover tooltip */}
+                      {hovered && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: CF_H + 6,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          background: '#1a1a1a',
+                          color: '#fff',
+                          borderRadius: 9,
+                          padding: '0.45rem 0.625rem',
+                          fontSize: '0.65rem',
+                          whiteSpace: 'nowrap',
+                          zIndex: 300,
+                          boxShadow: '0 4px 18px rgba(0,0,0,0.28)',
+                          pointerEvents: 'none',
+                        }}>
+                          <div style={{ fontWeight: 700, color: '#c9a96e', marginBottom: 4 }}>
+                            {new Date(yr, mo - 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
+                          </div>
+                          {inAmt > 0  && <div style={{ color: '#4ade80' }}>↑ In:  {formatCfAmount(inAmt,  currency)}</div>}
+                          {outAmt > 0 && <div style={{ color: '#f87171' }}>↓ Out: {formatCfAmount(outAmt, currency)}</div>}
+                          <div style={{ borderTop: '1px solid #333', marginTop: 4, paddingTop: 4, fontWeight: 600, color: net >= 0 ? '#4ade80' : '#f87171' }}>
+                            Net: {net >= 0 ? '+' : ''}{formatCfAmount(net, currency)}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* Cumulative balance polyline */}
+                {cfCumPoints.length > 1 && (
+                  <svg
+                    viewBox={`0 0 100 ${CF_H}`}
+                    preserveAspectRatio="none"
+                    style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}
+                  >
+                    <polyline
+                      vectorEffect="non-scaling-stroke"
+                      points={cfCumPoints.map(p => `${p.pct},${cfScaleY(p.balance)}`).join(' ')}
+                      fill="none"
+                      stroke="#c9a96e"
+                      strokeWidth="1.5"
+                      strokeLinejoin="round"
+                    />
+                    {cfCumPoints.slice(1).map((p, i) => (
+                      <circle
+                        key={i}
+                        cx={p.pct} cy={cfScaleY(p.balance)} r="1"
+                        vectorEffect="non-scaling-stroke"
+                        fill="#c9a96e" stroke="#fff" strokeWidth="1.5"
+                      />
+                    ))}
+                  </svg>
+                )}
+
+                {/* Empty state for current mode */}
+                {cfMonthKeys.length === 0 && (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '0.65rem', color: '#d1cdc7',
+                  }}>
+                    No {cashFlowMode === 'all' ? '' : cashFlowMode + ' '}transactions in this date range
+                  </div>
+                )}
+              </div>
+
+              {/* Right spacer */}
+              <div style={{ width: DATE_COL, flexShrink: 0 }} />
             </div>
           </div>
         )
