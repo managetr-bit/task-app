@@ -170,9 +170,9 @@ export function BoardPageClient({ boardId }: Props) {
           if (payload.eventType === 'INSERT') {
             setMembers(prev => [...prev, payload.new as Member])
           } else if (payload.eventType === 'UPDATE') {
-            setMembers(prev =>
-              prev.map(m => (m.id === (payload.new as Member).id ? (payload.new as Member) : m))
-            )
+            const updated = payload.new as Member
+            setMembers(prev => prev.map(m => m.id === updated.id ? updated : m))
+            setCurrentMember(prev => prev?.id === updated.id ? updated : prev)
           } else if (payload.eventType === 'DELETE') {
             setMembers(prev => prev.filter(m => m.id !== (payload.old as Member).id))
           }
