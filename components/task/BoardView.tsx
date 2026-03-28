@@ -14,7 +14,7 @@ import {
   type CollisionDetection,
 } from '@dnd-kit/core'
 import { SortableContext, horizontalListSortingStrategy } from '@dnd-kit/sortable'
-import { type Board, type Column, type Member, type Task, type Milestone, type MilestoneTask, type Priority, type BudgetLine, type CostTransaction } from '@/lib/types'
+import { type Board, type Column, type Member, type MemberRole, type Task, type Milestone, type MilestoneTask, type Priority, type BudgetLine, type CostTransaction } from '@/lib/types'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCard } from './TaskCard'
 import { AddTaskModal } from './AddTaskModal'
@@ -73,6 +73,7 @@ type Props = {
   onDeleteBudgetLine:  (id: string) => Promise<void>
   onImportBudgetLines: (lines: Omit<BudgetLine, 'id' | 'board_id' | 'created_at'>[]) => Promise<void>
   onChangeCurrency:    (c: 'TRY' | 'USD') => Promise<void>
+  onUpdateMemberRole:  (memberId: string, role: MemberRole) => Promise<void>
 }
 
 // Custom collision: column drags only collide with col-* targets; task drags ignore col-* targets
@@ -100,6 +101,7 @@ export function BoardView({
   onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onUpdateMilestoneName, onLinkTask, onUnlinkTask,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   onAddBudgetLine, onUpdateBudgetLine, onDeleteBudgetLine, onImportBudgetLines, onChangeCurrency,
+  onUpdateMemberRole,
 }: Props) {
   const [addTaskColumnId, setAddTaskColumnId] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
@@ -278,14 +280,18 @@ export function BoardView({
           )}
         </div>
 
-        <MembersBar members={members} currentMember={currentMember} />
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
           {momentumCount > 0 && (
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#c9a96e', background: '#fdf6ed', borderRadius: '20px', padding: '0.2rem 0.6rem', whiteSpace: 'nowrap' }}>
               {momentumCount} done today 🔥
             </span>
           )}
+          <MembersBar
+            members={members}
+            currentMember={currentMember}
+            isCreator={currentMember.role === 'creator'}
+            onUpdateMemberRole={onUpdateMemberRole}
+          />
           <ProgressArc pct={progressPct} size={36} />
           <button className="btn-ghost" onClick={() => setShowInviteManager(true)} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }} title="Invite people">
             👥 Invite
@@ -571,7 +577,11 @@ export function BoardView({
       {showInviteManager && (
         <InviteManager
           boardId={board.id}
+          boardName={board.name}
           profile={getLocalProfile()}
+          members={members}
+          currentMember={currentMember}
+          onUpdateMemberRole={onUpdateMemberRole}
           onClose={() => setShowInviteManager(false)}
         />
       )}

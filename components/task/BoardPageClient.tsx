@@ -6,6 +6,7 @@ import {
   type Board,
   type Column,
   type Member,
+  type MemberRole,
   type Task,
   type Milestone,
   type MilestoneTask,
@@ -499,6 +500,18 @@ export function BoardPageClient({ boardId }: Props) {
     if (data) setBoard(data)
   }, [boardId])
 
+  const updateMemberRole = useCallback(async (memberId: string, role: MemberRole) => {
+    const { data } = await supabase
+      .from('members')
+      .update({ role })
+      .eq('id', memberId)
+      .select()
+      .single()
+    if (data) {
+      setMembers(prev => prev.map(m => m.id === memberId ? data : m))
+      if (currentMember && currentMember.id === memberId) setCurrentMember(data)
+    }
+  }, [currentMember])
 
   const deleteColumn = useCallback(
     async (columnId: string, targetColumnId?: string) => {
@@ -630,6 +643,7 @@ export function BoardPageClient({ boardId }: Props) {
           onDeleteBudgetLine={deleteBudgetLine}
           onImportBudgetLines={importBudgetLines}
           onChangeCurrency={changeCurrency}
+          onUpdateMemberRole={updateMemberRole}
         />
       )}
     </>
