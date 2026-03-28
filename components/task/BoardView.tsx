@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -248,15 +248,30 @@ export function BoardView({
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FAF9F7', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
-      <header style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', padding: '0 1.5rem', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', position: 'sticky', top: 0, zIndex: 20, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+    <div style={{ minHeight: '100vh', background: '#F2F1EE', display: 'flex', flexDirection: 'column' }}>
+      {/* ── Command Header ─────────────────────────────────────────────────── */}
+      <header className="command-header">
+        {/* Left: breadcrumb + project name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: 0 }}>
           <button
             title="All projects"
             onClick={() => { if (window.confirm('Go back to all projects?')) window.location.href = '/' }}
-            style={{ fontSize: '1rem', color: '#c4bfb9', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, lineHeight: 1, padding: '4px 6px', borderRadius: 4 }}
-          >←</button>
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.375rem',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', fontWeight: 500,
+              padding: '0.25rem 0.5rem 0.25rem 0', borderRadius: 6,
+              transition: 'color 0.15s ease', flexShrink: 0,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 7h10M2 7l4-4M2 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Projects
+          </button>
+          <span style={{ color: 'rgba(255,255,255,0.2)', margin: '0 0.375rem', fontSize: '0.75rem' }}>/</span>
           {editingBoardName ? (
             <input
               value={boardNameDraft}
@@ -272,43 +287,71 @@ export function BoardView({
                 if (e.key === 'Escape') { setBoardNameDraft(board.name); setEditingBoardName(false) }
               }}
               autoFocus
-              style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1a1a1a', border: 'none', borderBottom: '2px solid #c9a96e', outline: 'none', background: 'transparent', width: 180 }}
+              style={{
+                fontSize: '0.9375rem', fontWeight: 700,
+                color: '#fff', background: 'transparent',
+                border: 'none', borderBottom: '1.5px solid rgba(201,168,108,0.7)',
+                outline: 'none', width: 200, letterSpacing: '-0.01em',
+              }}
             />
           ) : (
             <h1
               onClick={() => setEditingBoardName(true)}
               title="Click to rename"
-              style={{ fontSize: '0.9375rem', fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
+              style={{
+                fontSize: '0.9375rem', fontWeight: 700, color: '#FFFFFF',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                cursor: 'pointer', letterSpacing: '-0.01em', maxWidth: 280,
+              }}
             >
               {board.name}
             </h1>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+        {/* Right: team, progress, actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
           {momentumCount > 0 && (
-            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#c9a96e', background: '#fdf6ed', borderRadius: '20px', padding: '0.2rem 0.6rem', whiteSpace: 'nowrap' }}>
-              {momentumCount} done today 🔥
+            <span style={{
+              fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '-0.01em',
+              color: '#C9A86C', background: 'rgba(201,168,108,0.12)',
+              border: '1px solid rgba(201,168,108,0.25)',
+              borderRadius: '20px', padding: '0.2rem 0.6rem', whiteSpace: 'nowrap',
+            }}>
+              🔥 {momentumCount} done today
             </span>
           )}
-          <MembersBar
-            members={members}
-            currentMember={currentMember}
-            isCreator={currentMember.role === 'creator'}
-            onUpdateMemberRole={onUpdateMemberRole}
-          />
-          <ProgressArc pct={progressPct} size={36} />
-          <button className="btn-ghost" onClick={() => setShowInviteManager(true)} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }} title="Invite people">
-            👥 Invite
+          <MembersBar members={members} currentMember={currentMember} isCreator={currentMember.role === 'creator'} onUpdateMemberRole={onUpdateMemberRole} />
+          <ProgressArc pct={progressPct} size={34} onDark />
+          {/* Separator */}
+          <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.12)', flexShrink: 0 }} />
+          <button
+            className="btn-ghost"
+            onClick={() => setShowInviteManager(true)}
+            title="Invite people"
+            style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', padding: '0.3rem 0.6rem', gap: '0.3rem' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#fff'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.6)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="4" r="2.25" stroke="currentColor" strokeWidth="1.3"/><path d="M1 11.5c0-2.485 2.015-4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M11 8v4M9 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+            Invite
           </button>
-          <button className="btn-ghost" onClick={() => setShowWhiteboard(true)} style={{ padding: '0.375rem 0.625rem', fontSize: '0.8125rem' }} title="Open whiteboard">
-            🎨 Whiteboard
+          <button
+            className="btn-ghost"
+            onClick={() => setShowWhiteboard(true)}
+            title="Whiteboard"
+            style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', padding: '0.3rem 0.6rem', gap: '0.3rem' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#fff'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.6)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M4 12h6M7 10.5V12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M4 6l2 2 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Board
           </button>
         </div>
       </header>
 
       {/* ── Board body ── */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0, paddingBottom: isMobile ? 56 : 0 }}>
+      <div style={{ flex: 1, display: 'flex', minHeight: 0, paddingBottom: isMobile ? 60 : 0 }}>
 
         {/* ── LEFT: Timeline + Kanban ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
@@ -334,11 +377,14 @@ export function BoardView({
               />
             ) : (
               !isMobile && (
-                <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', padding: '0.35rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Timeline</span>
-                  {milestones.length > 0 && <span style={{ fontSize: '0.6rem', color: '#c4bfb9', background: '#F3F4F6', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>{milestones.length}</span>}
-                  <button onClick={() => setShowTimeline(true)} title="Expand timeline" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <div className="section-strip">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: '#9CA3AF', flexShrink: 0 }}>
+                    <path d="M1 3h10M1 6h10M1 9h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                  </svg>
+                  <span className="section-label">Timeline</span>
+                  {milestones.length > 0 && <span style={{ fontSize: '0.6rem', color: '#9CA3AF', background: '#F2F1EE', borderRadius: 10, padding: '0.1rem 0.45rem', fontWeight: 700, border: '1px solid #E2DFD9' }}>{milestones.length}</span>}
+                  <button onClick={() => setShowTimeline(true)} title="Expand timeline" style={{ color: '#C9A86C', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.15rem', lineHeight: 1, display: 'flex', alignItems: 'center', marginLeft: 2 }}>
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                 </div>
               )
@@ -350,10 +396,14 @@ export function BoardView({
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               {/* Board section header */}
               {!isMobile && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.35rem 1.5rem', background: '#FAF9F7', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
-                  <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Board</span>
-                  <button onClick={() => setShowKanban(p => !p)} title={showKanban ? 'Collapse board' : 'Expand board'} style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <div className="section-strip" style={{ background: '#F2F1EE' }}>
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: '#9CA3AF', flexShrink: 0 }}>
+                    <rect x="1" y="1.5" width="3.5" height="9" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                    <rect x="6.5" y="1.5" width="3.5" height="6" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                  </svg>
+                  <span className="section-label">Board</span>
+                  <button onClick={() => setShowKanban(p => !p)} title={showKanban ? 'Collapse board' : 'Expand board'} style={{ color: '#C9A86C', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.15rem', lineHeight: 1, display: 'flex', alignItems: 'center', marginLeft: 2 }}>
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                       <path d={showKanban ? 'M2 4.5L6 8.5L10 4.5' : 'M4.5 2L8.5 6L4.5 10'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
@@ -363,7 +413,7 @@ export function BoardView({
               <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
                 <DndContext sensors={sensors} collisionDetection={columnAwareCollision} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
                   {showKanban && (
-                    <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: isMobile ? '0.75rem' : '1rem 1.5rem 1.5rem', display: 'flex', gap: isMobile ? '0.75rem' : '1rem', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1, overflowX: 'auto', overflowY: 'visible', padding: isMobile ? '0.75rem' : '1rem 1.25rem 1.5rem', display: 'flex', gap: isMobile ? '0.75rem' : '1rem', alignItems: 'flex-start' }}>
                       <SortableContext items={columns.map(c => `col-${c.id}`)} strategy={horizontalListSortingStrategy}>
                         {columns.map(col => {
                           const colTasks = tasks.filter(t => t.column_id === col.id).sort((a, b) => a.position - b.position)
@@ -421,22 +471,24 @@ export function BoardView({
 
         {/* ── RIGHT SIDEBAR: Tabbed (Notes | Files | Cost) — desktop & tablet ── */}
         {!isMobile && (
-          <div style={{ width: sidebarW, flexShrink: 0, borderLeft: '1.5px solid #E8E5E0', display: 'flex', flexDirection: 'column', minHeight: 0, background: '#FAFAFA' }}>
+          <div style={{ width: sidebarW, flexShrink: 0, borderLeft: '1px solid #E2DFD9', display: 'flex', flexDirection: 'column', minHeight: 0, background: '#F7F6F4' }}>
             {/* Tab bar */}
-            <div style={{ display: 'flex', borderBottom: '1.5px solid #E8E5E0', background: '#fff', flexShrink: 0 }}>
+            <div className="sidebar-tab-bar">
               {([
-                { id: 'notes', icon: '📝', label: 'Notes' },
-                { id: 'files', icon: '📁', label: 'Files' },
-                { id: 'cost',  icon: '💰', label: 'Cost'  },
-              ] as { id: SidebarTab; icon: string; label: string }[]).map(tab => (
-                <button key={tab.id} onClick={() => setSidebarTab(tab.id)} style={{
-                  flex: 1, padding: '0.45rem 0.25rem', border: 'none', background: 'none', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                  color: sidebarTab === tab.id ? '#c9a96e' : '#9ca3af',
-                  borderBottom: sidebarTab === tab.id ? '2px solid #c9a96e' : '2px solid transparent',
-                }}>
-                  <span style={{ fontSize: '0.875rem', lineHeight: 1 }}>{tab.icon}</span>
-                  <span style={{ fontSize: '0.55rem', fontWeight: sidebarTab === tab.id ? 700 : 500, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{tab.label}</span>
+                { id: 'notes', label: 'Notes',
+                  icon: <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 2.5h9v7l-2.5 2.5h-6.5v-9.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M8.5 9.5v2.5l2.5-2.5h-2.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M4.5 5.5h5M4.5 7.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> },
+                { id: 'files', label: 'Files',
+                  icon: <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M3 1.5h5.5l3 3V12.5H3V1.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M8.5 1.5V4.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/></svg> },
+                { id: 'cost',  label: 'Cost',
+                  icon: <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/><path d="M7 4v6M5.5 5.5c0-.83.672-1.5 1.5-1.5s1.5.67 1.5 1.5c0 .83-.672 1-1.5 1S5.5 7.67 5.5 8.5c0 .83.672 1.5 1.5 1.5s1.5-.67 1.5-1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> },
+              ] as { id: SidebarTab; label: string; icon: React.ReactNode }[]).map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setSidebarTab(tab.id)}
+                  className={`sidebar-tab${sidebarTab === tab.id ? ' active' : ''}`}
+                >
+                  <span style={{ lineHeight: 1 }}>{tab.icon}</span>
+                  <span style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{tab.label}</span>
                 </button>
               ))}
             </div>
@@ -525,26 +577,27 @@ export function BoardView({
 
       {/* ── MOBILE: Bottom tab bar ── */}
       {isMobile && (
-        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 56, background: '#fff', borderTop: '1.5px solid #E8E5E0', display: 'flex', zIndex: 30 }}>
+        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 60, background: '#111827', borderTop: '1px solid #1F2937', display: 'flex', zIndex: 30 }}>
           {([
-            { id: 'board',    icon: '📋', label: 'Board' },
-            { id: 'timeline', icon: '📅', label: 'Timeline' },
-            { id: 'cost',     icon: '💰', label: 'Cost' },
-            { id: 'notes',    icon: '📝', label: 'Notes' },
-            { id: 'files',    icon: '📁', label: 'Files' },
-          ] as { id: MobileTab; icon: string; label: string }[]).map(tab => (
+            { id: 'board',    label: 'Board',    icon: <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><rect x="1" y="1.5" width="4" height="11" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="7.5" y="1.5" width="4" height="7" rx="1" stroke="currentColor" strokeWidth="1.3"/></svg> },
+            { id: 'timeline', label: 'Timeline', icon: <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M3 4.5V7M7 3.5V7M11 5V7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><circle cx="3" cy="4.5" r="1.2" fill="currentColor"/><circle cx="7" cy="3.5" r="1.2" fill="currentColor"/><circle cx="11" cy="5" r="1.2" fill="currentColor"/></svg> },
+            { id: 'cost',     label: 'Cost',     icon: <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/><path d="M7 4v6M5.5 5.5c0-.83.67-1.5 1.5-1.5s1.5.67 1.5 1.5c0 .83-.67 1-1.5 1s-1.5.67-1.5 1.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> },
+            { id: 'notes',    label: 'Notes',    icon: <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><path d="M2.5 2.5h9v7l-2.5 2.5h-6.5v-9.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M4.5 5.5h5M4.5 7.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> },
+            { id: 'files',    label: 'Files',    icon: <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><path d="M3 1.5h5.5l3 3V12.5H3V1.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M8.5 1.5V4.5h3" stroke="currentColor" strokeWidth="1.3"/></svg> },
+          ] as { id: MobileTab; label: string; icon: React.ReactNode }[]).map(tab => (
             <button
               key={tab.id}
               onClick={() => setMobileTab(tab.id)}
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                gap: 2, border: 'none', background: 'none', cursor: 'pointer',
-                color: mobileTab === tab.id ? '#c9a96e' : '#9ca3af',
-                borderTop: mobileTab === tab.id ? '2px solid #c9a96e' : '2px solid transparent',
+                gap: 3, border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                color: mobileTab === tab.id ? '#C9A86C' : 'rgba(255,255,255,0.4)',
+                borderTop: mobileTab === tab.id ? '2px solid #C9A86C' : '2px solid transparent',
+                transition: 'color 0.12s ease, border-color 0.12s ease',
               }}
             >
-              <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{tab.icon}</span>
-              <span style={{ fontSize: '0.6rem', fontWeight: mobileTab === tab.id ? 700 : 500, letterSpacing: '0.04em' }}>{tab.label}</span>
+              {tab.icon}
+              <span style={{ fontSize: '0.5625rem', fontWeight: mobileTab === tab.id ? 700 : 500, letterSpacing: '0.05em', textTransform: 'uppercase' }}>{tab.label}</span>
             </button>
           ))}
         </nav>
