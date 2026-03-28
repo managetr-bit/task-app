@@ -442,6 +442,13 @@ export function BoardPageClient({ boardId }: Props) {
     if (error) console.error('updateMilestoneName error:', error)
   }, [])
 
+  const completeMilestone = useCallback(async (milestoneId: string, complete: boolean) => {
+    const completed_at = complete ? new Date().toISOString() : null
+    setMilestones(prev => prev.map(m => m.id === milestoneId ? { ...m, completed_at } : m))
+    const { error } = await supabase.from('milestones').update({ completed_at }).eq('id', milestoneId)
+    if (error) console.error('completeMilestone error:', error)
+  }, [])
+
   // ── Cost actions ──────────────────────────────────────────────────────────
   const addTransaction = useCallback(async (data: Omit<CostTransaction, 'id' | 'board_id' | 'created_at'>) => {
     const { data: tx, error } = await supabase
@@ -633,6 +640,7 @@ export function BoardPageClient({ boardId }: Props) {
           onDeleteMilestone={deleteMilestone}
           onUpdateMilestoneDate={updateMilestoneDate}
           onUpdateMilestoneName={updateMilestoneName}
+          onCompleteMilestone={completeMilestone}
           onLinkTask={linkTask}
           onUnlinkTask={unlinkTask}
           onAddTransaction={addTransaction}

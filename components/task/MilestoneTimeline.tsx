@@ -16,6 +16,7 @@ type Props = {
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUpdateDate: (milestoneId: string, newDate: string) => Promise<void>
   onUpdateName?: (milestoneId: string, name: string) => Promise<void>
+  onComplete?: (milestoneId: string, complete: boolean) => Promise<void>
   onCollapse?: () => void
 }
 
@@ -55,11 +56,12 @@ function getMilestoneStatus(ms: Milestone, linkedTasks: Task[], completedCount: 
   const today = new Date(); today.setHours(0,0,0,0)
   const due = new Date(ms.target_date + 'T00:00:00')
   const diff = diffDays(today, due)
-  const allDone = linkedTasks.length > 0 && completedCount === linkedTasks.length
-  if (allDone) return { color: '#22c55e', ring: '#bbf7d040' }
-  if (diff < 0)  return { color: '#ef4444', ring: '#fecaca40' }
-  if (diff <= 7) return { color: '#f59e0b', ring: '#fde68a40' }
-  return { color: '#c9a96e', ring: '#f0e4d040' }
+  const manuallyDone = !!ms.completed_at
+  const allDone = manuallyDone || (linkedTasks.length > 0 && completedCount === linkedTasks.length)
+  if (allDone) return { color: '#22c55e', ring: '#bbf7d040', done: true }
+  if (diff < 0)  return { color: '#ef4444', ring: '#fecaca40', done: false }
+  if (diff <= 7) return { color: '#f59e0b', ring: '#fde68a40', done: false }
+  return { color: '#c9a96e', ring: '#f0e4d040', done: false }
 }
 
 // ── Layout constants ──────────────────────────────────────────────────────────
@@ -127,7 +129,7 @@ function computeAutoArrangeOffsets(
   return result
 }
 
-export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTransactions, budgetLines, currency = 'USD', onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onCollapse }: Props) {
+export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTransactions, budgetLines, currency = 'USD', onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onComplete, onCollapse }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
 
   // ── Bar width tracking for accurate label-width estimation ──
@@ -212,6 +214,20 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
     setLabelOffsets(computeAutoArrangeOffsets(milestones, barWidth, startDate, totalDays))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [milestones, barWidth])
+
+  // ── Auto-complete milestones when all linked tasks are done ──
+  useEffect(() => {
+    if (!onComplete) return
+    for (const ms of milestones) {
+      if (ms.completed_at) continue  // already marked complete — don't re-fire
+      const linkedIds = milestoneTasks.filter(mt => mt.milestone_id === ms.id).map(mt => mt.task_id)
+      if (linkedIds.length === 0) continue  // no tasks linked — manual-only
+      const linkedTasks = tasks.filter(t => linkedIds.includes(t.id))
+      const allDone = linkedTasks.length > 0 && linkedTasks.every(t => !!t.completed_at)
+      if (allDone) onComplete(ms.id, true)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, milestoneTasks, milestones])
 
   function pctOf(d: Date) {
     return Math.min(100, Math.max(0, (diffDays(startDate, d) / totalDays) * 100))
@@ -729,6 +745,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                         opacity: isDragging ? 0.6 : 0.9,
                         marginTop: 1,
                         lineHeight: 1.2,
+                        textDecoration: status.done ? 'line-through' : 'none',
                       }}>{formatLabel(ms.target_date)}</div>
                     </div>
                   )
@@ -736,6 +753,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
 
                 {/* Diamond */}
                 <div style={{
+                  position: 'relative',
                   width: isHovered || isDragging ? 14 : 12,
                   height: isHovered || isDragging ? 14 : 12,
                   transform: 'rotate(45deg)',
@@ -748,7 +766,16 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                     : '0 1px 5px rgba(0,0,0,0.2)',
                   transition: isDragging ? 'none' : 'all 0.15s ease',
                   flexShrink: 0,
-                }} />
+                }}>
+                  {status.done && (
+                    <span style={{
+                      position: 'absolute', inset: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transform: 'rotate(-45deg)',
+                      fontSize: '7px', fontWeight: 900, color: '#fff', lineHeight: 1,
+                    }}>✓</span>
+                  )}
+                </div>
 
                 {/* Drag position tooltip */}
                 {isDragging && dragPct !== null && (
@@ -988,6 +1015,36 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                     <div style={{ height: '100%', width: `${(done / linked.length) * 100}%`, background: status.color, borderRadius: 2, transition: 'width 0.4s ease' }} />
                   </div>
                 </div>
+              )}
+              {/* Manual complete/reopen button */}
+              {onComplete && (
+                <button
+                  type="button"
+                  onClick={() => onComplete(selectedMs.id, !selectedMs.completed_at)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.35rem',
+                    width: '100%', marginBottom: '0.625rem',
+                    padding: '0.4rem 0.75rem', borderRadius: 8, cursor: 'pointer',
+                    border: `1.5px solid ${status.done ? '#22c55e' : '#E8E5E0'}`,
+                    background: status.done ? '#f0fdf4' : '#FAFAFA',
+                    color: status.done ? '#16a34a' : '#6b7280',
+                    fontSize: '0.75rem', fontWeight: 700,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span style={{ fontSize: '0.85rem' }}>{status.done ? '✓' : '○'}</span>
+                  {status.done ? (
+                    <>
+                      <span style={{ flex: 1, textAlign: 'left' }}>Completed</span>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 400, color: '#86efac' }}>
+                        {selectedMs.completed_at ? new Date(selectedMs.completed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''}
+                      </span>
+                      <span style={{ fontSize: '0.62rem', color: '#86efac' }}>· Reopen</span>
+                    </>
+                  ) : (
+                    <span style={{ flex: 1, textAlign: 'left' }}>Mark as complete</span>
+                  )}
+                </button>
               )}
               <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#c4bfb9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.375rem' }}>Prerequisite tasks</div>
               <div style={{ maxHeight: 168, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>

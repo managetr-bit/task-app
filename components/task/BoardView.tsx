@@ -60,6 +60,7 @@ type Props = {
   onDeleteMilestone: (milestoneId: string) => Promise<void>
   onUpdateMilestoneDate: (milestoneId: string, newDate: string) => Promise<void>
   onUpdateMilestoneName?: (milestoneId: string, name: string) => Promise<void>
+  onCompleteMilestone: (milestoneId: string, complete: boolean) => Promise<void>
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
   // Cost module
@@ -98,7 +99,7 @@ export function BoardView({
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
   onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn, onReorderColumn,
   onUpdateFilePanelUrl, onUpdateBoardName,
-  onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onUpdateMilestoneName, onLinkTask, onUnlinkTask,
+  onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onUpdateMilestoneName, onCompleteMilestone, onLinkTask, onUnlinkTask,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   onAddBudgetLine, onUpdateBudgetLine, onDeleteBudgetLine, onImportBudgetLines, onChangeCurrency,
   onUpdateMemberRole,
@@ -251,7 +252,11 @@ export function BoardView({
       {/* Header */}
       <header style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', padding: '0 1.5rem', height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', position: 'sticky', top: 0, zIndex: 20, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
-          <a href="/" title="All projects" style={{ fontSize: '1rem', color: '#c4bfb9', textDecoration: 'none', flexShrink: 0, lineHeight: 1 }}>←</a>
+          <button
+            title="All projects"
+            onClick={() => { if (window.confirm('Go back to all projects?')) window.location.href = '/' }}
+            style={{ fontSize: '1rem', color: '#c4bfb9', background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, lineHeight: 1, padding: '4px 6px', borderRadius: 4 }}
+          >←</button>
           {editingBoardName ? (
             <input
               value={boardNameDraft}
@@ -322,6 +327,7 @@ export function BoardView({
                 onDelete={onDeleteMilestone}
                 onUpdateDate={onUpdateMilestoneDate}
                 onUpdateName={onUpdateMilestoneName}
+                onComplete={onCompleteMilestone}
                 onLinkTask={onLinkTask}
                 onUnlinkTask={onUnlinkTask}
                 onCollapse={() => setShowTimeline(false)}

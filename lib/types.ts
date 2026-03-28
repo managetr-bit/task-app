@@ -65,6 +65,7 @@ export type Milestone = {
   board_id: string
   name: string
   target_date: string
+  completed_at: string | null   // null = not yet complete
   created_at: string
 }
 
