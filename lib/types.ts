@@ -149,6 +149,7 @@ export type BudgetLine = {
   type: 'expense' | 'income'
   budgeted_amount: number
   milestone_id: string | null
+  expected_date: string | null   // YYYY-MM-DD: when this cost/income is expected to occur
   notes: string | null
   position: number
   created_at: string

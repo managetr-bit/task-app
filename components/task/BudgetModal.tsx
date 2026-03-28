@@ -27,11 +27,12 @@ type EditingLine = {
   type: 'expense' | 'income'
   budgeted_amount: string
   milestone_id: string
+  expected_date: string
   notes: string
 }
 
 const blank = (): EditingLine => ({
-  name: '', category: 'other', type: 'expense', budgeted_amount: '', milestone_id: '', notes: '',
+  name: '', category: 'other', type: 'expense', budgeted_amount: '', milestone_id: '', expected_date: '', notes: '',
 })
 
 export function BudgetModal({ currency, budgetLines, milestones, defaultLineType, onClose, onAdd, onUpdate, onDelete, onImportLines }: Props) {
@@ -121,7 +122,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
 
   function startEdit(line?: BudgetLine) {
     if (line) {
-      setEditing({ id: line.id, name: line.name, category: line.category, type: line.type, budgeted_amount: String(line.budgeted_amount), milestone_id: line.milestone_id ?? '', notes: line.notes ?? '' })
+      setEditing({ id: line.id, name: line.name, category: line.category, type: line.type, budgeted_amount: String(line.budgeted_amount), milestone_id: line.milestone_id ?? '', expected_date: line.expected_date ?? '', notes: line.notes ?? '' })
     } else {
       setEditing(blank())
     }
@@ -137,6 +138,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
       type: editing.type,
       budgeted_amount: amt,
       milestone_id: editing.milestone_id || null,
+      expected_date: editing.expected_date || null,
       notes: editing.notes.trim() || null,
       position: editing.id ? (budgetLines.find(l => l.id === editing.id)?.position ?? 0) : budgetLines.length,
     }
@@ -193,6 +195,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
         type,
         budgeted_amount: amt,
         milestone_id: milestone?.id ?? null,
+        expected_date: milestone?.target_date ?? null,
         notes: notesRaw || null,
         position: budgetLines.length + lines.length,
       })
@@ -277,6 +280,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
                         <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
                           {COST_CATEGORIES[line.category]?.label}
                           {line.milestone_id && milestones.find(m => m.id === line.milestone_id) && ` · ${milestones.find(m => m.id === line.milestone_id)!.name}`}
+                          {line.expected_date && <span style={{ color: '#c9a96e' }}> · {line.expected_date}</span>}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -325,7 +329,20 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
                   <div>
                     <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 3 }}>Linked Milestone / Phase</label>
                     {milestones.length > 0 ? (
-                      <select className="input-base" value={editing.milestone_id} onChange={e => setEditing(p => p ? { ...p, milestone_id: e.target.value } : p)} style={{ fontSize: '0.8125rem' }}>
+                      <select
+                        className="input-base"
+                        value={editing.milestone_id}
+                        onChange={e => {
+                          const id = e.target.value
+                          const ms = milestones.find(m => m.id === id)
+                          setEditing(p => p ? {
+                            ...p,
+                            milestone_id: id,
+                            expected_date: id && ms ? ms.target_date : p.expected_date,
+                          } : p)
+                        }}
+                        style={{ fontSize: '0.8125rem' }}
+                      >
                         <option value="">— not linked —</option>
                         {milestones.map(m => <option key={m.id} value={m.id}>{m.name} ({m.target_date})</option>)}
                       </select>
@@ -334,6 +351,27 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
                         No milestones yet — add them from the <strong>Timeline</strong> tab to link budget items to project phases.
                       </div>
                     )}
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 3 }}>
+                      Expected Date
+                      <span style={{ fontWeight: 400, color: '#c4bfb9', marginLeft: 4 }}>— when this cost / income is expected to occur</span>
+                    </label>
+                    <input
+                      className="input-base"
+                      type="date"
+                      value={editing.expected_date}
+                      onChange={e => setEditing(p => p ? { ...p, expected_date: e.target.value } : p)}
+                      style={{ fontSize: '0.8125rem' }}
+                    />
+                    {editing.milestone_id && (() => {
+                      const ms = milestones.find(m => m.id === editing.milestone_id)
+                      return ms ? (
+                        <p style={{ fontSize: '0.68rem', color: '#c9a96e', marginTop: 3 }}>
+                          Auto-set from milestone "{ms.name}" · {ms.target_date}
+                        </p>
+                      ) : null
+                    })()}
                   </div>
                   <div>
                     <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 3 }}>Notes</label>

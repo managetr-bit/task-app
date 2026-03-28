@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { type Milestone, type MilestoneTask, type Task, type CostTransaction } from '@/lib/types'
+import { type Milestone, type MilestoneTask, type Task, type CostTransaction, type BudgetLine } from '@/lib/types'
 
 type Props = {
   milestones: Milestone[]
   milestoneTasks: MilestoneTask[]
   tasks: Task[]
   costTransactions?: CostTransaction[]
+  budgetLines?: BudgetLine[]
   currency?: 'TRY' | 'USD'
   onAdd: (name: string, targetDate: string) => Promise<void>
   onDelete: (milestoneId: string) => Promise<void>
@@ -126,7 +127,7 @@ function computeAutoArrangeOffsets(
   return result
 }
 
-export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTransactions, currency = 'USD', onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onCollapse }: Props) {
+export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTransactions, budgetLines, currency = 'USD', onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onCollapse }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
 
   // ── Bar width tracking for accurate label-width estimation ──
@@ -1010,7 +1011,12 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
 
       {/* ── Cash Flow Panel ── */}
       {(() => {
-        if (!costTransactions?.length) return null
+        // Show if there are transactions OR budget lines with a date
+        const budgetLinesWithDate = (budgetLines ?? []).filter(bl => {
+          const date = bl.expected_date ?? (bl.milestone_id ? milestones.find(m => m.id === bl.milestone_id)?.target_date : null)
+          return !!date
+        })
+        if (!costTransactions?.length && !budgetLinesWithDate.length) return null
 
         const CF_H        = 110   // panel height px
         const CF_CENTER   = 52    // y of zero line within panel
@@ -1018,7 +1024,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
 
         // Group all transactions by "YYYY-MM", split actual vs forecast
         const cfByMonth: Record<string, { cashIn: number; cashOut: number; forecastIn: number; forecastOut: number }> = {}
-        for (const tx of costTransactions) {
+        for (const tx of costTransactions ?? []) {
           const d = new Date(tx.date + 'T00:00:00')
           if (d < startDate || d > endDate) continue
           const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -1030,6 +1036,19 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
             if (tx.is_forecast) cfByMonth[key].forecastOut += tx.amount
             else                cfByMonth[key].cashOut      += tx.amount
           }
+        }
+
+        // Add budget lines as forecast entries (planned, not yet transacted)
+        // Only include lines that have an expected date (explicit or from milestone)
+        for (const bl of budgetLinesWithDate) {
+          const dateStr = bl.expected_date ?? milestones.find(m => m.id === bl.milestone_id)?.target_date
+          if (!dateStr) continue
+          const d = new Date(dateStr + 'T00:00:00')
+          if (d < startDate || d > endDate) continue
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+          if (!cfByMonth[key]) cfByMonth[key] = { cashIn: 0, cashOut: 0, forecastIn: 0, forecastOut: 0 }
+          if (bl.type === 'income') cfByMonth[key].forecastIn  += bl.budgeted_amount
+          else                      cfByMonth[key].forecastOut += bl.budgeted_amount
         }
 
         // Visible in / out based on mode

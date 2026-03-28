@@ -37,7 +37,7 @@ function fmtFull(amount: number, currency: 'TRY' | 'USD'): string {
 }
 
 // ── Cash Flow Chart (pure SVG) ───────────────────────────────────────────────
-function CashFlowChart({ transactions, currency }: { transactions: CostTransaction[]; currency: 'TRY' | 'USD' }) {
+function CashFlowChart({ transactions, budgetLines, milestones, currency }: { transactions: CostTransaction[]; budgetLines: BudgetLine[]; milestones: Milestone[]; currency: 'TRY' | 'USD' }) {
   const W = 240, H = 130, PL = 42, PR = 8, PT = 10, PB = 28
 
   // Build monthly buckets — last 8 months + future months with data
@@ -62,6 +62,16 @@ function CashFlowChart({ transactions, currency }: { transactions: CostTransacti
         if (tx.is_forecast) buckets[key].forecastOut += tx.amount
         else                buckets[key].cashOut     += tx.amount
       }
+    }
+
+    // Add budget lines (with expected_date or milestone date) as forecast entries
+    for (const bl of budgetLines) {
+      const dateStr = bl.expected_date ?? (bl.milestone_id ? milestones.find(m => m.id === bl.milestone_id)?.target_date : null)
+      if (!dateStr) continue
+      const key = dateStr.slice(0, 7)
+      if (!buckets[key]) buckets[key] = { cashIn: 0, cashOut: 0, forecastIn: 0, forecastOut: 0 }
+      if (bl.type === 'income') buckets[key].forecastIn  += bl.budgeted_amount
+      else                      buckets[key].forecastOut += bl.budgeted_amount
     }
 
     return Object.entries(buckets)
@@ -317,7 +327,7 @@ export function CostPanel({
           onToggle={() => setShowChart(p => !p)}
         >
           <div style={{ padding: '0.25rem 0.5rem 0.5rem' }}>
-            <CashFlowChart transactions={transactions} currency={currency} />
+            <CashFlowChart transactions={transactions} budgetLines={budgetLines} milestones={milestones} currency={currency} />
             {/* Legend */}
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.25rem' }}>
               <LegendDot color="#6ACA9A" label="Cash In" />
