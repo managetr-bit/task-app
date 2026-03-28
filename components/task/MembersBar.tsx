@@ -28,13 +28,16 @@ export function MembersBar({ members, currentMember, isCreator, onUpdateMemberRo
   // Fixed position of the open popover (calculated from avatar's bounding rect)
   const [popoverPos, setPopoverPos] = useState<{ top: number; right: number } | null>(null)
   const wrapperRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const popoverRef  = useRef<HTMLDivElement | null>(null)
 
-  // Close on outside mousedown
+  // Close on outside mousedown — but NOT when clicking inside the popover itself
   useEffect(() => {
     if (!openId) return
     function handleMouseDown(e: MouseEvent) {
       const wrapper = wrapperRefs.current[openId!]
-      if (wrapper && !wrapper.contains(e.target as Node)) {
+      const inWrapper = wrapper?.contains(e.target as Node) ?? false
+      const inPopover = popoverRef.current?.contains(e.target as Node) ?? false
+      if (!inWrapper && !inPopover) {
         setOpenId(null)
         setPopoverPos(null)
       }
@@ -144,7 +147,7 @@ export function MembersBar({ members, currentMember, isCreator, onUpdateMemberRo
       {/* Popover — rendered fixed so it escapes any stacking context */}
       {openMember && popoverPos && (
         <div
-          onMouseDown={e => e.stopPropagation()}
+          ref={popoverRef}
           style={{
             position: 'fixed',
             top: popoverPos.top,
