@@ -178,8 +178,9 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
   const [editingDateId, setEditingDateId] = useState<string | null>(null)
 
   // ── Cash flow panel ──
-  const [cashFlowMode, setCashFlowMode] = useState<'all' | 'actual' | 'forecast'>('all')
-  const [cfHoverMonth, setCfHoverMonth] = useState<string | null>(null)
+  const [cashFlowMode, setCashFlowMode]       = useState<'all' | 'actual' | 'forecast'>('all')
+  const [cfHoverMonth, setCfHoverMonth]       = useState<string | null>(null)
+  const [cfCollapsed,  setCfCollapsed]        = useState(false)
 
   // ── Date range ──
   const today = new Date(); today.setHours(0,0,0,0)
@@ -1069,6 +1070,21 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
           <div>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 1.5rem 0.2rem', borderTop: '1.5px solid #F0EDE8' }}>
+              {/* Collapse toggle */}
+              <button
+                onClick={() => setCfCollapsed(v => !v)}
+                title={cfCollapsed ? 'Expand cash flow' : 'Collapse cash flow'}
+                style={{
+                  background: 'none', border: 'none', padding: '0 2px', cursor: 'pointer',
+                  color: '#c4bfb9', display: 'flex', alignItems: 'center', flexShrink: 0,
+                  transition: 'transform 0.18s',
+                  transform: cfCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <polyline points="2,3.5 5,6.5 8,3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
               <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Cash Flow</span>
               {/* Mode toggles */}
               <div style={{ display: 'flex', gap: 3, marginLeft: 4 }}>
@@ -1115,7 +1131,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
             </div>
 
             {/* Chart row — matches the flex layout of the track area */}
-            <div style={{ display: 'flex', padding: '0 1rem 0.75rem' }}>
+            {!cfCollapsed && <div style={{ display: 'flex', padding: '0 1rem 0.75rem' }}>
               {/* Left spacer (matches DATE_COL) */}
               <div style={{ width: DATE_COL, flexShrink: 0 }} />
 
@@ -1269,7 +1285,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
 
               {/* Right spacer */}
               <div style={{ width: DATE_COL, flexShrink: 0 }} />
-            </div>
+            </div>}
           </div>
         )
       })()}
