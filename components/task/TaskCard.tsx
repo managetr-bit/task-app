@@ -1,36 +1,45 @@
 'use client'
-
 import { type Task, type Member } from '@/lib/types'
 import { Avatar } from './MembersBar'
 
 type Props = {
-  task: Task
-  members: Member[]
-  currentMember: Member
+  task: Task; members: Member[]; currentMember: Member
   isDoneColumn: boolean
   onAssign: (taskId: string, memberId: string | null) => Promise<void>
   onClick: (task: Task) => void
   dragHandleProps?: Record<string, unknown>
 }
 
+// Deterministic category tag from task id
+const TAGS = [
+  { cls: 'tag-purple', label: 'Design' },
+  { cls: 'tag-blue',   label: 'Development' },
+  { cls: 'tag-green',  label: 'Research' },
+  { cls: 'tag-pink',   label: 'Planning' },
+  { cls: 'tag-amber',  label: 'Review' },
+]
+function getTag(id: string) {
+  const n = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  return TAGS[n % TAGS.length]
+}
+
 function getDueBadge(dueDate: string | null): { label: string; cls: string } | null {
   if (!dueDate) return null
   const due = new Date(dueDate)
   const today = new Date(); today.setHours(0,0,0,0)
-  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate())
-  const diff = Math.round((dueDay.getTime() - today.getTime()) / 86400000)
-
-  if (diff < 0)  return { label: 'Overdue',      cls: 'badge badge-red'   }
-  if (diff === 0) return { label: 'Due today',    cls: 'badge badge-amber' }
-  if (diff === 1) return { label: 'Tomorrow',     cls: 'badge badge-amber' }
-  if (diff <= 7)  return { label: `${diff}d`,     cls: 'badge badge-gray'  }
-  return           { label: `${diff}d`,           cls: 'badge badge-gray'  }
+  const diff = Math.round((new Date(due.getFullYear(), due.getMonth(), due.getDate()).getTime() - today.getTime()) / 86400000)
+  if (diff < 0)   return { label: 'Overdue',   cls: 'badge badge-red'   }
+  if (diff === 0)  return { label: 'Due today', cls: 'badge badge-amber' }
+  if (diff === 1)  return { label: 'Tomorrow',  cls: 'badge badge-amber' }
+  if (diff <= 7)   return { label: `${diff}d`,  cls: 'badge badge-gray'  }
+  return             { label: `${diff}d`,        cls: 'badge badge-gray'  }
 }
 
 export function TaskCard({ task, members, currentMember, isDoneColumn, onAssign, onClick }: Props) {
-  const assignee  = task.assigned_to ? members.find(m => m.id === task.assigned_to) : null
-  const dueBadge  = getDueBadge(task.due_date)
-  const isHigh    = task.priority === 'high'
+  const assignee = task.assigned_to ? members.find(m => m.id === task.assigned_to) : null
+  const dueBadge = getDueBadge(task.due_date)
+  const tag      = getTag(task.id)
+  const isHigh   = task.priority === 'high'
 
   async function handleTakeIt(e: React.MouseEvent) {
     e.stopPropagation()
@@ -42,50 +51,46 @@ export function TaskCard({ task, members, currentMember, isDoneColumn, onAssign,
       className={`task-card animate-fadeUp ${isDoneColumn && task.completed_at ? 'animate-burst' : ''}`}
       onClick={() => onClick(task)}
       style={{
-        background: isDoneColumn ? '#FAFAFA' : '#FFFFFF',
-        border: `1px solid ${isDoneColumn ? '#E9E6E1' : '#E2DFD9'}`,
-        borderLeft: isHigh && !isDoneColumn
-          ? '3px solid #DC2626'
-          : isDoneColumn ? '3px solid #BBF7D0' : '3px solid transparent',
-        borderRadius: '9px',
-        padding: '0.75rem 0.875rem',
+        background: isDoneColumn ? '#FAFAFE' : '#FFFFFF',
+        border: `1px solid ${isDoneColumn ? '#EAE7F5' : '#E8E5F0'}`,
+        borderLeft: isHigh && !isDoneColumn ? '3px solid #EF4444' : '3px solid transparent',
+        borderRadius: '12px',
+        padding: '0.75rem',
         cursor: 'pointer',
-        opacity: isDoneColumn ? 0.68 : 1,
+        opacity: isDoneColumn ? 0.7 : 1,
         position: 'relative',
       }}
     >
+      {/* Tag + due badge row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+        <span className={`tag ${tag.cls}`}>{tag.label}</span>
+        {dueBadge && !isDoneColumn && (
+          <span className={dueBadge.cls} style={{ fontSize: '0.6rem' }}>{dueBadge.label}</span>
+        )}
+      </div>
+
       {/* Title */}
       <p style={{
-        fontSize: '0.8125rem',
-        fontWeight: 500,
-        color: isDoneColumn ? '#9CA3AF' : '#111827',
-        lineHeight: 1.45,
-        textDecoration: isDoneColumn ? 'line-through' : 'none',
-        marginBottom: task.description ? '0.375rem' : '0.5rem',
+        fontSize: '0.8125rem', fontWeight: 600, color: isDoneColumn ? '#9CA3AF' : '#111827',
+        lineHeight: 1.45, textDecoration: isDoneColumn ? 'line-through' : 'none',
+        marginBottom: task.description && !isDoneColumn ? '0.375rem' : '0.5rem',
         wordBreak: 'break-word',
       }}>
         {task.title}
       </p>
 
-      {/* Description snippet */}
+      {/* Description */}
       {task.description && !isDoneColumn && (
         <p style={{
-          fontSize: '0.6875rem',
-          color: '#9CA3AF',
-          lineHeight: 1.4,
-          marginBottom: '0.5rem',
-          overflow: 'hidden',
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
+          fontSize: '0.6875rem', color: '#9CA3AF', lineHeight: 1.4, marginBottom: '0.5rem',
+          overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
         }}>
           {task.description}
         </p>
       )}
 
-      {/* Footer row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.25rem' }}>
-        {/* Assignee / Take it */}
+      {/* Footer */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.25rem', marginTop: 2 }}>
         {assignee ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
             <Avatar member={assignee} isCurrent={assignee.id === currentMember.id} small />
@@ -97,37 +102,22 @@ export function TaskCard({ task, members, currentMember, isDoneColumn, onAssign,
           <button
             onClick={handleTakeIt}
             style={{
-              fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase',
-              color: '#C9A86C', background: '#FEF3E2',
-              border: '1px solid #F0D9A0', borderRadius: '5px',
-              padding: '0.2rem 0.45rem', cursor: 'pointer',
+              fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.05em', textTransform: 'uppercase',
+              color: '#7C3AED', background: '#EDE9FE', border: '1px solid #DDD6FE',
+              borderRadius: '5px', padding: '0.2rem 0.45rem', cursor: 'pointer',
               transition: 'background 0.12s ease',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FDE8B8' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#FEF3E2' }}
-          >
-            Assign
-          </button>
+          >Assign</button>
         ) : <div />}
 
-        {/* Due date badge */}
-        {dueBadge && !isDoneColumn && (
-          <span className={dueBadge.cls} style={{ fontSize: '0.6rem' }}>
-            {dueBadge.label}
-          </span>
+        {/* High priority dot */}
+        {isHigh && !isDoneColumn && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#EF4444', display: 'inline-block' }} />
+            <span style={{ fontSize: '0.6rem', color: '#EF4444', fontWeight: 700 }}>HIGH</span>
+          </div>
         )}
       </div>
-
-      {/* High priority indicator dot */}
-      {isHigh && !isDoneColumn && (
-        <div
-          title="High priority"
-          style={{
-            position: 'absolute', top: 8, right: 8,
-            width: 6, height: 6, borderRadius: '50%', background: '#DC2626',
-          }}
-        />
-      )}
     </div>
   )
 }

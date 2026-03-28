@@ -248,7 +248,7 @@ export function BoardView({
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F2F1EE', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', background: '#F5F4FD', display: 'flex', flexDirection: 'column' }}>
       {/* ── Command Header ─────────────────────────────────────────────────── */}
       <header className="command-header">
         {/* Left: breadcrumb + project name */}
@@ -259,19 +259,19 @@ export function BoardView({
             style={{
               display: 'flex', alignItems: 'center', gap: '0.375rem',
               background: 'none', border: 'none', cursor: 'pointer',
-              color: 'rgba(255,255,255,0.45)', fontSize: '0.8rem', fontWeight: 500,
+              color: '#9CA3AF', fontSize: '0.8rem', fontWeight: 500,
               padding: '0.25rem 0.5rem 0.25rem 0', borderRadius: 6,
               transition: 'color 0.15s ease', flexShrink: 0,
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.45)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M2 7h10M2 7l4-4M2 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             Projects
           </button>
-          <span style={{ color: 'rgba(255,255,255,0.2)', margin: '0 0.375rem', fontSize: '0.75rem' }}>/</span>
+          <span style={{ color: '#E8E5F0', margin: '0 0.375rem', fontSize: '0.75rem' }}>/</span>
           {editingBoardName ? (
             <input
               value={boardNameDraft}
@@ -289,8 +289,8 @@ export function BoardView({
               autoFocus
               style={{
                 fontSize: '0.9375rem', fontWeight: 700,
-                color: '#fff', background: 'transparent',
-                border: 'none', borderBottom: '1.5px solid rgba(201,168,108,0.7)',
+                color: '#111827', background: 'transparent',
+                border: 'none', borderBottom: '1.5px solid rgba(124,58,237,0.5)',
                 outline: 'none', width: 200, letterSpacing: '-0.01em',
               }}
             />
@@ -299,7 +299,7 @@ export function BoardView({
               onClick={() => setEditingBoardName(true)}
               title="Click to rename"
               style={{
-                fontSize: '0.9375rem', fontWeight: 700, color: '#FFFFFF',
+                fontSize: '0.9375rem', fontWeight: 700, color: '#111827',
                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 cursor: 'pointer', letterSpacing: '-0.01em', maxWidth: 280,
               }}
@@ -314,8 +314,8 @@ export function BoardView({
           {momentumCount > 0 && (
             <span style={{
               fontSize: '0.6875rem', fontWeight: 600, letterSpacing: '-0.01em',
-              color: '#C9A86C', background: 'rgba(201,168,108,0.12)',
-              border: '1px solid rgba(201,168,108,0.25)',
+              color: '#7C3AED', background: '#EDE9FE',
+              border: '1px solid #DDD6FE',
               borderRadius: '20px', padding: '0.2rem 0.6rem', whiteSpace: 'nowrap',
             }}>
               🔥 {momentumCount} done today
@@ -324,14 +324,14 @@ export function BoardView({
           <MembersBar members={members} currentMember={currentMember} isCreator={currentMember.role === 'creator'} onUpdateMemberRole={onUpdateMemberRole} />
           <ProgressArc pct={progressPct} size={34} onDark />
           {/* Separator */}
-          <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.12)', flexShrink: 0 }} />
+          <div style={{ width: 1, height: 22, background: '#E8E5F0', flexShrink: 0 }} />
           <button
             className="btn-ghost"
             onClick={() => setShowInviteManager(true)}
             title="Invite people"
-            style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', padding: '0.3rem 0.6rem', gap: '0.3rem' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#fff'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.6)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+            style={{ color: '#6B7280', fontSize: '0.8rem', padding: '0.3rem 0.6rem', gap: '0.3rem' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED'; (e.currentTarget as HTMLButtonElement).style.background = '#F3F0FA' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6B7280'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="4" r="2.25" stroke="currentColor" strokeWidth="1.3"/><path d="M1 11.5c0-2.485 2.015-4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M11 8v4M9 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
             Invite
@@ -340,15 +340,62 @@ export function BoardView({
             className="btn-ghost"
             onClick={() => setShowWhiteboard(true)}
             title="Whiteboard"
-            style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.8rem', padding: '0.3rem 0.6rem', gap: '0.3rem' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#fff'; (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.08)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.6)'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+            style={{ color: '#6B7280', fontSize: '0.8rem', padding: '0.3rem 0.6rem', gap: '0.3rem' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED'; (e.currentTarget as HTMLButtonElement).style.background = '#F3F0FA' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6B7280'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M4 12h6M7 10.5V12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M4 6l2 2 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
             Board
           </button>
         </div>
       </header>
+
+      {/* ── KPI Stats Bar ── */}
+      {!isMobile && (
+        <div className="kpi-bar" style={{ justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <div className="kpi-item">
+              <div>
+                <div className="kpi-value">{totalTasks}</div>
+                <div className="kpi-label">Total Tasks</div>
+              </div>
+              <span className="badge badge-blue" style={{ marginLeft: '0.5rem' }}>Active</span>
+            </div>
+            <div style={{ width: 1, height: 32, background: '#E8E5F0' }} />
+            <div className="kpi-item">
+              <div>
+                <div className="kpi-value" style={{ color: '#10B981' }}>{doneTasks}</div>
+                <div className="kpi-label">Completed</div>
+              </div>
+              <span className="badge badge-green" style={{ marginLeft: '0.5rem' }}>+{momentumCount} today</span>
+            </div>
+            <div style={{ width: 1, height: 32, background: '#E8E5F0' }} />
+            <div className="kpi-item">
+              <div>
+                <div className="kpi-value" style={{ color: '#7C3AED' }}>{progressPct}%</div>
+                <div className="kpi-label">Progress</div>
+              </div>
+              <span className="badge badge-purple" style={{ marginLeft: '0.5rem' }}>
+                {progressPct === 100 ? '✓ Done' : 'On Track'}
+              </span>
+            </div>
+            <div style={{ width: 1, height: 32, background: '#E8E5F0' }} />
+            <div className="kpi-item">
+              <div>
+                <div className="kpi-value">{members.length}</div>
+                <div className="kpi-label">Team Members</div>
+              </div>
+            </div>
+          </div>
+          {/* Mini progress bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ width: 160, height: 6, background: '#E8E5F0', borderRadius: 3, overflow: 'hidden' }}>
+              <div style={{ width: `${progressPct}%`, height: '100%', background: 'linear-gradient(90deg, #7C3AED, #A78BFA)', borderRadius: 3, transition: 'width 0.5s ease' }} />
+            </div>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#7C3AED' }}>{progressPct}% complete</span>
+          </div>
+        </div>
+      )}
 
       {/* ── Board body ── */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0, paddingBottom: isMobile ? 60 : 0 }}>
@@ -382,8 +429,8 @@ export function BoardView({
                     <path d="M1 3h10M1 6h10M1 9h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                   </svg>
                   <span className="section-label">Timeline</span>
-                  {milestones.length > 0 && <span style={{ fontSize: '0.6rem', color: '#9CA3AF', background: '#F2F1EE', borderRadius: 10, padding: '0.1rem 0.45rem', fontWeight: 700, border: '1px solid #E2DFD9' }}>{milestones.length}</span>}
-                  <button onClick={() => setShowTimeline(true)} title="Expand timeline" style={{ color: '#C9A86C', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.15rem', lineHeight: 1, display: 'flex', alignItems: 'center', marginLeft: 2 }}>
+                  {milestones.length > 0 && <span style={{ fontSize: '0.6rem', color: '#9CA3AF', background: '#F5F4FD', borderRadius: 10, padding: '0.1rem 0.45rem', fontWeight: 700, border: '1px solid #E8E5F0' }}>{milestones.length}</span>}
+                  <button onClick={() => setShowTimeline(true)} title="Expand timeline" style={{ color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.15rem', lineHeight: 1, display: 'flex', alignItems: 'center', marginLeft: 2 }}>
                     <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                 </div>
@@ -396,13 +443,13 @@ export function BoardView({
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               {/* Board section header */}
               {!isMobile && (
-                <div className="section-strip" style={{ background: '#F2F1EE' }}>
+                <div className="section-strip" style={{ background: '#F5F4FD' }}>
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: '#9CA3AF', flexShrink: 0 }}>
                     <rect x="1" y="1.5" width="3.5" height="9" rx="1" stroke="currentColor" strokeWidth="1.3"/>
                     <rect x="6.5" y="1.5" width="3.5" height="6" rx="1" stroke="currentColor" strokeWidth="1.3"/>
                   </svg>
                   <span className="section-label">Board</span>
-                  <button onClick={() => setShowKanban(p => !p)} title={showKanban ? 'Collapse board' : 'Expand board'} style={{ color: '#C9A86C', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.15rem', lineHeight: 1, display: 'flex', alignItems: 'center', marginLeft: 2 }}>
+                  <button onClick={() => setShowKanban(p => !p)} title={showKanban ? 'Collapse board' : 'Expand board'} style={{ color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.15rem', lineHeight: 1, display: 'flex', alignItems: 'center', marginLeft: 2 }}>
                     <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
                       <path d={showKanban ? 'M2 4.5L6 8.5L10 4.5' : 'M4.5 2L8.5 6L4.5 10'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
@@ -437,7 +484,7 @@ export function BoardView({
                       {columns.length < 6 && (
                         <div style={{ flexShrink: 0, width: 220 }}>
                           {showAddColumn ? (
-                            <form onSubmit={handleAddColumn} className="animate-slideDown" style={{ background: '#FFFFFF', border: '1.5px solid #E8E5E0', borderRadius: '14px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                            <form onSubmit={handleAddColumn} className="animate-slideDown" style={{ background: '#FFFFFF', border: '1.5px solid #E8E5F0', borderRadius: '14px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                               <input className="input-base" type="text" placeholder="Column name" value={newColumnName} onChange={e => setNewColumnName(e.target.value)} maxLength={24} autoFocus required />
                               <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <button type="submit" className="btn-primary" disabled={addingColumn || !newColumnName.trim()} style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Add</button>
@@ -471,7 +518,7 @@ export function BoardView({
 
         {/* ── RIGHT SIDEBAR: Tabbed (Notes | Files | Cost) — desktop & tablet ── */}
         {!isMobile && (
-          <div style={{ width: sidebarW, flexShrink: 0, borderLeft: '1px solid #E2DFD9', display: 'flex', flexDirection: 'column', minHeight: 0, background: '#F7F6F4' }}>
+          <div style={{ width: sidebarW, flexShrink: 0, borderLeft: '1px solid #E8E5F0', display: 'flex', flexDirection: 'column', minHeight: 0, background: '#FAFAFE' }}>
             {/* Tab bar */}
             <div className="sidebar-tab-bar">
               {([
@@ -577,7 +624,7 @@ export function BoardView({
 
       {/* ── MOBILE: Bottom tab bar ── */}
       {isMobile && (
-        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 60, background: '#111827', borderTop: '1px solid #1F2937', display: 'flex', zIndex: 30 }}>
+        <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, height: 60, background: '#FFFFFF', borderTop: '1px solid #E8E5F0', display: 'flex', zIndex: 30 }}>
           {([
             { id: 'board',    label: 'Board',    icon: <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><rect x="1" y="1.5" width="4" height="11" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="7.5" y="1.5" width="4" height="7" rx="1" stroke="currentColor" strokeWidth="1.3"/></svg> },
             { id: 'timeline', label: 'Timeline', icon: <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><path d="M1 7h12M3 4.5V7M7 3.5V7M11 5V7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><circle cx="3" cy="4.5" r="1.2" fill="currentColor"/><circle cx="7" cy="3.5" r="1.2" fill="currentColor"/><circle cx="11" cy="5" r="1.2" fill="currentColor"/></svg> },
@@ -591,8 +638,8 @@ export function BoardView({
               style={{
                 flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 gap: 3, border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                color: mobileTab === tab.id ? '#C9A86C' : 'rgba(255,255,255,0.4)',
-                borderTop: mobileTab === tab.id ? '2px solid #C9A86C' : '2px solid transparent',
+                color: mobileTab === tab.id ? '#7C3AED' : '#9CA3AF',
+                borderTop: mobileTab === tab.id ? '2px solid #7C3AED' : '2px solid transparent',
                 transition: 'color 0.12s ease, border-color 0.12s ease',
               }}
             >
@@ -668,9 +715,9 @@ export function BoardView({
                       <button
                         key={col.id}
                         onClick={async () => { await onDeleteColumn(deleteColConfirm.columnId, col.id); setDeleteColConfirm(null) }}
-                        style={{ textAlign: 'left', padding: '0.6rem 0.875rem', borderRadius: 10, border: '1.5px solid #E8E5E0', background: '#fff', cursor: 'pointer', fontSize: '0.85rem', color: '#1a1a1a' }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#c9a96e' }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5E0' }}
+                        style={{ textAlign: 'left', padding: '0.6rem 0.875rem', borderRadius: 10, border: '1.5px solid #E8E5F0', background: '#fff', cursor: 'pointer', fontSize: '0.85rem', color: '#1a1a1a' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7C3AED' }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5F0' }}
                       >
                         Move to <strong>{col.name}</strong>
                       </button>

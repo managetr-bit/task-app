@@ -24,26 +24,26 @@ export function NicknameModal({ boardName, onJoin }: Props) {
     <div className="modal-overlay">
       <div className="modal-card" style={{ maxWidth: 400 }}>
         {/* Top accent */}
-        <div style={{ height: 3, background: 'linear-gradient(90deg, #C9A86C, #E8C87A)', borderRadius: '14px 14px 0 0' }} />
+        <div style={{ height: 3, background: 'linear-gradient(90deg, #7C3AED, #A78BFA)', borderRadius: '16px 16px 0 0' }} />
 
         <div style={{ padding: '2rem' }}>
           {/* Icon */}
           <div style={{
             width: 44, height: 44, borderRadius: 11,
-            background: '#FEF3E2', border: '1px solid #F0D9A0',
+            background: '#EDE9FE', border: '1px solid #DDD6FE',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             marginBottom: '1.25rem',
           }}>
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle cx="10" cy="7" r="3.5" stroke="#C9A86C" strokeWidth="1.5"/>
-              <path d="M3 16.5c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="#C9A86C" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="10" cy="7" r="3.5" stroke="#7C3AED" strokeWidth="1.5"/>
+              <path d="M3 16.5c0-3.866 3.134-7 7-7s7 3.134 7 7" stroke="#7C3AED" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
           </div>
 
           <h2 style={{ fontSize: '1.125rem', fontWeight: 700, color: '#111827', marginBottom: '0.25rem', letterSpacing: '-0.02em' }}>
             Joining project
           </h2>
-          <p style={{ fontSize: '0.9375rem', color: '#C9A86C', fontWeight: 600, marginBottom: '0.625rem', wordBreak: 'break-word' }}>
+          <p style={{ fontSize: '0.9375rem', color: '#7C3AED', fontWeight: 600, marginBottom: '0.625rem', wordBreak: 'break-word' }}>
             {boardName}
           </p>
           <p style={{ fontSize: '0.8125rem', color: '#9CA3AF', marginBottom: '1.75rem', lineHeight: 1.5 }}>

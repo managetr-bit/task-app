@@ -43,7 +43,7 @@ export function AddTaskModal({ columnId, columns, initialTitle, onClose, onSubmi
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid #E2DFD9',
+          borderBottom: '1px solid #E8E5F0',
         }}>
           <div>
             <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.01em' }}>
@@ -103,9 +103,9 @@ export function AddTaskModal({ columnId, columns, initialTitle, onClose, onSubmi
                       flex: 1, padding: '0.4375rem 0.5rem',
                       borderRadius: 7, border: '1.5px solid',
                       fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                      borderColor: priority === p ? (p === 'high' ? '#DC2626' : '#C9A86C') : '#E2DFD9',
-                      background: priority === p ? (p === 'high' ? '#FEF2F2' : '#FEF3E2') : 'transparent',
-                      color: priority === p ? (p === 'high' ? '#DC2626' : '#A8843F') : '#6B7280',
+                      borderColor: priority === p ? (p === 'high' ? '#EF4444' : '#7C3AED') : '#E8E5F0',
+                      background: priority === p ? (p === 'high' ? '#FEF2F2' : '#EDE9FE') : 'transparent',
+                      color: priority === p ? (p === 'high' ? '#EF4444' : '#6D28D9') : '#6B7280',
                       transition: 'all 0.12s ease',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem',
                     }}

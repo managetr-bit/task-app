@@ -114,8 +114,8 @@ export default function LandingPage() {
       {/* ── Top bar ── */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 20,
-        height: 56, background: '#111827',
-        borderBottom: '1px solid #1F2937',
+        height: 56, background: '#FFFFFF',
+        borderBottom: '1px solid #E8E5F0',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 1.5rem',
       }}>
@@ -123,7 +123,7 @@ export default function LandingPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
           <div style={{
             width: 28, height: 28, borderRadius: 7,
-            background: 'linear-gradient(135deg, #C9A86C 0%, #A8843F 100%)',
+            background: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
           }}>
@@ -132,7 +132,7 @@ export default function LandingPage() {
               <rect x="7.5" y="1.5" width="4" height="7.5" rx="1.2" fill="rgba(255,255,255,0.9)"/>
             </svg>
           </div>
-          <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
+          <span style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', letterSpacing: '-0.02em' }}>
             ProjectBoard
           </span>
         </div>
@@ -144,22 +144,22 @@ export default function LandingPage() {
             title="Edit profile"
             style={{
               display: 'flex', alignItems: 'center', gap: '0.5rem',
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              background: '#F5F4FD', border: '1px solid #E8E5F0',
               borderRadius: '20px', padding: '0.3rem 0.75rem 0.3rem 0.375rem',
               cursor: 'pointer', transition: 'background 0.15s ease',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.10)' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#EDE9FE' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F5F4FD' }}
           >
             <div style={{
               width: 24, height: 24, borderRadius: '50%',
-              background: '#C9A86C',
+              background: '#7C3AED',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               color: '#fff', fontSize: '0.625rem', fontWeight: 800, flexShrink: 0,
             }}>
               {profile.display_name.charAt(0).toUpperCase()}
             </div>
-            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#111827' }}>
               {profile.display_name}
             </span>
           </button>
@@ -167,7 +167,7 @@ export default function LandingPage() {
           <button
             onClick={() => setShowProfileModal(true)}
             style={{
-              fontSize: '0.8rem', fontWeight: 600, color: 'rgba(255,255,255,0.6)',
+              fontSize: '0.8rem', fontWeight: 600, color: '#6B7280',
               background: 'none', border: 'none', cursor: 'pointer', padding: '0.375rem 0.625rem',
               borderRadius: 8,
             }}
@@ -180,32 +180,32 @@ export default function LandingPage() {
       {/* ── Main ── */}
       <main style={{
         minHeight: '100vh', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', paddingTop: '56px', background: '#F2F1EE',
+        alignItems: 'center', paddingTop: '56px', background: '#F5F4FD',
       }}>
         {/* Hero section */}
         <div style={{
-          width: '100%', background: '#111827',
-          borderBottom: '1px solid #1F2937',
+          width: '100%', background: '#F5F4FD',
+          borderBottom: '1px solid #E8E5F0',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           padding: '3.5rem 1.5rem 3rem',
         }}>
           <p style={{
             fontSize: '0.6875rem', fontWeight: 700, letterSpacing: '0.1em',
-            textTransform: 'uppercase', color: '#C9A86C',
+            textTransform: 'uppercase', color: '#7C3AED',
             marginBottom: '0.75rem',
           }}>
             Project Command Center
           </p>
           <h1 style={{
             fontSize: 'clamp(1.75rem, 4vw, 2.5rem)', fontWeight: 800,
-            color: '#FFFFFF', letterSpacing: '-0.03em', textAlign: 'center',
+            color: '#111827', letterSpacing: '-0.03em', textAlign: 'center',
             marginBottom: '0.75rem', lineHeight: 1.15,
           }}>
             Manage your projects.<br />
-            <span style={{ color: '#C9A86C' }}>Ship faster.</span>
+            <span style={{ color: '#7C3AED' }}>Ship faster.</span>
           </h1>
           <p style={{
-            fontSize: '0.9375rem', color: 'rgba(255,255,255,0.5)',
+            fontSize: '0.9375rem', color: '#6B7280',
             textAlign: 'center', maxWidth: 400, lineHeight: 1.6, marginBottom: '2rem',
           }}>
             Timeline · Kanban board · Budget tracking · Team collaboration — all in one place.
@@ -218,11 +218,11 @@ export default function LandingPage() {
             style={{
               display: 'flex', gap: '0.625rem',
               width: '100%', maxWidth: 460,
-              background: 'rgba(255,255,255,0.06)',
-              border: `1px solid ${focused ? 'rgba(201,168,108,0.5)' : 'rgba(255,255,255,0.12)'}`,
+              background: '#FFFFFF',
+              border: `1px solid ${focused ? 'rgba(124,58,237,0.5)' : '#E8E5F0'}`,
               borderRadius: 12, padding: '0.375rem 0.375rem 0.375rem 1rem',
               transition: 'border-color 0.2s ease',
-              boxShadow: focused ? '0 0 0 4px rgba(201,168,108,0.1)' : 'none',
+              boxShadow: focused ? '0 0 0 4px rgba(124,58,237,0.1)' : 'none',
             }}
           >
             <input
@@ -237,7 +237,7 @@ export default function LandingPage() {
               required
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                fontSize: '0.9375rem', color: '#FFFFFF', fontFamily: 'inherit',
+                fontSize: '0.9375rem', color: '#111827', fontFamily: 'inherit',
               }}
             />
             <button
@@ -280,21 +280,21 @@ export default function LandingPage() {
                     style={{
                       animationDelay: `${i * 0.04}s`,
                       background: '#FFFFFF',
-                      border: '1px solid #E2DFD9',
+                      border: '1px solid #E8E5F0',
                       borderRadius: 12, overflow: 'hidden',
                       transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
                     }}
                     onMouseEnter={e => {
-                      (e.currentTarget as HTMLDivElement).style.borderColor = '#C9A86C'
-                      ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(201,168,108,0.12)'
+                      (e.currentTarget as HTMLDivElement).style.borderColor = '#7C3AED'
+                      ;(e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 16px rgba(124,58,237,0.12)'
                     }}
                     onMouseLeave={e => {
-                      (e.currentTarget as HTMLDivElement).style.borderColor = '#E2DFD9'
+                      (e.currentTarget as HTMLDivElement).style.borderColor = '#E8E5F0'
                       ;(e.currentTarget as HTMLDivElement).style.boxShadow = 'none'
                     }}
                   >
                     {/* Card color strip */}
-                    <div style={{ height: 3, background: 'linear-gradient(90deg, #C9A86C, #E8C87A)' }} />
+                    <div style={{ height: 3, background: 'linear-gradient(90deg, #7C3AED, #A78BFA)' }} />
 
                     <div style={{ padding: '0.875rem 1rem' }}>
                       <div
@@ -308,14 +308,14 @@ export default function LandingPage() {
                         }}>{rb.name}</div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
                           <div style={{
-                            width: 16, height: 16, borderRadius: '50%', background: '#C9A86C',
+                            width: 16, height: 16, borderRadius: '50%', background: '#7C3AED',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             color: '#fff', fontSize: '0.5rem', fontWeight: 800, flexShrink: 0,
                           }}>
                             {rb.nickname.charAt(0).toUpperCase()}
                           </div>
                           <span style={{ fontSize: '0.6875rem', color: '#6B7280' }}>as {rb.nickname}</span>
-                          <span style={{ color: '#D5D1CB', fontSize: '0.6rem' }}>·</span>
+                          <span style={{ color: '#D0CBDF', fontSize: '0.6rem' }}>·</span>
                           <span style={{ fontSize: '0.6875rem', color: '#9CA3AF' }}>{formatDate(rb.visitedAt)}</span>
                         </div>
                       </div>
@@ -383,7 +383,7 @@ export default function LandingPage() {
         <footer style={{ marginTop: 'auto', padding: '1.5rem', textAlign: 'center' }}>
           <p style={{ fontSize: '0.75rem', color: '#C4BFBA' }}>
             Built by{' '}
-            <a href="https://omercimen.com" target="_blank" rel="noopener noreferrer" style={{ color: '#C9A86C', textDecoration: 'none', fontWeight: 600 }}>
+            <a href="https://omercimen.com" target="_blank" rel="noopener noreferrer" style={{ color: '#7C3AED', textDecoration: 'none', fontWeight: 600 }}>
               omercimen.com
             </a>
           </p>

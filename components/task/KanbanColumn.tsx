@@ -22,12 +22,12 @@ type Props = {
 
 // Status configs
 const COL_CONFIG: Record<string, { accent: string; bg: string; countBg: string; countColor: string }> = {
-  'To Do':  { accent: '#6B7280', bg: '#F2F1EE',   countBg: '#E5E7EB',  countColor: '#374151' },
-  'Doing':  { accent: '#D97706', bg: '#FFFBEB',   countBg: '#FDE68A',  countColor: '#92400E' },
-  'Done':   { accent: '#16A34A', bg: '#F0FDF4',   countBg: '#BBF7D0',  countColor: '#15803D' },
+  'To Do': { accent: '#9CA3AF', bg: '#FAFAFE',  countBg: '#F3F0FA', countColor: '#7C3AED' },
+  'Doing': { accent: '#7C3AED', bg: '#F5F3FF',  countBg: '#EDE9FE', countColor: '#6D28D9' },
+  'Done':  { accent: '#10B981', bg: '#F0FDF9',  countBg: '#A7F3D0', countColor: '#065F46' },
 }
 function getCfg(name: string) {
-  return COL_CONFIG[name] ?? { accent: '#C9A86C', bg: '#FEF3E2', countBg: '#F0D9A0', countColor: '#92400E' }
+  return COL_CONFIG[name] ?? { accent: '#7C3AED', bg: '#F5F3FF', countBg: '#EDE9FE', countColor: '#6D28D9' }
 }
 
 export function KanbanColumn({
@@ -151,7 +151,7 @@ export function KanbanColumn({
                   <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setShowMenu(false)} />
                   <div style={{
                     position: 'absolute', right: 0, top: '100%', zIndex: 20,
-                    background: '#fff', border: '1px solid #E2DFD9', borderRadius: 9,
+                    background: '#fff', border: '1px solid #E8E5F0', borderRadius: 9,
                     padding: '0.25rem', minWidth: 140,
                     boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
                   }}>
@@ -164,7 +164,7 @@ export function KanbanColumn({
                           fontSize: '0.8125rem', color: '#374151', background: 'none', border: 'none',
                           borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
                         }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F2F1EE' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F3F0FA' }}
                         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'none' }}
                       >
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8 1.5l2.5 2.5-7 7H1v-2.5l7-7z" stroke="#374151" strokeWidth="1.3" strokeLinejoin="round"/></svg>
@@ -197,8 +197,8 @@ export function KanbanColumn({
       <div
         ref={setNodeRef}
         style={{
-          background: isOver ? '#FEF3E2' : cfg.bg,
-          border: `1.5px dashed ${isOver ? '#C9A86C' : 'transparent'}`,
+          background: isOver ? '#F5F3FF' : cfg.bg,
+          border: `1.5px dashed ${isOver ? '#7C3AED' : 'transparent'}`,
           borderRadius: '10px',
           padding: '0.5rem',
           minHeight: 72,
@@ -210,7 +210,7 @@ export function KanbanColumn({
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             minHeight: 56, color: '#C4BFBA', fontSize: '0.75rem',
-            border: '1px dashed #E2DFD9', borderRadius: 8,
+            border: '1px dashed #DDD6FE', borderRadius: 8,
           }}>
             No tasks
           </div>
@@ -236,7 +236,7 @@ export function KanbanColumn({
               textAlign: 'center', fontFamily: 'inherit',
               transition: 'color 0.12s ease',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#C9A86C' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
           >
             {expanded ? '↑ Show less' : `+ ${hiddenCount} more`}
@@ -248,7 +248,7 @@ export function KanbanColumn({
             onClick={onAddTask}
             style={{
               background: 'transparent',
-              border: '1px dashed #D5D1CB',
+              border: '1px dashed #DDD6FE',
               borderRadius: '8px', padding: '0.4375rem 0.5rem',
               cursor: 'pointer', color: '#9CA3AF',
               fontSize: '0.75rem', textAlign: 'center',
@@ -256,12 +256,12 @@ export function KanbanColumn({
               transition: 'border-color 0.12s ease, color 0.12s ease, background 0.12s ease',
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#C9A86C'
-              ;(e.currentTarget as HTMLButtonElement).style.color = '#C9A86C'
-              ;(e.currentTarget as HTMLButtonElement).style.background = '#FEF9F0'
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#7C3AED'
+              ;(e.currentTarget as HTMLButtonElement).style.color = '#7C3AED'
+              ;(e.currentTarget as HTMLButtonElement).style.background = '#F5F3FF'
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#D5D1CB'
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#DDD6FE'
               ;(e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF'
               ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
             }}

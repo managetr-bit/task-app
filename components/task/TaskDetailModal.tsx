@@ -66,7 +66,7 @@ export function TaskDetailModal({ task, members, currentMember, milestones, mile
         <div style={{
           display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '0.75rem',
           padding: '1.25rem 1.5rem',
-          borderBottom: '1px solid #E2DFD9',
+          borderBottom: '1px solid #E8E5F0',
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             {editing ? (
@@ -161,9 +161,9 @@ export function TaskDetailModal({ task, members, currentMember, milestones, mile
                 onClick={() => onAssign(task.id, null)}
                 style={{
                   padding: '0.3rem 0.625rem', borderRadius: '7px',
-                  border: `1.5px solid ${!task.assigned_to ? '#C9A86C' : '#E2DFD9'}`,
-                  background: !task.assigned_to ? '#FEF3E2' : 'transparent',
-                  color: !task.assigned_to ? '#A8843F' : '#6B7280',
+                  border: `1.5px solid ${!task.assigned_to ? '#7C3AED' : '#E8E5F0'}`,
+                  background: !task.assigned_to ? '#EDE9FE' : 'transparent',
+                  color: !task.assigned_to ? '#6D28D9' : '#6B7280',
                   fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
                   fontFamily: 'inherit', transition: 'all 0.12s ease',
                 }}
@@ -177,12 +177,12 @@ export function TaskDetailModal({ task, members, currentMember, milestones, mile
                   style={{
                     display: 'flex', alignItems: 'center', gap: '0.375rem',
                     padding: '0.3rem 0.625rem', borderRadius: '7px',
-                    border: `1.5px solid ${task.assigned_to === m.id ? m.color : '#E2DFD9'}`,
+                    border: `1.5px solid ${task.assigned_to === m.id ? m.color : '#E8E5F0'}`,
                     background: task.assigned_to === m.id ? `${m.color}18` : 'transparent',
                     cursor: 'pointer', transition: 'all 0.12s ease', fontFamily: 'inherit',
                   }}
                   onMouseEnter={e => { if (task.assigned_to !== m.id) (e.currentTarget as HTMLButtonElement).style.borderColor = m.color }}
-                  onMouseLeave={e => { if (task.assigned_to !== m.id) (e.currentTarget as HTMLButtonElement).style.borderColor = '#E2DFD9' }}
+                  onMouseLeave={e => { if (task.assigned_to !== m.id) (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5F0' }}
                 >
                   <Avatar member={m} isCurrent={m.id === currentMember.id} small />
                   <span style={{ fontSize: '0.75rem', color: '#374151', fontWeight: 500 }}>
@@ -199,7 +199,7 @@ export function TaskDetailModal({ task, members, currentMember, milestones, mile
               <label className="form-label">Milestones</label>
               <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
                 {linkedMilestones.map(m => (
-                  <span key={m.id} className="badge badge-gold">
+                  <span key={m.id} className="badge badge-purple">
                     <svg width="9" height="9" viewBox="0 0 10 10" fill="none">
                       <path d="M5 1l1.18 2.39 2.64.38-1.91 1.86.45 2.63L5 7.1 2.64 8.26l.45-2.63L1.18 3.77l2.64-.38z" fill="currentColor"/>
                     </svg>
@@ -216,7 +216,7 @@ export function TaskDetailModal({ task, members, currentMember, milestones, mile
           display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem',
           padding: '0.875rem 1.5rem',
           borderTop: '1px solid #E2DFD9',
-          background: '#F7F6F4', borderRadius: '0 0 14px 14px',
+          background: '#F5F3FF', borderRadius: '0 0 16px 16px',
         }}>
           <div>
             {confirmDelete ? (
