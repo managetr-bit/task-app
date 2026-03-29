@@ -126,6 +126,7 @@ export function BoardView({
   const [noteTaskDraft, setNoteTaskDraft] = useState<string | null>(null)
   type SidebarTab = 'notes' | 'files' | 'cost'
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('notes')
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // canEditCosts: board creator OR admin role
   const canEditCosts = isCreator || currentMember.role === 'creator' || currentMember.role === 'admin'
   // Responsive
@@ -559,27 +560,28 @@ export function BoardView({
         </div>
 
         {/* ── RIGHT SIDEBAR: Tabbed (Notes | Files | Cost) — desktop & tablet ── */}
-        {/* Drag handle */}
-        {!isMobile && (
+        {/* Drag handle — hidden when collapsed */}
+        {!isMobile && !sidebarCollapsed && (
           <div
             onMouseDown={handleResizeStart}
             style={{
-              width: 4,
-              flexShrink: 0,
-              cursor: 'col-resize',
-              background: 'transparent',
-              position: 'relative',
-              zIndex: 20,
+              width: 4, flexShrink: 0, cursor: 'col-resize',
+              background: 'transparent', position: 'relative', zIndex: 20,
             }}
             onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#DDD6FE' }}
             onMouseLeave={e => { if (!resizingRef.current) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
           />
         )}
         {!isMobile && (
-          <div style={{ width: sidebarW, flexShrink: 0, borderLeft: '1px solid #E8E5F0', display: 'flex', flexDirection: 'column', minHeight: 0, background: '#FAFAFE' }}>
+          <div style={{
+            width: sidebarCollapsed ? 40 : sidebarW,
+            flexShrink: 0, borderLeft: '1px solid #E8E5F0',
+            display: 'flex', flexDirection: 'column', minHeight: 0,
+            background: '#FAFAFE', transition: 'width 0.2s ease', overflow: 'hidden',
+          }}>
             {/* Tab bar */}
-            <div className="sidebar-tab-bar">
-              {([
+            <div className="sidebar-tab-bar" style={{ position: 'relative' }}>
+              {!sidebarCollapsed && ([
                 { id: 'notes', label: 'Notes',
                   icon: <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2.5 2.5h9v7l-2.5 2.5h-6.5v-9.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M8.5 9.5v2.5l2.5-2.5h-2.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M4.5 5.5h5M4.5 7.5h3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> },
                 { id: 'files', label: 'Files',
@@ -596,10 +598,26 @@ export function BoardView({
                   <span style={{ fontSize: '0.55rem', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase' }}>{tab.label}</span>
                 </button>
               ))}
+              {/* Collapse / expand button */}
+              <button
+                onClick={() => setSidebarCollapsed(p => !p)}
+                title={sidebarCollapsed ? 'Expand panel' : 'Collapse panel'}
+                style={{
+                  width: 40, flexShrink: 0, border: 'none', background: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#9CA3AF', fontSize: '0.75rem', padding: 0,
+                  borderBottom: '2px solid transparent',
+                  transition: 'color 0.12s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
+              >
+                {sidebarCollapsed ? '‹' : '›'}
+              </button>
             </div>
 
-            {/* Tab content */}
-            <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Tab content — hidden when collapsed */}
+            <div style={{ flex: 1, minHeight: 0, display: sidebarCollapsed ? 'none' : 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {sidebarTab === 'notes' && (
                 <NotesPanel
                   boardId={board.id}
