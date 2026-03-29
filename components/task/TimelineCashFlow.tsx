@@ -458,9 +458,9 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
     return CF_CENTER - (balance / cfBalanceRange) * (CF_CENTER - 10)
   }
 
-  // ── KPI totals ──
-  const totalCashIn  = (costTransactions ?? []).filter(tx => tx.type === 'cash_in'  && !tx.is_forecast).reduce((s, tx) => s + tx.amount, 0)
-  const totalCashOut = (costTransactions ?? []).filter(tx => tx.type === 'cash_out' && !tx.is_forecast).reduce((s, tx) => s + tx.amount, 0)
+  // ── KPI totals — respects cashFlowMode same as chart bars ──
+  const totalCashIn  = cfMonthKeys.reduce((s, k) => s + cfIn(cfByMonth[k]),  0)
+  const totalCashOut = cfMonthKeys.reduce((s, k) => s + cfOut(cfByMonth[k]), 0)
   const runningBalance = totalCashIn - totalCashOut
   const milestoneCount = milestones.length
 
