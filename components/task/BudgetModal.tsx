@@ -277,21 +277,21 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
                       <span style={{ fontSize: '1rem' }}>{COST_CATEGORIES[line.category]?.emoji}</span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{line.name}</div>
-                        <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
+                        <div style={{ fontSize: '0.7rem', color: '#6B7280' }}>
                           {COST_CATEGORIES[line.category]?.label}
                           {line.milestone_id && milestones.find(m => m.id === line.milestone_id) && ` · ${milestones.find(m => m.id === line.milestone_id)!.name}`}
                           {line.expected_date && <span style={{ color: '#7C3AED' }}> · {line.expected_date}</span>}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: line.type === 'income' ? '#6ACA9A' : '#1a1a1a' }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: line.type === 'income' ? '#16a34a' : '#1a1a1a' }}>
                           {line.type === 'income' ? '+' : ''}{sym(currency)}{line.budgeted_amount.toLocaleString()}
                         </div>
-                        <div style={{ fontSize: '0.65rem', color: '#c4bfb9', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{line.type}</div>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 600, color: line.type === 'income' ? '#16a34a' : '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{line.type}</div>
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); setConfirmDeleteId(line.id) }}
-                        style={{ color: '#c4bfb9', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem', lineHeight: 1 }}
+                        style={{ color: '#9CA3AF', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem', lineHeight: 1 }}
                       >🗑</button>
                     </div>
                   )

@@ -240,12 +240,12 @@ export function TaskDetailModal({ task, members, currentMember, milestones, mile
               <button
                 onClick={() => setConfirmDelete(true)}
                 style={{
-                  fontSize: '0.75rem', fontWeight: 500, color: '#9CA3AF',
+                  fontSize: '0.75rem', fontWeight: 500, color: '#6B7280',
                   background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                   transition: 'color 0.12s ease',
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#DC2626' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6B7280' }}
               >
                 Delete task
               </button>
@@ -254,7 +254,7 @@ export function TaskDetailModal({ task, members, currentMember, milestones, mile
 
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             {creator && (
-              <span style={{ fontSize: '0.6875rem', color: '#9CA3AF', marginRight: '0.25rem' }}>
+              <span style={{ fontSize: '0.6875rem', color: '#6B7280', marginRight: '0.25rem' }}>
                 by {creator.nickname}
               </span>
             )}
