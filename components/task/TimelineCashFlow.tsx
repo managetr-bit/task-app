@@ -536,8 +536,8 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
   return (
     <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5F0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
 
-      {/* ── KPI bar (only when there's CF data) ── */}
-      {hasCfData && (
+      {/* ── KPI bar — always visible ── */}
+      {(
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.5rem 0', flexWrap: 'wrap' }}>
           {[
             { label: 'Cash In',    value: formatCfAmount(totalCashIn,  currency), color: '#6ACA9A', bg: '#F0FBF5' },
@@ -602,41 +602,6 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* ── Header (no-CF variant) ── */}
-      {!hasCfData && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.5rem 0', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Timeline</span>
-          {milestones.length > 0 && (
-            <span style={{ fontSize: '0.6rem', color: '#7C3AED', background: '#EDE9FE', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>
-              {milestones.length}
-            </span>
-          )}
-          {onCollapse && (
-            <button onClick={onCollapse} title="Collapse timeline" style={{ color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8.5L10 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </button>
-          )}
-          <div style={{ flex: 1 }} />
-          {milestones.length > 1 && (
-            <button
-              onClick={() => setLabelOffsets(computeAutoArrangeOffsets(milestones, barWidth, startDate, totalDays))}
-              title="Auto-arrange labels to avoid overlaps"
-              style={{
-                fontSize: '0.58rem', fontWeight: 600, padding: '0.15rem 0.5rem',
-                border: '1px solid #E8E5F0', borderRadius: 6, background: '#fff',
-                color: '#9ca3af', cursor: 'pointer', whiteSpace: 'nowrap',
-                transition: 'all 0.12s',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#7C3AED' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5F0' }}
-            >⊞ Auto Arrange</button>
-          )}
-          <span style={{ fontSize: '0.58rem', color: '#C4B5FD', fontStyle: 'italic' }}>
-            {milestones.length === 0 ? 'Click track to add' : 'Click to manage · Drag to reschedule'}
-          </span>
         </div>
       )}
 
@@ -989,7 +954,7 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
         </div>{/* end flex row */}
 
         {/* ── Cash Flow section (inline below track) ── */}
-        {hasCfData && (
+        {(
           <div style={{ display: 'flex', marginBottom: '0.75rem' }}>
             {/* Left label area */}
             <div style={{
@@ -1169,9 +1134,11 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
                 <div style={{
                   position: 'absolute', inset: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '0.65rem', color: '#C4B5FD',
+                  fontSize: '0.65rem', color: '#C4B5FD', fontStyle: 'italic',
                 }}>
-                  No {cashFlowMode === 'all' ? '' : cashFlowMode + ' '}transactions in this date range
+                  {(costTransactions ?? []).length === 0
+                    ? 'Add transactions in the Cost tab to see cash flow'
+                    : `No ${cashFlowMode === 'all' ? '' : cashFlowMode + ' '}transactions in this date range`}
                 </div>
               )}
             </div>
@@ -1180,9 +1147,6 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
             <div style={{ width: DATE_COL, flexShrink: 0 }} />
           </div>
         )}
-
-        {/* Bottom padding when no CF data */}
-        {!hasCfData && <div style={{ paddingBottom: '0.75rem' }} />}
 
         {/* ── Add milestone form ── */}
         {pendingPct !== null && (
