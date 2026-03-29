@@ -22,7 +22,7 @@ import { TaskDetailModal } from './TaskDetailModal'
 import { ProgressArc } from './ProgressArc'
 import { MembersBar } from './MembersBar'
 import { FilePanel } from './FilePanel'
-import { MilestoneTimeline } from './MilestoneTimeline'
+import { TimelineCashFlow } from './TimelineCashFlow'
 import { NotesPanel } from './NotesPanel'
 import { Whiteboard } from './Whiteboard'
 import { InviteManager } from './InviteManager'
@@ -447,7 +447,7 @@ export function BoardView({
           {/* Timeline (hidden on mobile when not active tab) */}
           {(!isMobile || mobileTab === 'timeline') && (
             showTimeline ? (
-              <MilestoneTimeline
+              <TimelineCashFlow
                 milestones={milestones}
                 milestoneTasks={milestoneTasks}
                 tasks={tasks}
