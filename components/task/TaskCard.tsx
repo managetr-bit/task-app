@@ -10,18 +10,6 @@ type Props = {
   dragHandleProps?: Record<string, unknown>
 }
 
-// Deterministic category tag from task id
-const TAGS = [
-  { cls: 'tag-purple', label: 'Design' },
-  { cls: 'tag-blue',   label: 'Development' },
-  { cls: 'tag-green',  label: 'Research' },
-  { cls: 'tag-pink',   label: 'Planning' },
-  { cls: 'tag-amber',  label: 'Review' },
-]
-function getTag(id: string) {
-  const n = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
-  return TAGS[n % TAGS.length]
-}
 
 function getDueBadge(dueDate: string | null): { label: string; cls: string } | null {
   if (!dueDate) return null
@@ -38,7 +26,6 @@ function getDueBadge(dueDate: string | null): { label: string; cls: string } | n
 export function TaskCard({ task, members, currentMember, isDoneColumn, onAssign, onClick }: Props) {
   const assignee = task.assigned_to ? members.find(m => m.id === task.assigned_to) : null
   const dueBadge = getDueBadge(task.due_date)
-  const tag      = getTag(task.id)
   const isHigh   = task.priority === 'high'
 
   async function handleTakeIt(e: React.MouseEvent) {
@@ -61,13 +48,12 @@ export function TaskCard({ task, members, currentMember, isDoneColumn, onAssign,
         position: 'relative',
       }}
     >
-      {/* Tag + due badge row */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-        <span className={`tag ${tag.cls}`}>{tag.label}</span>
-        {dueBadge && !isDoneColumn && (
+      {/* Due badge row */}
+      {dueBadge && !isDoneColumn && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.375rem' }}>
           <span className={dueBadge.cls} style={{ fontSize: '0.6rem' }}>{dueBadge.label}</span>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Title */}
       <p style={{
