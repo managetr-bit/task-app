@@ -39,12 +39,50 @@ const PLATFORM_ICONS: Record<string, string> = {
   'gdrive-folder': '📁', 'gdrive-file': '📄', 'onedrive': '☁️', 'link': '🔗',
 }
 
+const APPS_SCRIPT_CODE = `function doPost(e) {
+  try {
+    var d = JSON.parse(e.postData.contents);
+    var folder = d.parentFolderId
+      ? DriveApp.getFolderById(d.parentFolderId)
+      : DriveApp.getRootFolder();
+    var blob;
+    if (d.data && d.data.indexOf('base64,') > -1) {
+      var b64 = d.data.split('base64,')[1];
+      blob = Utilities.newBlob(
+        Utilities.base64Decode(b64), 'image/png', d.fileName);
+    } else {
+      blob = Utilities.newBlob(
+        d.data || '', 'text/plain', d.fileName);
+    }
+    var file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,
+      DriveApp.Permission.VIEW);
+    return ContentService
+      .createTextOutput(JSON.stringify(
+        {success:true, url:file.getUrl()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify(
+        {success:false, error:err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}`
+
 export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScriptUrl, onCloudScriptUrlChange }: Props) {
   const [editing, setEditing] = useState(false)
   const [inputUrl, setInputUrl] = useState(filePanelUrl ?? '')
   const [saving, setSaving] = useState(false)
   const [showUploadSetup, setShowUploadSetup] = useState(false)
   const [scriptDraft, setScriptDraft] = useState(cloudScriptUrl)
+  const [copied, setCopied] = useState(false)
+
+  function copyScript() {
+    navigator.clipboard.writeText(APPS_SCRIPT_CODE).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2500)
+    })
+  }
   const [savedLinks, setSavedLinks] = useState<{url: string; label: string; savedAt: string}[]>([])
 
   useEffect(() => {
@@ -158,55 +196,68 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
                   </span>
                   <span style={{ marginLeft: 'auto', fontSize: '0.6rem', color: '#c4bfb9' }}>{showUploadSetup ? '▲' : '▼'}</span>
                 </button>
+
                 {showUploadSetup && (
-                  <div style={{ padding: '0 1rem 0.875rem' }}>
-                    <p style={{ fontSize: '0.68rem', color: '#9ca3af', marginBottom: '0.5rem', lineHeight: 1.5 }}>
-                      Notes and whiteboard images save directly into this Drive folder. Requires a Google Apps Script Web App URL.
-                    </p>
-                    <details style={{ marginBottom: '0.625rem', fontSize: '0.68rem', color: '#9ca3af', background: '#F3F4F6', borderRadius: 8, padding: '0.4rem 0.625rem' }}>
-                      <summary style={{ cursor: 'pointer', fontWeight: 600 }}>How to set up (one-time)</summary>
-                      <ol style={{ margin: '0.5rem 0 0', paddingLeft: '1.1rem', lineHeight: 1.9 }}>
-                        <li>Go to <strong>script.google.com</strong> → New project</li>
-                        <li>Paste the script below and save</li>
-                        <li><strong>Deploy → New deployment → Web App</strong></li>
-                        <li><em>Execute as</em>: Me &nbsp;|&nbsp; <em>Access</em>: Anyone</li>
-                        <li>Copy the Web App URL and paste it below</li>
-                      </ol>
-                      <pre style={{ marginTop: '0.5rem', background: '#fff', padding: '0.5rem', borderRadius: 6, fontSize: '0.62rem', overflowX: 'auto', border: '1px solid #E8E5E0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{`function doPost(e) {
-  try {
-    var d = JSON.parse(e.postData.contents);
-    var folder = d.parentFolderId
-      ? DriveApp.getFolderById(d.parentFolderId)
-      : DriveApp.getRootFolder();
-    var blob;
-    if (d.data && d.data.indexOf('base64,') > -1) {
-      var b64 = d.data.split('base64,')[1];
-      blob = Utilities.newBlob(
-        Utilities.base64Decode(b64), 'image/png', d.fileName);
-    } else {
-      blob = Utilities.newBlob(
-        d.data || '', 'text/plain', d.fileName);
-    }
-    var file = folder.createFile(blob);
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,
-      DriveApp.Permission.VIEW);
-    return ContentService
-      .createTextOutput(JSON.stringify(
-        {success:true, url:file.getUrl()}))
-      .setMimeType(ContentService.MimeType.JSON);
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify(
-        {success:false, error:err.toString()}))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-}`}</pre>
-                    </details>
+                  <div style={{ padding: '0 1rem 0.875rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+
+                    {/* Update notice for existing users */}
+                    {cloudScriptUrl && (
+                      <div style={{ background: '#FFF7ED', border: '1.5px solid #FED7AA', borderRadius: 8, padding: '0.5rem 0.625rem' }}>
+                        <p style={{ fontSize: '0.68rem', fontWeight: 700, color: '#C2410C', marginBottom: '0.2rem' }}>⚠ Script update required</p>
+                        <p style={{ fontSize: '0.65rem', color: '#9A3412', lineHeight: 1.5 }}>
+                          Your current script saves to a subfolder. Copy the new script below, paste it into your Apps Script project, and redeploy to save files directly to your folder.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Script copy block */}
+                    <div style={{ background: '#F3F4F6', borderRadius: 8, padding: '0.5rem 0.625rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
+                        <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#6B7280' }}>Apps Script code</span>
+                        <button
+                          onClick={copyScript}
+                          style={{
+                            padding: '0.2rem 0.5rem', borderRadius: 6, border: 'none', cursor: 'pointer',
+                            background: copied ? '#D1FAE5' : '#7C3AED',
+                            color: copied ? '#065F46' : '#fff',
+                            fontSize: '0.65rem', fontWeight: 700, transition: 'all 0.2s',
+                          }}
+                        >{copied ? '✓ Copied!' : '📋 Copy'}</button>
+                      </div>
+                      <pre style={{ margin: 0, fontSize: '0.58rem', color: '#374151', overflowX: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-all', maxHeight: 80, lineHeight: 1.5 }}>{APPS_SCRIPT_CODE.slice(0, 120)}…</pre>
+                    </div>
+
+                    {/* Steps */}
+                    <div style={{ fontSize: '0.67rem', color: '#6B7280', lineHeight: 1.8 }}>
+                      {cloudScriptUrl ? (
+                        <>
+                          <strong style={{ color: '#374151' }}>To update:</strong>
+                          <ol style={{ margin: '0.2rem 0 0', paddingLeft: '1.1rem' }}>
+                            <li>Open <strong>script.google.com</strong> → your project</li>
+                            <li>Select all → paste the copied script → Save</li>
+                            <li><strong>Deploy → Manage deployments → ✎ edit → New version → Deploy</strong></li>
+                          </ol>
+                        </>
+                      ) : (
+                        <>
+                          <strong style={{ color: '#374151' }}>One-time setup:</strong>
+                          <ol style={{ margin: '0.2rem 0 0', paddingLeft: '1.1rem' }}>
+                            <li>Go to <strong>script.google.com</strong> → New project</li>
+                            <li>Paste the copied script → Save</li>
+                            <li>Deploy → New deployment → Web App</li>
+                            <li><em>Execute as</em>: Me &nbsp;|&nbsp; <em>Access</em>: Anyone</li>
+                            <li>Copy the Web App URL → paste below → Save</li>
+                          </ol>
+                        </>
+                      )}
+                    </div>
+
+                    {/* URL input */}
                     <input
                       value={scriptDraft}
                       onChange={e => setScriptDraft(e.target.value)}
                       placeholder="https://script.google.com/macros/s/…/exec"
-                      style={{ width: '100%', padding: '0.45rem 0.6rem', borderRadius: 8, border: '1.5px solid #E8E5E0', fontSize: '0.7rem', outline: 'none', boxSizing: 'border-box', marginBottom: '0.5rem', fontFamily: 'monospace', color: '#374151' }}
+                      style={{ width: '100%', padding: '0.45rem 0.6rem', borderRadius: 8, border: '1.5px solid #E8E5E0', fontSize: '0.7rem', outline: 'none', boxSizing: 'border-box', fontFamily: 'monospace', color: '#374151' }}
                       onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED' }}
                       onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
                     />
@@ -214,7 +265,7 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
                       <button
                         onClick={() => { onCloudScriptUrlChange(scriptDraft.trim()); setShowUploadSetup(false) }}
                         style={{ flex: 1, padding: '0.4rem', borderRadius: 8, border: 'none', background: '#7C3AED', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
-                      >Save</button>
+                      >Save URL</button>
                       {cloudScriptUrl && (
                         <button
                           onClick={() => { onCloudScriptUrlChange(''); setScriptDraft(''); setShowUploadSetup(false) }}
