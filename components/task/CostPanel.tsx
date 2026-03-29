@@ -134,7 +134,7 @@ function CashFlowChart({ transactions, budgetLines, milestones, currency }: { tr
         const y = PT + chartH * (1 - f)
         return (
           <g key={f}>
-            <line x1={PL} y1={y} x2={W - PR} y2={y} stroke="#F0EDE8" strokeWidth="1" />
+            <line x1={PL} y1={y} x2={W - PR} y2={y} stroke="#EDE9FE" strokeWidth="1" />
             {f > 0 && (
               <text x={PL - 4} y={y + 3} textAnchor="end" fontSize="7" fill="#9ca3af">{fmtY(f * niceMax)}</text>
             )}
@@ -147,7 +147,7 @@ function CashFlowChart({ transactions, budgetLines, milestones, currency }: { tr
         <line
           x1={PL + nowIdx * groupW + groupW / 2} y1={PT}
           x2={PL + nowIdx * groupW + groupW / 2} y2={PT + chartH}
-          stroke="#c9a96e" strokeWidth="1" strokeDasharray="2 2" opacity="0.6"
+          stroke="#7C3AED" strokeWidth="1" strokeDasharray="2 2" opacity="0.6"
         />
       )}
 
@@ -180,7 +180,7 @@ function CashFlowChart({ transactions, budgetLines, milestones, currency }: { tr
               />
             )}
             {/* X label */}
-            <text x={cx + groupW / 2} y={H - 6} textAnchor="middle" fontSize="7" fill={m.key === nowKey ? '#c9a96e' : '#9ca3af'} fontWeight={m.key === nowKey ? '700' : '400'}>
+            <text x={cx + groupW / 2} y={H - 6} textAnchor="middle" fontSize="7" fill={m.key === nowKey ? '#7C3AED' : '#9ca3af'} fontWeight={m.key === nowKey ? '700' : '400'}>
               {m.label}
             </text>
           </g>
@@ -192,8 +192,8 @@ function CashFlowChart({ transactions, budgetLines, milestones, currency }: { tr
         const path = balance.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
         return (
           <>
-            <path d={path} fill="none" stroke="#c9a96e" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
-            {balance.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={2} fill="#c9a96e" />)}
+            <path d={path} fill="none" stroke="#7C3AED" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" />
+            {balance.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={2} fill="#7C3AED" />)}
           </>
         )
       })()}
@@ -268,9 +268,9 @@ export function CostPanel({
   const sym = currency === 'TRY' ? '₺' : '$'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#FAFAFA' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#FAFAFE' }}>
       {/* Header */}
-      <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #E8E5E0', display: 'flex', alignItems: 'center', gap: '0.375rem', background: '#fff', flexShrink: 0 }}>
+      <div style={{ padding: '0.5rem 0.75rem', borderBottom: '1px solid #E8E5F0', display: 'flex', alignItems: 'center', gap: '0.375rem', background: '#fff', flexShrink: 0 }}>
         <span style={{ fontSize: '0.75rem' }}>💰</span>
         <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1 }}>Cost</span>
 
@@ -280,7 +280,7 @@ export function CostPanel({
             <button key={c} onClick={() => canEdit && onChangeCurrency(c)} style={{
               padding: '0.15rem 0.45rem', borderRadius: 5, border: 'none', cursor: canEdit ? 'pointer' : 'default',
               background: currency === c ? '#fff' : 'transparent',
-              color: currency === c ? '#c9a96e' : '#9ca3af',
+              color: currency === c ? '#7C3AED' : '#9ca3af',
               fontSize: '0.65rem', fontWeight: 700,
               boxShadow: currency === c ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
             }}>{c === 'TRY' ? '₺ TRY' : '$ USD'}</button>
@@ -294,7 +294,7 @@ export function CostPanel({
           <button
             onClick={() => { setEditingTx(null); setShowTxModal(true) }}
             title="Add transaction"
-            style={{ width: 20, height: 20, borderRadius: '50%', background: '#c9a96e', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, flexShrink: 0 }}
+            style={{ width: 20, height: 20, borderRadius: '50%', background: '#7C3AED', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1, flexShrink: 0 }}
           >+</button>
         )}
       </div>
@@ -332,7 +332,7 @@ export function CostPanel({
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '0.25rem' }}>
               <LegendDot color="#6ACA9A" label="Cash In" />
               <LegendDot color="#E86A8E" label="Cash Out" />
-              <LegendDot color="#c9a96e" label="Balance" line />
+              <LegendDot color="#7C3AED" label="Balance" line />
             </div>
           </div>
         </Section>
@@ -352,7 +352,7 @@ export function CostPanel({
                         {sym}{v.spent.toLocaleString()} / {sym}{v.budgeted.toLocaleString()}
                       </span>
                     </div>
-                    <div style={{ height: 4, background: '#F0EDE8', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: 4, background: '#EDE9FE', borderRadius: 2, overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`, background: over ? '#ef4444' : pct > 70 ? '#f59e0b' : '#6ACA9A', borderRadius: 2, transition: 'width 0.3s' }} />
                     </div>
                   </div>
@@ -385,7 +385,7 @@ export function CostPanel({
             {canEdit && (
               <button
                 onClick={() => { setBudgetModalDefaultType('expense'); setShowBudgetModal(true) }}
-                style={{ fontSize: '0.65rem', color: '#c9a96e', background: 'none', border: '1px dashed #c9a96e60', borderRadius: 6, cursor: 'pointer', padding: '4px 10px', fontWeight: 600, marginTop: 4 }}
+                style={{ fontSize: '0.65rem', color: '#7C3AED', background: 'none', border: '1px dashed #7C3AED60', borderRadius: 6, cursor: 'pointer', padding: '4px 10px', fontWeight: 600, marginTop: 4 }}
               >
                 + Add budget item
               </button>
@@ -427,11 +427,11 @@ export function CostPanel({
         {/* ── Transactions ── */}
         <Section title={`Transactions${transactions.length > 0 ? ` (${transactions.length})` : ''}`} emoji="🧾" open alwaysOpen>
           {/* Filter bar */}
-          <div style={{ display: 'flex', gap: '0.25rem', padding: '0.375rem 0.75rem', borderBottom: '1px solid #F0EDE8' }}>
+          <div style={{ display: 'flex', gap: '0.25rem', padding: '0.375rem 0.75rem', borderBottom: '1px solid #EDE9FE' }}>
             {([['all', 'All'], ['cash_out', '↑ Out'], ['cash_in', '↓ In'], ['forecast', '~Forecast']] as const).map(([id, label]) => (
               <button key={id} onClick={() => setTxFilter(id)} style={{
                 padding: '0.2rem 0.5rem', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: '0.65rem', fontWeight: txFilter === id ? 700 : 500,
-                background: txFilter === id ? '#c9a96e' : '#F3F4F6',
+                background: txFilter === id ? '#7C3AED' : '#F3F4F6',
                 color: txFilter === id ? '#fff' : '#6b7280',
               }}>{label}</button>
             ))}
@@ -452,10 +452,10 @@ export function CostPanel({
                     key={tx.id}
                     onClick={() => canEdit && (setEditingTx(tx), setShowTxModal(true))}
                     style={{
-                      padding: '0.5rem 0.75rem', borderBottom: '1px solid #F0EDE8', display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
+                      padding: '0.5rem 0.75rem', borderBottom: '1px solid #EDE9FE', display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
                       cursor: canEdit ? 'pointer' : 'default', background: '#fff',
                     }}
-                    onMouseEnter={e => { if (canEdit) (e.currentTarget as HTMLDivElement).style.background = '#FAFAFA' }}
+                    onMouseEnter={e => { if (canEdit) (e.currentTarget as HTMLDivElement).style.background = '#FAFAFE' }}
                     onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = '#fff' }}
                   >
                     <div style={{
@@ -475,7 +475,7 @@ export function CostPanel({
                         {new Date(tx.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
                         {line && ` · ${COST_CATEGORIES[line.category]?.emoji} ${line.name}`}
                         {ms && ` · ${ms.name}`}
-                        {tx.is_forecast && <span style={{ color: '#c9a96e', fontWeight: 600 }}> · forecast</span>}
+                        {tx.is_forecast && <span style={{ color: '#7C3AED', fontWeight: 600 }}> · forecast</span>}
                       </div>
                     </div>
                     <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: isCashIn ? '#6ACA9A' : '#E86A8E', flexShrink: 0 }}>
@@ -546,10 +546,10 @@ function PaymentScheduleGroup({
   const totalScheduled = txs.reduce((s, t) => s + t.amount, 0)
   const pct = line.budgeted_amount > 0 ? Math.min(100, Math.round(totalScheduled / line.budgeted_amount * 100)) : 0
   const isIncome = line.type === 'income'
-  const accentColor = isIncome ? '#6ACA9A' : '#c9a96e'
+  const accentColor = isIncome ? '#6ACA9A' : '#7C3AED'
 
   return (
-    <div style={{ borderBottom: '1px solid #F0EDE8' }}>
+    <div style={{ borderBottom: '1px solid #EDE9FE' }}>
       {/* Header row */}
       <div
         onClick={() => setExpanded(p => !p)}
@@ -572,7 +572,7 @@ function PaymentScheduleGroup({
 
       {/* Progress bar */}
       {txs.length > 0 && line.budgeted_amount > 0 && (
-        <div style={{ height: 2, background: '#F0EDE8', borderRadius: 1, marginLeft: 16, marginBottom: 2 }}>
+        <div style={{ height: 2, background: '#EDE9FE', borderRadius: 1, marginLeft: 16, marginBottom: 2 }}>
           <div style={{ height: '100%', width: `${pct}%`, background: pct > 100 ? '#ef4444' : accentColor, borderRadius: 1 }} />
         </div>
       )}
@@ -600,7 +600,7 @@ function PaymentScheduleGroup({
                   <span style={{ fontSize: '0.6rem', color: '#9ca3af', flexShrink: 0 }}>
                     {ms ? ms.name : new Date(tx.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
                   </span>
-                  {tx.is_forecast && <span style={{ fontSize: '0.55rem', color: '#c9a96e', fontWeight: 700, flexShrink: 0 }}>plan</span>}
+                  {tx.is_forecast && <span style={{ fontSize: '0.55rem', color: '#7C3AED', fontWeight: 700, flexShrink: 0 }}>plan</span>}
                   <span style={{ fontSize: '0.7rem', fontWeight: 700, color: isIncome ? '#6ACA9A' : '#E86A8E', flexShrink: 0 }}>
                     {isIncome ? '+' : '-'}{fmt(tx.amount, currency)}
                   </span>
@@ -624,12 +624,12 @@ function PaymentScheduleGroup({
 
 function SummaryCard({ label, value, sub, color, bar }: { label: string; value: string; sub?: string; color?: string; bar?: number | null }) {
   return (
-    <div style={{ background: '#fff', borderRadius: 10, border: '1.5px solid #F0EDE8', padding: '0.5rem 0.625rem' }}>
+    <div style={{ background: '#fff', borderRadius: 10, border: '1.5px solid #EDE9FE', padding: '0.5rem 0.625rem' }}>
       <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>{label}</div>
       <div style={{ fontSize: '0.9375rem', fontWeight: 700, color: color ?? '#1a1a1a', lineHeight: 1.2 }}>{value}</div>
       {sub && <div style={{ fontSize: '0.6rem', color: '#c4bfb9', marginTop: 2 }}>{sub}</div>}
       {bar != null && (
-        <div style={{ height: 3, background: '#F0EDE8', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
+        <div style={{ height: 3, background: '#EDE9FE', borderRadius: 2, marginTop: 4, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${bar}%`, background: bar > 90 ? '#ef4444' : bar > 70 ? '#f59e0b' : '#6ACA9A', borderRadius: 2, transition: 'width 0.4s' }} />
         </div>
       )}
@@ -641,12 +641,12 @@ function Section({ title, emoji, open, onToggle, alwaysOpen, children }: {
   title: string; emoji: string; open: boolean; onToggle?: () => void; alwaysOpen?: boolean; children: React.ReactNode
 }) {
   return (
-    <div style={{ borderTop: '1px solid #E8E5E0' }}>
+    <div style={{ borderTop: '1px solid #E8E5F0' }}>
       {!alwaysOpen && (
         <button onClick={onToggle} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0.45rem 0.75rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
           <span style={{ fontSize: '0.75rem' }}>{emoji}</span>
           <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', flex: 1 }}>{title}</span>
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s', color: '#c9a96e' }}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ transform: open ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s', color: '#7C3AED' }}>
             <path d="M2 4L5 7L8 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>

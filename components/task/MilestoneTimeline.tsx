@@ -61,7 +61,7 @@ function getMilestoneStatus(ms: Milestone, linkedTasks: Task[], completedCount: 
   if (allDone) return { color: '#22c55e', ring: '#bbf7d040', done: true }
   if (diff < 0)  return { color: '#ef4444', ring: '#fecaca40', done: false }
   if (diff <= 7) return { color: '#f59e0b', ring: '#fde68a40', done: false }
-  return { color: '#c9a96e', ring: '#f0e4d040', done: false }
+  return { color: '#7C3AED', ring: '#EDE9FE40', done: false }
 }
 
 // ── Layout constants ──────────────────────────────────────────────────────────
@@ -474,18 +474,18 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
   const selectedMs = milestones.find(m => m.id === selectedId)
 
   return (
-    <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5E0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
+    <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5F0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
 
       {/* ── Header ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.5rem 0', flexWrap: 'wrap' }}>
         <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Timeline</span>
         {milestones.length > 0 && (
-          <span style={{ fontSize: '0.6rem', color: '#c4bfb9', background: '#F3F4F6', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.6rem', color: '#7C3AED', background: '#EDE9FE', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>
             {milestones.length}
           </span>
         )}
         {onCollapse && (
-          <button onClick={onCollapse} title="Collapse timeline" style={{ color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+          <button onClick={onCollapse} title="Collapse timeline" style={{ color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5L6 8.5L10 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         )}
@@ -497,15 +497,15 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
             title="Auto-arrange labels to avoid overlaps"
             style={{
               fontSize: '0.58rem', fontWeight: 600, padding: '0.15rem 0.5rem',
-              border: '1px solid #E8E5E0', borderRadius: 6, background: '#fff',
+              border: '1px solid #E8E5F0', borderRadius: 6, background: '#fff',
               color: '#9ca3af', cursor: 'pointer', whiteSpace: 'nowrap',
               transition: 'all 0.12s',
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c9a96e'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#c9a96e' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5E0' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#7C3AED' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af'; (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5F0' }}
           >⊞ Auto Arrange</button>
         )}
-        <span style={{ fontSize: '0.58rem', color: '#d1cdc7', fontStyle: 'italic' }}>
+        <span style={{ fontSize: '0.58rem', color: '#C4B5FD', fontStyle: 'italic' }}>
           {milestones.length === 0 ? 'Click track to add' : 'Click to manage · Drag to reschedule'}
         </span>
       </div>
@@ -532,7 +532,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
             {editingField === 'start' ? (
               <input type="date" value={customStart ?? toDateStr(startDate)} onChange={e => setCustomStart(e.target.value)}
                 onBlur={() => setEditingField(null)} autoFocus onClick={e => e.stopPropagation()}
-                style={{ fontSize: '0.48rem', border: '1px solid #c9a96e', borderRadius: 3, padding: '0.05rem 0.15rem', background: '#fff', outline: 'none', color: '#374151', width: 82 }} />
+                style={{ fontSize: '0.48rem', border: '1px solid #7C3AED', borderRadius: 3, padding: '0.05rem 0.15rem', background: '#fff', outline: 'none', color: '#374151', width: 82 }} />
             ) : (
               <span style={{ fontSize: '0.52rem', fontWeight: 600, color: '#9ca3af', whiteSpace: 'nowrap', lineHeight: `${TRACK_H}px`, textAlign: 'right' }}>
                 {formatLabel(toDateStr(startDate))}
@@ -563,7 +563,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
               top: LINE_Y - Math.floor(TRACK_H / 2) - 18,
               transform: 'translateX(-50%)',
               fontSize: t.isYearBoundary ? '0.6rem' : '0.55rem',
-              color: t.isYearBoundary ? '#9ca3af' : '#d1cdc7',
+              color: t.isYearBoundary ? '#9ca3af' : '#C4B5FD',
               fontWeight: t.isYearBoundary ? 600 : 400,
               whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 40,
             }}>{t.label}</div>
@@ -574,7 +574,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
             <div key={`l${i}`} style={{
               position: 'absolute', left: `${t.pct}%`,
               top: LINE_Y - Math.floor(TRACK_H / 2) - 6, width: 1, height: 6,
-              background: t.isYearBoundary ? '#d1cdc7' : '#E8E5E0',
+              background: t.isYearBoundary ? '#C4B5FD' : '#E8E5F0',
               transform: 'translateX(-50%)', pointerEvents: 'none',
             }} />
           ))}
@@ -588,13 +588,13 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
             overflow: 'hidden',
           }}>
             {/* Track background */}
-            <div style={{ position: 'absolute', inset: 0, background: '#F0EDE8' }} />
+            <div style={{ position: 'absolute', inset: 0, background: '#EDE9FE' }} />
             {/* Progress fill: start → today */}
             {todayPct > 0 && (
               <div style={{
                 position: 'absolute', left: 0, width: `${todayPct}%`,
                 top: 0, bottom: 0,
-                background: 'linear-gradient(90deg, #f0e4d0 0%, #c9a96e 100%)',
+                background: 'linear-gradient(90deg, #DDD6FE 0%, #7C3AED 100%)',
               }} />
             )}
           </div>
@@ -603,7 +603,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
           <div style={{
             position: 'absolute', left: `${todayPct}%`,
             top: 0, height: LINE_Y * 2, width: 1.5,
-            background: '#c9a96e30', transform: 'translateX(-50%)',
+            background: '#7C3AED30', transform: 'translateX(-50%)',
             borderRadius: 1, pointerEvents: 'none',
           }} />
           <div style={{
@@ -624,16 +624,16 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
               <div style={{
                 position: 'absolute', left: `${hoverPct}%`, top: LINE_Y + 0.5,
                 transform: 'translate(-50%, -50%)', width: 20, height: 20,
-                borderRadius: '50%', background: '#c9a96e18', border: '1.5px dashed #c9a96e',
+                borderRadius: '50%', background: '#7C3AED18', border: '1.5px dashed #7C3AED',
                 pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <span style={{ fontSize: '0.75rem', color: '#c9a96e', fontWeight: 700, lineHeight: 1 }}>+</span>
+                <span style={{ fontSize: '0.75rem', color: '#7C3AED', fontWeight: 700, lineHeight: 1 }}>+</span>
               </div>
               <div style={{
                 position: 'absolute', left: `${hoverPct}%`, top: LINE_Y + 17,
                 transform: 'translateX(-50%)', fontSize: '0.6rem', color: '#6b7280',
                 whiteSpace: 'nowrap', background: '#fff', padding: '0.15rem 0.45rem',
-                borderRadius: 5, border: '1px solid #E8E5E0', boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+                borderRadius: 5, border: '1px solid #E8E5F0', boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
                 pointerEvents: 'none', fontWeight: 500, zIndex: 30,
               }}>{formatFull(hoverDate)}</div>
             </>
@@ -735,7 +735,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                     >
                       <div style={{
                         fontSize: '0.65rem', fontWeight: 600,
-                        color: isSelected ? status.color : isDragging ? '#c9a96e' : '#374151',
+                        color: isSelected ? status.color : isDragging ? '#7C3AED' : '#374151',
                         opacity: isDragging ? 0.7 : 1,
                         lineHeight: 1.3,
                       }}>{ms.name}</div>
@@ -784,7 +784,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                     ...(isAbove ? { top: 'calc(100% + 7px)' } : { bottom: 'calc(100% + 7px)' }),
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: '#c9a96e',
+                    background: '#7C3AED',
                     color: '#fff',
                     fontSize: '0.58rem',
                     fontWeight: 600,
@@ -793,7 +793,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                     whiteSpace: 'nowrap',
                     pointerEvents: 'none',
                     zIndex: 200,
-                    boxShadow: '0 2px 10px rgba(201,169,110,0.4)',
+                    boxShadow: '0 2px 10px rgba(124,58,237,0.35)',
                   }}>
                     {formatFull(addDays(startDate, Math.round(dragPct / 100 * totalDays)))}
                   </div>
@@ -809,7 +809,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
               transform: 'translate(-50%, -50%)', zIndex: 3,
               width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <div style={{ width: 10, height: 10, transform: 'rotate(45deg)', background: '#c9a96e', border: '2px solid #fff', boxShadow: '0 0 0 3px #c9a96e33' }} />
+              <div style={{ width: 10, height: 10, transform: 'rotate(45deg)', background: '#7C3AED', border: '2px solid #fff', boxShadow: '0 0 0 3px #7C3AED33' }} />
             </div>
           )}
         </div>{/* end barDiv */}
@@ -830,7 +830,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
             {editingField === 'end' ? (
               <input type="date" value={customEnd ?? toDateStr(endDate)} onChange={e => setCustomEnd(e.target.value)}
                 onBlur={() => setEditingField(null)} autoFocus onClick={e => e.stopPropagation()}
-                style={{ fontSize: '0.48rem', border: '1px solid #c9a96e', borderRadius: 3, padding: '0.05rem 0.15rem', background: '#fff', outline: 'none', color: '#374151', width: 82 }} />
+                style={{ fontSize: '0.48rem', border: '1px solid #7C3AED', borderRadius: 3, padding: '0.05rem 0.15rem', background: '#fff', outline: 'none', color: '#374151', width: 82 }} />
             ) : (
               <span style={{ fontSize: '0.52rem', fontWeight: 600, color: '#9ca3af', whiteSpace: 'nowrap', lineHeight: `${TRACK_H}px` }}>
                 {formatLabel(toDateStr(endDate))}
@@ -851,7 +851,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
               top: 'calc(100% - 0.75rem)',
               zIndex: 100,
               background: '#fff',
-              border: '1.5px solid #E8E5E0',
+              border: '1.5px solid #E8E5F0',
               borderRadius: 14,
               padding: '1rem',
               width: 232,
@@ -888,7 +888,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
               top: 'calc(100% - 16px)',
               zIndex: 50,
               background: '#fff',
-              border: '1.5px solid #E8E5E0',
+              border: '1.5px solid #E8E5F0',
               borderRadius: 12,
               padding: '0.875rem',
               width: 260,
@@ -935,7 +935,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
               top: 'calc(100% - 16px)',
               zIndex: 30,
               background: '#fff',
-              border: '1.5px solid #E8E5E0',
+              border: '1.5px solid #E8E5F0',
               borderRadius: 14,
               width: 288,
               boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
@@ -965,7 +965,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                       }}
                       autoFocus
                       maxLength={60}
-                      style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1a1a1a', border: 'none', borderBottom: '1.5px solid #c9a96e', outline: 'none', background: 'transparent', width: '100%', padding: 0 }}
+                      style={{ fontSize: '0.875rem', fontWeight: 700, color: '#1a1a1a', border: 'none', borderBottom: '1.5px solid #7C3AED', outline: 'none', background: 'transparent', width: '100%', padding: 0 }}
                     />
                   ) : (
                     <div
@@ -986,7 +986,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                           setEditingDateId(null)
                         }}
                         onKeyDown={e => { if (e.key === 'Escape') setEditingDateId(null) }}
-                        style={{ fontSize: '0.65rem', color: '#6b7280', border: '1px solid #E8E5E0', borderRadius: 4, padding: '0.05rem 0.25rem', outline: 'none', background: '#fff' }}
+                        style={{ fontSize: '0.65rem', color: '#6b7280', border: '1px solid #E8E5F0', borderRadius: 4, padding: '0.05rem 0.25rem', outline: 'none', background: '#fff' }}
                       />
                     ) : (
                       <button
@@ -1005,13 +1005,13 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                       <button onClick={() => setConfirmDeleteId(null)} style={{ fontSize: '0.7rem', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
                     </>
                   ) : (
-                    <button onClick={() => setConfirmDeleteId(selectedMs.id)} style={{ fontSize: '1rem', color: '#d1cdc7', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: '0 0.2rem' }} onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }} onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#d1cdc7' }}>×</button>
+                    <button onClick={() => setConfirmDeleteId(selectedMs.id)} style={{ fontSize: '1rem', color: '#C4B5FD', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: '0 0.2rem' }} onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }} onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#C4B5FD' }}>×</button>
                   )}
                 </div>
               </div>
               {linked.length > 0 && (
                 <div style={{ marginBottom: '0.75rem' }}>
-                  <div style={{ height: 4, background: '#F0EDE8', borderRadius: 2, overflow: 'hidden' }}>
+                  <div style={{ height: 4, background: '#EDE9FE', borderRadius: 2, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${(done / linked.length) * 100}%`, background: status.color, borderRadius: 2, transition: 'width 0.4s ease' }} />
                   </div>
                 </div>
@@ -1025,7 +1025,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                     display: 'flex', alignItems: 'center', gap: '0.35rem',
                     width: '100%', marginBottom: '0.625rem',
                     padding: '0.4rem 0.75rem', borderRadius: 8, cursor: 'pointer',
-                    border: `1.5px solid ${status.done ? '#22c55e' : '#E8E5E0'}`,
+                    border: `1.5px solid ${status.done ? '#22c55e' : '#E8E5F0'}`,
                     background: status.done ? '#f0fdf4' : '#FAFAFA',
                     color: status.done ? '#16a34a' : '#6b7280',
                     fontSize: '0.75rem', fontWeight: 700,
@@ -1053,7 +1053,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   const isDone = !!t.completed_at
                   return (
                     <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.3rem 0.4rem', borderRadius: 8, background: isLinked ? `${status.color}14` : 'transparent', transition: 'background 0.1s' }}>
-                      <input type="checkbox" checked={isLinked} onChange={() => isLinked ? onUnlinkTask(selectedMs.id, t.id) : onLinkTask(selectedMs.id, t.id)} style={{ accentColor: '#c9a96e', width: 13, height: 13, flexShrink: 0 }} />
+                      <input type="checkbox" checked={isLinked} onChange={() => isLinked ? onUnlinkTask(selectedMs.id, t.id) : onLinkTask(selectedMs.id, t.id)} style={{ accentColor: '#7C3AED', width: 13, height: 13, flexShrink: 0 }} />
                       <span style={{ fontSize: '0.78rem', color: isLinked ? '#1a1a1a' : '#6b7280', fontWeight: isLinked ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textDecoration: isDone && isLinked ? 'line-through' : 'none', opacity: isDone && isLinked ? 0.6 : 1 }}>{t.title}</span>
                       {isDone && isLinked && <span style={{ fontSize: '0.65rem', color: '#22c55e', flexShrink: 0, fontWeight: 700 }}>✓</span>}
                     </label>
@@ -1145,7 +1145,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
         return (
           <div>
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 1.5rem 0.2rem', borderTop: '1.5px solid #F0EDE8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 1.5rem 0.2rem', borderTop: '1.5px solid #EDE9FE' }}>
               {/* Collapse toggle */}
               <button
                 onClick={() => setCfCollapsed(v => !v)}
@@ -1168,9 +1168,9 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   <button key={mode} onClick={() => setCashFlowMode(mode)} style={{
                     fontSize: '0.55rem', fontWeight: 600, padding: '0.1rem 0.4rem',
                     border: '1px solid', borderRadius: 5,
-                    borderColor: cashFlowMode === mode ? '#c9a96e' : '#E8E5E0',
-                    background: cashFlowMode === mode ? '#fdf6ed' : '#fff',
-                    color: cashFlowMode === mode ? '#c9a96e' : '#9ca3af',
+                    borderColor: cashFlowMode === mode ? '#7C3AED' : '#E8E5F0',
+                    background: cashFlowMode === mode ? '#EDE9FE' : '#fff',
+                    color: cashFlowMode === mode ? '#7C3AED' : '#9ca3af',
                     cursor: 'pointer', fontFamily: 'inherit',
                   }}>
                     {mode === 'all' ? 'All' : mode === 'actual' ? 'Actuals' : 'Forecast'}
@@ -1190,7 +1190,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   </div>
                 ))}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <div style={{ width: 14, height: 1.5, background: '#c9a96e', borderRadius: 1 }} />
+                  <div style={{ width: 14, height: 1.5, background: '#7C3AED', borderRadius: 1 }} />
                   <span style={{ fontSize: '0.55rem', color: '#9ca3af' }}>Balance</span>
                 </div>
                 {/* Final running total */}
@@ -1219,7 +1219,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   <div key={i} style={{
                     position: 'absolute', left: `${t.pct}%`,
                     top: 0, bottom: 0, width: 1,
-                    background: t.isYearBoundary ? '#E8E5E0' : '#F5F3F0',
+                    background: t.isYearBoundary ? '#E8E5F0' : '#F5F3FF',
                     pointerEvents: 'none',
                   }} />
                 ))}
@@ -1227,14 +1227,14 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                 {/* Zero line */}
                 <div style={{
                   position: 'absolute', left: 0, right: 0,
-                  top: CF_CENTER, height: 1, background: '#E8E5E0',
+                  top: CF_CENTER, height: 1, background: '#E8E5F0',
                 }} />
 
                 {/* Today marker */}
                 {todayPct > 0 && todayPct < 100 && (
                   <div style={{
                     position: 'absolute', left: `${todayPct}%`, top: 0, bottom: 0,
-                    width: 1.5, background: '#c9a96e20', pointerEvents: 'none',
+                    width: 1.5, background: '#7C3AED20', pointerEvents: 'none',
                   }} />
                 )}
 
@@ -1303,7 +1303,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                           boxShadow: '0 4px 18px rgba(0,0,0,0.28)',
                           pointerEvents: 'none',
                         }}>
-                          <div style={{ fontWeight: 700, color: '#c9a96e', marginBottom: 4 }}>
+                          <div style={{ fontWeight: 700, color: '#7C3AED', marginBottom: 4 }}>
                             {new Date(yr, mo - 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}
                           </div>
                           {inAmt > 0  && <div style={{ color: '#4ade80' }}>↑ In:  {formatCfAmount(inAmt,  currency)}</div>}
@@ -1332,7 +1332,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                         top: CF_CENTER - 5,
                         width: 10, height: 10,
                         transform: 'translateX(-50%) rotate(45deg)',
-                        background: '#c9a96e',
+                        background: '#7C3AED',
                         border: '2px solid #fff',
                         borderRadius: 2,
                         zIndex: 8,
@@ -1354,7 +1354,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                       vectorEffect="non-scaling-stroke"
                       points={cfCumPoints.map(p => `${p.pct},${cfScaleY(p.balance)}`).join(' ')}
                       fill="none"
-                      stroke="#c9a96e"
+                      stroke="#7C3AED"
                       strokeWidth="1.5"
                       strokeLinejoin="round"
                     />
@@ -1363,7 +1363,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                         key={i}
                         cx={p.pct} cy={cfScaleY(p.balance)} r="1"
                         vectorEffect="non-scaling-stroke"
-                        fill="#c9a96e" stroke="#fff" strokeWidth="1.5"
+                        fill="#7C3AED" stroke="#fff" strokeWidth="1.5"
                       />
                     ))}
                   </svg>
@@ -1374,7 +1374,7 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   <div style={{
                     position: 'absolute', inset: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '0.65rem', color: '#d1cdc7',
+                    fontSize: '0.65rem', color: '#C4B5FD',
                   }}>
                     No {cashFlowMode === 'all' ? '' : cashFlowMode + ' '}transactions in this date range
                   </div>
