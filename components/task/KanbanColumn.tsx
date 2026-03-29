@@ -150,10 +150,10 @@ export function KanbanColumn({
                 <>
                   <div style={{ position: 'fixed', inset: 0, zIndex: 10 }} onClick={() => setShowMenu(false)} />
                   <div style={{
-                    position: 'absolute', right: 0, top: '100%', zIndex: 20,
-                    background: '#fff', border: '1px solid #E8E5F0', borderRadius: 9,
+                    position: 'absolute', right: 0, top: '100%', zIndex: 200,
+                    background: '#fff', border: '1.5px solid #D8D4F0', borderRadius: 9,
                     padding: '0.25rem', minWidth: 140,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.20), 0 2px 8px rgba(0,0,0,0.10)',
                   }}>
                     {onRenameColumn && (
                       <button

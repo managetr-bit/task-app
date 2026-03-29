@@ -38,8 +38,8 @@ export function TaskCard({ task, members, currentMember, isDoneColumn, onAssign,
       className={`task-card animate-fadeUp ${isDoneColumn && task.completed_at ? 'animate-burst' : ''}`}
       onClick={() => onClick(task)}
       style={{
-        background: isDoneColumn ? '#FAFAFE' : '#FFFFFF',
-        border: `1px solid ${isDoneColumn ? '#EAE7F5' : '#E8E5F0'}`,
+        background: '#FFFFFF',
+        border: `1.5px solid ${isDoneColumn ? '#DDD6FE' : '#E8E5F0'}`,
         borderLeft: isHigh && !isDoneColumn ? '3px solid #EF4444' : '3px solid transparent',
         borderRadius: '12px',
         padding: '0.75rem',
