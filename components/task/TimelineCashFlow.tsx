@@ -229,20 +229,9 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
   const todayPct = pctOf(today)
   const todayLabel = 'TODAY'
 
-  // ── 6-slot label layout ──
-  type SlotKey = 'above-1' | 'above-2' | 'above-3' | 'below-1' | 'below-2' | 'below-3'
-  type SlotDef = { key: SlotKey; row: 'above' | 'below'; level: 1 | 2 | 3 }
-
-  const SLOTS: SlotDef[] = [
-    { key: 'above-1', row: 'above', level: 1 },
-    { key: 'below-1', row: 'below', level: 1 },
-    { key: 'above-2', row: 'above', level: 2 },
-    { key: 'below-2', row: 'below', level: 2 },
-    { key: 'above-3', row: 'above', level: 3 },
-    { key: 'below-3', row: 'below', level: 3 },
-  ]
-
-  const milestoneLayout: Map<string, { row: 'above' | 'below'; level: 1 | 2 | 3 }> = (() => {
+  // ── 3-level below-only label layout ──
+  // Labels always go below the track in 3 staggered rows, purely for legibility.
+  const milestoneLayout: Map<string, { row: 'below'; level: 1 | 2 | 3 }> = (() => {
     const MIN_PX = 44
     const DATE_CHARS = 7
     const sorted = [...milestones]
@@ -254,38 +243,26 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
       }))
       .sort((a, b) => a.pct - b.pct)
 
-    const lastPct: Record<SlotKey, number> = {
-      'above-1': -Infinity, 'above-2': -Infinity, 'above-3': -Infinity,
-      'below-1': -Infinity, 'below-2': -Infinity, 'below-3': -Infinity,
-    }
-    const lastHW: Record<SlotKey, number> = {
-      'above-1': 0, 'above-2': 0, 'above-3': 0,
-      'below-1': 0, 'below-2': 0, 'below-3': 0,
-    }
-    const layout = new Map<string, { row: 'above' | 'below'; level: 1 | 2 | 3 }>()
-
-    const priority: SlotDef[] = [
-      ...SLOTS.filter(s => s.row === 'below').sort((a, b) => a.level - b.level),
-      ...SLOTS.filter(s => s.row === 'above').sort((a, b) => a.level - b.level),
-    ]
+    const lastPct: Record<'1'|'2'|'3', number> = { '1': -Infinity, '2': -Infinity, '3': -Infinity }
+    const lastHW:  Record<'1'|'2'|'3', number> = { '1': 0, '2': 0, '3': 0 }
+    const layout = new Map<string, { row: 'below'; level: 1 | 2 | 3 }>()
 
     for (const ms of sorted) {
-      let chosen: SlotDef | null = null
-      for (const slot of priority) {
-        const gap = ms.pct - lastPct[slot.key]
-        if (gap >= ms.hw + lastHW[slot.key]) { chosen = slot; break }
+      let chosen: 1 | 2 | 3 = 1
+      for (const lvl of [1, 2, 3] as const) {
+        const k = String(lvl) as '1'|'2'|'3'
+        if (ms.pct - lastPct[k] >= ms.hw + lastHW[k]) { chosen = lvl; break }
       }
-      if (!chosen) chosen = priority[0]
-
-      layout.set(ms.id, { row: chosen.row, level: chosen.level })
-      lastPct[chosen.key] = ms.pct
-      lastHW[chosen.key]  = ms.hw
+      const k = String(chosen) as '1'|'2'|'3'
+      layout.set(ms.id, { row: 'below', level: chosen })
+      lastPct[k] = ms.pct
+      lastHW[k]  = ms.hw
     }
     return layout
   })()
 
   const paddingTopPx = 20
-  const barHeightPx  = 130
+  const barHeightPx  = 160  // extra room for 3 below-rows
 
   // ── Tick marks ──
   const useWeekly = totalDays <= 60
@@ -665,13 +642,15 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
               }}>{t.label}</div>
             ))}
 
-            {/* Tick hairlines */}
+            {/* Month grid lines — full height of bar area (unified with CF below) */}
             {monthTicks.map((t, i) => (
               <div key={`l${i}`} style={{
                 position: 'absolute', left: `${t.pct}%`,
-                top: LINE_Y - Math.floor(TRACK_H / 2) - 6, width: 1, height: 6,
-                background: t.isYearBoundary ? '#C4B5FD' : '#E8E5F0',
+                top: LINE_Y - Math.floor(TRACK_H / 2) - 6,
+                width: 1, height: barHeightPx,
+                background: t.isYearBoundary ? '#DDD6FE' : '#EDE9FE',
                 transform: 'translateX(-50%)', pointerEvents: 'none',
+                opacity: 0.7,
               }} />
             ))}
 
@@ -971,15 +950,16 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
             </div>
 
             {/* CF chart */}
-            <div style={{ flex: 1, position: 'relative', height: CF_H, background: '#FAFAFE', borderRadius: 6, overflow: 'hidden' }}>
+            <div style={{ flex: 1, position: 'relative', height: CF_H, overflow: 'hidden' }}>
 
-              {/* Month grid lines */}
+              {/* Month grid lines — continue from timeline above */}
               {monthTicks.map((t, i) => (
                 <div key={i} style={{
                   position: 'absolute', left: `${t.pct}%`,
                   top: 0, bottom: 0, width: 1,
-                  background: t.isYearBoundary ? '#E8E5F0' : '#F0EEF8',
-                  pointerEvents: 'none',
+                  background: t.isYearBoundary ? '#DDD6FE' : '#EDE9FE',
+                  transform: 'translateX(-50%)', pointerEvents: 'none',
+                  opacity: 0.7,
                 }} />
               ))}
 
@@ -1077,8 +1057,8 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
                 )
               })}
 
-              {/* Milestone trigger diamonds on zero line */}
-              {milestones.map(ms => {
+              {/* Milestone trigger diamonds on zero line — only when balance line is shown */}
+              {showBalance && milestones.map(ms => {
                 if (!costTransactions?.some(tx => tx.milestone_id === ms.id)) return null
                 const msPct = pctOf(new Date(ms.target_date + 'T00:00:00'))
                 if (msPct < 0 || msPct > 100) return null
