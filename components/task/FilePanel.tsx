@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 type Props = {
+  boardId: string
   filePanelUrl: string | null
   isCreator: boolean
   onUpdate: (url: string | null) => Promise<void>
@@ -38,12 +39,26 @@ const PLATFORM_ICONS: Record<string, string> = {
   'gdrive-folder': '📁', 'gdrive-file': '📄', 'onedrive': '☁️', 'link': '🔗',
 }
 
-export function FilePanel({ filePanelUrl, isCreator, onUpdate, cloudScriptUrl, onCloudScriptUrlChange }: Props) {
+export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScriptUrl, onCloudScriptUrlChange }: Props) {
   const [editing, setEditing] = useState(false)
   const [inputUrl, setInputUrl] = useState(filePanelUrl ?? '')
   const [saving, setSaving] = useState(false)
   const [showUploadSetup, setShowUploadSetup] = useState(false)
   const [scriptDraft, setScriptDraft] = useState(cloudScriptUrl)
+  const [savedLinks, setSavedLinks] = useState<{url: string; label: string; savedAt: string}[]>([])
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`saved_links_${boardId}`)
+      setSavedLinks(raw ? JSON.parse(raw) : [])
+    } catch { setSavedLinks([]) }
+  }, [boardId])
+
+  function removeSavedLink(index: number) {
+    const updated = savedLinks.filter((_, i) => i !== index)
+    setSavedLinks(updated)
+    localStorage.setItem(`saved_links_${boardId}`, JSON.stringify(updated))
+  }
 
   const embed = filePanelUrl ? parseUrl(filePanelUrl) : null
   const canEmbed = embed?.type === 'gdrive-folder' || embed?.type === 'gdrive-file'
@@ -235,6 +250,32 @@ function getOrCreate(parent, name) {
           </div>
         )}
       </div>
+
+      {/* Saved links from notes */}
+      {savedLinks.length > 0 && (
+        <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #E8E5F0' }}>
+          <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+            Saved Links
+          </div>
+          {savedLinks.map((link, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+              <span style={{ fontSize: '0.7rem' }}>🔗</span>
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: '0.75rem', color: '#7C3AED', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}
+              >
+                {link.label || link.url}
+              </a>
+              <button
+                onClick={() => removeSavedLink(i)}
+                style={{ background: 'none', border: 'none', color: '#d1d5db', cursor: 'pointer', fontSize: '0.7rem', padding: 0 }}
+              >✕</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

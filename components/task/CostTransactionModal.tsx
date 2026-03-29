@@ -29,9 +29,13 @@ export function CostTransactionModal({
   const [description, setDescription] = useState(editing?.description ?? '')
   const [budgetLineId, setBudgetLineId] = useState<string>(editing?.budget_line_id ?? defaultBudgetLineId ?? '')
   const [milestoneId, setMilestoneId] = useState<string>(editing?.milestone_id ?? '')
+  const [milestoneOffset, setMilestoneOffset] = useState<number>(editing?.milestone_offset_days ?? 0)
   const [isForecast, setIsForecast]   = useState(editing?.is_forecast ?? false)
   const [saving, setSaving]           = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [installCount, setInstallCount] = useState(3)
+  const [installFreq, setInstallFreq] = useState<'monthly' | 'quarterly'>('monthly')
 
   // Suggest category from selected budget line
   const selectedLine = budgetLines.find(l => l.id === budgetLineId)
@@ -41,16 +45,40 @@ export function CostTransactionModal({
     const parsed = parseFloat(amount.replace(/[^0-9.]/g, ''))
     if (!parsed || parsed <= 0) return
     setSaving(true)
-    await onSave({
-      type,
-      amount: parsed,
-      date,
-      description: description.trim(),
-      budget_line_id: budgetLineId || null,
-      milestone_id:   milestoneId  || null,
-      task_id:        null,
-      is_forecast:    isForecast,
-    })
+
+    if (isRecurring && !editing) {
+      const perAmount = parsed / installCount
+      const freqMonths = installFreq === 'monthly' ? 1 : 3
+      let baseDate = new Date(date + 'T00:00:00')
+      for (let i = 0; i < installCount; i++) {
+        const d = new Date(baseDate)
+        d.setMonth(d.getMonth() + i * freqMonths)
+        const payDate = d.toISOString().slice(0, 10)
+        await onSave({
+          type,
+          amount: perAmount,
+          date: payDate,
+          description: description.trim() ? `${description.trim()} (${i + 1}/${installCount})` : `Payment ${i + 1} of ${installCount}`,
+          budget_line_id: budgetLineId || null,
+          milestone_id: milestoneId || null,
+          milestone_offset_days: milestoneId ? milestoneOffset : null,
+          task_id: null,
+          is_forecast: isForecast,
+        })
+      }
+    } else {
+      await onSave({
+        type,
+        amount: parsed,
+        date,
+        description: description.trim(),
+        budget_line_id: budgetLineId || null,
+        milestone_id: milestoneId || null,
+        milestone_offset_days: milestoneId ? milestoneOffset : null,
+        task_id: null,
+        is_forecast: isForecast,
+      })
+    }
     onClose()
   }
 
@@ -176,6 +204,7 @@ export function CostTransactionModal({
                 onChange={e => {
                   const id = e.target.value
                   setMilestoneId(id)
+                  setMilestoneOffset(0)
                   if (id && !editing) {
                     const ms = milestones.find(m => m.id === id)
                     if (ms) { setDate(ms.target_date); setIsForecast(true) }
@@ -184,10 +213,30 @@ export function CostTransactionModal({
                 style={{ fontSize: '0.8125rem' }}
               >
                 <option value="">— none —</option>
-                {milestones.map(m => (
+                {milestones.filter((m, i, arr) => arr.findIndex(x => x.id === m.id) === i).map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
               </select>
+              {milestoneId && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                  <input
+                    type="number"
+                    value={milestoneOffset}
+                    onChange={e => {
+                      const days = parseInt(e.target.value) || 0
+                      setMilestoneOffset(days)
+                      const ms = milestones.find(m => m.id === milestoneId)
+                      if (ms) {
+                        const d = new Date(ms.target_date + 'T00:00:00')
+                        d.setDate(d.getDate() + days)
+                        setDate(d.toISOString().slice(0, 10))
+                      }
+                    }}
+                    style={{ width: 64, padding: '0.25rem 0.5rem', borderRadius: 6, border: '1px solid #E8E5F0', fontSize: '0.8rem', textAlign: 'center' }}
+                  />
+                  <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>days {milestoneOffset >= 0 ? 'after' : 'before'} milestone</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -196,7 +245,7 @@ export function CostTransactionModal({
             <div
               onClick={() => setIsForecast(p => !p)}
               style={{
-                width: 36, height: 20, borderRadius: 10, background: isForecast ? '#c9a96e' : '#E5E7EB',
+                width: 36, height: 20, borderRadius: 10, background: isForecast ? '#7C3AED' : '#E5E7EB',
                 position: 'relative', transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0,
               }}
             >
@@ -208,6 +257,54 @@ export function CostTransactionModal({
             </div>
             <span style={{ fontSize: '0.8125rem', color: '#4b5563' }}>Forecast (planned, not actual)</span>
           </label>
+
+          {/* Recurring */}
+          <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: '0.75rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: isRecurring ? '0.75rem' : 0 }}>
+              <div
+                onClick={() => setIsRecurring(p => !p)}
+                style={{
+                  width: 36, height: 20, borderRadius: 10, background: isRecurring ? '#7C3AED' : '#E5E7EB',
+                  position: 'relative', transition: 'background 0.2s', cursor: 'pointer', flexShrink: 0,
+                }}
+              >
+                <div style={{
+                  position: 'absolute', top: 2, left: isRecurring ? 18 : 2, width: 16, height: 16,
+                  borderRadius: '50%', background: '#fff', transition: 'left 0.2s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }} />
+              </div>
+              <span style={{ fontSize: '0.8125rem', color: '#4b5563' }}>Recurring payments</span>
+            </label>
+            {isRecurring && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>Every</span>
+                <select
+                  value={installFreq}
+                  onChange={e => setInstallFreq(e.target.value as 'monthly' | 'quarterly')}
+                  style={{ padding: '0.25rem 0.5rem', borderRadius: 6, border: '1px solid #E8E5F0', fontSize: '0.8rem' }}
+                >
+                  <option value="monthly">month</option>
+                  <option value="quarterly">quarter</option>
+                </select>
+                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>for</span>
+                <input
+                  type="number"
+                  min={2}
+                  max={60}
+                  value={installCount}
+                  onChange={e => setInstallCount(Math.max(2, parseInt(e.target.value) || 2))}
+                  style={{ width: 52, padding: '0.25rem 0.5rem', borderRadius: 6, border: '1px solid #E8E5F0', fontSize: '0.8rem', textAlign: 'center' }}
+                />
+                <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>payments</span>
+                <span style={{ fontSize: '0.7rem', color: '#9ca3af', width: '100%' }}>
+                  {amount && parseFloat(amount.replace(/[^0-9.]/g, '')) > 0
+                    ? `${sym}${(parseFloat(amount.replace(/[^0-9.]/g, '')) / installCount).toLocaleString(undefined, { maximumFractionDigits: 0 })} / payment`
+                    : 'Enter amount above'}
+                </span>
+              </div>
+            )}
+          </div>
 
           {/* Actions */}
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>

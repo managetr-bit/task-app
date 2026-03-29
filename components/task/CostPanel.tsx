@@ -577,6 +577,28 @@ function PaymentScheduleGroup({
         </div>
       )}
 
+      {/* Budgeted vs Planned amounts */}
+      {(() => {
+        const plannedTotal = allTransactions.filter(t => t.budget_line_id === line.id).reduce((s, t) => s + t.amount, 0)
+        return (
+          <div style={{ display: 'flex', gap: '1rem', marginTop: 4, marginLeft: 16 }}>
+            <div style={{ fontSize: '0.65rem', color: '#6b7280' }}>
+              Budgeted: <span style={{ fontWeight: 700, color: '#1a1a1a' }}>{fmt(line.budgeted_amount, currency)}</span>
+            </div>
+            <div style={{ fontSize: '0.65rem', color: '#6b7280' }}>
+              Planned: <span style={{ fontWeight: 700, color: plannedTotal > line.budgeted_amount ? '#ef4444' : '#7C3AED' }}>{fmt(plannedTotal, currency)}</span>
+            </div>
+            {line.budgeted_amount > 0 && Math.abs(line.budgeted_amount - plannedTotal) > 0.01 && (
+              <div style={{ fontSize: '0.65rem', color: line.budgeted_amount > plannedTotal ? '#f59e0b' : '#ef4444' }}>
+                {line.budgeted_amount > plannedTotal
+                  ? `⚠ ${fmt(line.budgeted_amount - plannedTotal, currency)} unscheduled`
+                  : `⚡ ${fmt(plannedTotal - line.budgeted_amount, currency)} over budget`}
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Expanded: list of payments */}
       {expanded && (
         <div style={{ marginLeft: 16, marginBottom: 6 }}>

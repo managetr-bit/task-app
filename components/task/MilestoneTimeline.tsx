@@ -18,6 +18,7 @@ type Props = {
   onUpdateName?: (milestoneId: string, name: string) => Promise<void>
   onComplete?: (milestoneId: string, complete: boolean) => Promise<void>
   onCollapse?: () => void
+  onUpdateDependency?: (milestoneId: string, dependsOnId: string | null, offsetDays: number) => Promise<void>
 }
 
 function toDateStr(d: Date) {
@@ -129,7 +130,7 @@ function computeAutoArrangeOffsets(
   return result
 }
 
-export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTransactions, budgetLines, currency = 'USD', onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onComplete, onCollapse }: Props) {
+export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTransactions, budgetLines, currency = 'USD', onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onComplete, onCollapse, onUpdateDependency }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
 
   // ── Bar width tracking for accurate label-width estimation ──
@@ -802,6 +803,27 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
             )
           })}
 
+          {/* Dependency arrows */}
+          {milestones.filter(ms => ms.depends_on_id).map(ms => {
+            const depMs = milestones.find(m => m.id === ms.depends_on_id)
+            if (!depMs) return null
+            const fromPct = pctOf(new Date(depMs.target_date + 'T00:00:00'))
+            const toPct = pctOf(new Date(ms.target_date + 'T00:00:00'))
+            return (
+              <div key={`dep-${ms.id}`} style={{
+                position: 'absolute',
+                left: `${Math.min(fromPct, toPct)}%`,
+                width: `${Math.abs(toPct - fromPct)}%`,
+                top: LINE_Y - 1,
+                height: 2,
+                background: 'linear-gradient(90deg, #7C3AED40, #7C3AED80)',
+                borderTop: '1.5px dashed #7C3AED60',
+                pointerEvents: 'none',
+                zIndex: 3,
+              }} />
+            )
+          })}
+
           {/* Pending add dot */}
           {pendingPct !== null && (
             <div style={{
@@ -1046,7 +1068,57 @@ export function MilestoneTimeline({ milestones, milestoneTasks, tasks, costTrans
                   )}
                 </button>
               )}
-              <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#c4bfb9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.375rem' }}>Prerequisite tasks</div>
+              {/* Dependency */}
+              <div style={{ marginTop: '0.75rem' }}>
+                <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>
+                  Depends on milestone
+                </div>
+                <select
+                  value={selectedMs.depends_on_id ?? ''}
+                  onChange={async e => {
+                    const depId = e.target.value || null
+                    if (depId) {
+                      const depMs = milestones.find(m => m.id === depId)
+                      if (depMs) {
+                        const d = new Date(depMs.target_date + 'T00:00:00')
+                        d.setDate(d.getDate() + (selectedMs.offset_days ?? 0))
+                        await onUpdateDate(selectedMs.id, d.toISOString().slice(0, 10))
+                      }
+                    }
+                    if (onUpdateDependency) await onUpdateDependency(selectedMs.id, depId, selectedMs.offset_days ?? 0)
+                  }}
+                  style={{ fontSize: '0.72rem', border: '1px solid #E8E5F0', borderRadius: 6, padding: '0.25rem 0.5rem', width: '100%', color: '#374151' }}
+                >
+                  <option value="">— independent —</option>
+                  {milestones.filter(m => m.id !== selectedMs.id).map(m => (
+                    <option key={m.id} value={m.id}>{m.name}</option>
+                  ))}
+                </select>
+                {selectedMs.depends_on_id && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                    <input
+                      type="number"
+                      defaultValue={selectedMs.offset_days ?? 0}
+                      onBlur={async e => {
+                        const days = parseInt(e.target.value) || 0
+                        const depMs = milestones.find(m => m.id === selectedMs.depends_on_id)
+                        if (depMs) {
+                          const d = new Date(depMs.target_date + 'T00:00:00')
+                          d.setDate(d.getDate() + days)
+                          await onUpdateDate(selectedMs.id, d.toISOString().slice(0, 10))
+                        }
+                        if (onUpdateDependency) await onUpdateDependency(selectedMs.id, selectedMs.depends_on_id, days)
+                      }}
+                      style={{ width: 56, padding: '0.2rem 0.4rem', borderRadius: 6, border: '1px solid #E8E5F0', fontSize: '0.8rem', textAlign: 'center' }}
+                    />
+                    <span style={{ fontSize: '0.72rem', color: '#6b7280' }}>
+                      days {(selectedMs.offset_days ?? 0) >= 0 ? 'after' : 'before'} dependency
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div style={{ fontSize: '0.6rem', fontWeight: 700, color: '#c4bfb9', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.375rem', marginTop: '0.75rem' }}>Prerequisite tasks</div>
               <div style={{ maxHeight: 168, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.125rem' }}>
                 {openTasks.map(t => {
                   const isLinked = linkedIds.includes(t.id)

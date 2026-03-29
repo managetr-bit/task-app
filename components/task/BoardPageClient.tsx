@@ -451,21 +451,26 @@ export function BoardPageClient({ boardId }: Props) {
 
   // ── Cost actions ──────────────────────────────────────────────────────────
   const addTransaction = useCallback(async (data: Omit<CostTransaction, 'id' | 'board_id' | 'created_at'>) => {
+    // milestone_offset_days is stripped until DB migration adds the column
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { milestone_offset_days: _offset, ...dbData } = data
     const { data: tx, error } = await supabase
       .from('cost_transactions')
-      .insert({ ...data, board_id: boardId })
+      .insert({ ...dbData, board_id: boardId })
       .select().single()
     if (error) { console.error('addTransaction error:', error); return }
-    if (tx) setCostTransactions(prev => [tx, ...prev])
+    if (tx) setCostTransactions(prev => [{ ...tx, milestone_offset_days: data.milestone_offset_days }, ...prev])
   }, [boardId])
 
   const updateTransaction = useCallback(async (id: string, updates: Partial<CostTransaction>) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { milestone_offset_days: _offset, ...dbUpdates } = updates
     const { data: tx, error } = await supabase
       .from('cost_transactions')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id).select().single()
     if (error) { console.error('updateTransaction error:', error); return }
-    if (tx) setCostTransactions(prev => prev.map(t => t.id === id ? tx : t))
+    if (tx) setCostTransactions(prev => prev.map(t => t.id === id ? { ...tx, milestone_offset_days: updates.milestone_offset_days ?? t.milestone_offset_days } : t))
   }, [])
 
   const deleteTransaction = useCallback(async (id: string) => {

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -136,7 +136,41 @@ export function BoardView({
   }, [])
   const isMobile  = winW < 768
   const isTablet  = winW >= 768 && winW < 1100
-  const sidebarW  = isTablet ? 220 : 280
+  const defaultSidebarW = isTablet ? 220 : 280
+  const [sidebarWidth, setSidebarWidth] = useState<number | null>(null)
+  const sidebarW = sidebarWidth ?? defaultSidebarW
+  const resizingRef = useRef(false)
+  const resizeStartX = useRef(0)
+  const resizeStartW = useRef(0)
+  useEffect(() => {
+    // Load saved sidebar width from localStorage
+    try {
+      const saved = localStorage.getItem(`sidebar_w_${board.id}`)
+      if (saved) setSidebarWidth(parseInt(saved))
+    } catch { /* ignore */ }
+  }, [board.id])
+
+  function handleResizeStart(e: React.MouseEvent) {
+    e.preventDefault()
+    resizingRef.current = true
+    resizeStartX.current = e.clientX
+    resizeStartW.current = sidebarW
+
+    const onMove = (ev: MouseEvent) => {
+      if (!resizingRef.current) return
+      const delta = resizeStartX.current - ev.clientX  // drag left = wider sidebar
+      const newW = Math.min(520, Math.max(180, resizeStartW.current + delta))
+      setSidebarWidth(newW)
+    }
+    const onUp = () => {
+      resizingRef.current = false
+      try { localStorage.setItem(`sidebar_w_${board.id}`, String(sidebarW)) } catch { /* ignore */ }
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
   type MobileTab = 'board' | 'timeline' | 'cost' | 'notes' | 'files'
   const [mobileTab, setMobileTab] = useState<MobileTab>('board')
   // Cloud storage settings — Apps Script URL stored per board in localStorage
@@ -177,6 +211,11 @@ export function BoardView({
       setCopiedLink(true)
       setTimeout(() => setCopiedLink(false), 2000)
     })
+  }
+
+  async function handleUpdateMilestoneDependency(_milestoneId: string, _dependsOnId: string | null, _offsetDays: number) {
+    // For now, date update is already handled by onUpdateDate inside MilestoneTimeline.
+    // Future: also persist depends_on_id and offset_days to DB.
   }
 
   async function handleAddColumn(e: React.FormEvent) {
@@ -421,6 +460,7 @@ export function BoardView({
                 onLinkTask={onLinkTask}
                 onUnlinkTask={onUnlinkTask}
                 onCollapse={() => setShowTimeline(false)}
+                onUpdateDependency={handleUpdateMilestoneDependency}
               />
             ) : (
               !isMobile && (
@@ -517,6 +557,22 @@ export function BoardView({
         </div>
 
         {/* ── RIGHT SIDEBAR: Tabbed (Notes | Files | Cost) — desktop & tablet ── */}
+        {/* Drag handle */}
+        {!isMobile && (
+          <div
+            onMouseDown={handleResizeStart}
+            style={{
+              width: 4,
+              flexShrink: 0,
+              cursor: 'col-resize',
+              background: 'transparent',
+              position: 'relative',
+              zIndex: 20,
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = '#DDD6FE' }}
+            onMouseLeave={e => { if (!resizingRef.current) (e.currentTarget as HTMLDivElement).style.background = 'transparent' }}
+          />
+        )}
         {!isMobile && (
           <div style={{ width: sidebarW, flexShrink: 0, borderLeft: '1px solid #E8E5F0', display: 'flex', flexDirection: 'column', minHeight: 0, background: '#FAFAFE' }}>
             {/* Tab bar */}
@@ -553,7 +609,7 @@ export function BoardView({
               )}
               {sidebarTab === 'files' && (
                 <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                  <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} cloudScriptUrl={cloudScriptUrl} onCloudScriptUrlChange={saveCloudScriptUrl} />
+                  <FilePanel boardId={board.id} filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} cloudScriptUrl={cloudScriptUrl} onCloudScriptUrlChange={saveCloudScriptUrl} />
                 </div>
               )}
               {sidebarTab === 'cost' && (
@@ -596,7 +652,7 @@ export function BoardView({
               <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Files</span>
             </div>
             <div style={{ flex: 1, overflow: 'hidden' }}>
-              <FilePanel filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} cloudScriptUrl={cloudScriptUrl} onCloudScriptUrlChange={saveCloudScriptUrl} />
+              <FilePanel boardId={board.id} filePanelUrl={board.file_panel_url} isCreator={isCreator} onUpdate={onUpdateFilePanelUrl} cloudScriptUrl={cloudScriptUrl} onCloudScriptUrlChange={saveCloudScriptUrl} />
             </div>
           </div>
         )}

@@ -33,6 +33,25 @@ function storageKey(boardId: string) {
   return `notes_${boardId}`
 }
 
+function extractFirstUrl(text: string): string | null {
+  const match = text.match(/https?:\/\/[^\s]+/)
+  return match ? match[0] : null
+}
+
+function getSavedLinks(boardId: string): {url: string; label: string; savedAt: string}[] {
+  try {
+    const raw = localStorage.getItem(`saved_links_${boardId}`)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function addSavedLink(boardId: string, url: string, label: string) {
+  const links = getSavedLinks(boardId)
+  if (links.some(l => l.url === url)) return  // don't duplicate
+  links.unshift({ url, label, savedAt: new Date().toISOString() })
+  localStorage.setItem(`saved_links_${boardId}`, JSON.stringify(links.slice(0, 20)))
+}
+
 function loadNotes(boardId: string): LocalNote[] {
   try {
     const raw = localStorage.getItem(storageKey(boardId))
@@ -195,6 +214,14 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
             <p style={{ margin: 0, fontSize: '0.8rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {note.content}
             </p>
+            {extractFirstUrl(note.content) && (
+              <button
+                onClick={() => addSavedLink(boardId, extractFirstUrl(note.content)!, note.content.slice(0, 40))}
+                style={{ fontSize: '0.6rem', color: '#7C3AED', background: '#EDE9FE', border: 'none', borderRadius: 4, padding: '0.15rem 0.4rem', cursor: 'pointer', marginTop: 4 }}
+              >
+                📎 Save link to Files
+              </button>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '0.5rem', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.6rem', color: '#c4bfb9' }}>
                 {note.author_name ? `${note.author_name} · ` : ''}{timeAgo(note.created_at)}

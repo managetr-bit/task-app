@@ -66,6 +66,8 @@ export type Milestone = {
   name: string
   target_date: string
   completed_at: string | null   // null = not yet complete
+  depends_on_id: string | null          // ID of milestone this depends on
+  offset_days: number                   // days after (positive) or before (negative) the dependency
   created_at: string
 }
 
@@ -165,6 +167,7 @@ export type CostTransaction = {
   date: string          // YYYY-MM-DD
   description: string
   milestone_id: string | null
+  milestone_offset_days: number | null  // days offset from linked milestone date (+ = after, - = before)
   task_id: string | null
   is_forecast: boolean
   created_at: string
