@@ -897,7 +897,7 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
             </div>
 
             {/* CF chart */}
-            <div style={{ flex: 1, position: 'relative', height: CF_H, overflow: 'hidden' }}>
+            <div style={{ flex: 1, position: 'relative', height: CF_H, overflow: 'visible' }}>
 
               {/* Month grid lines — continue from timeline above */}
               {monthTicks.map((t, i) => (
