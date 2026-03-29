@@ -16,7 +16,7 @@ export function ProgressArc({ pct, size = 36, onDark = false }: Props) {
           style={{ transition:'stroke-dashoffset 0.5s ease, stroke 0.3s ease' }}/>
       </svg>
       <span style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center',
-        fontSize:size < 40 ? '0.5rem' : '0.625rem', fontWeight:700, color:textColor, letterSpacing:'-0.01em' }}>
+        fontSize:size < 40 ? '0.6rem' : '0.7rem', fontWeight:700, color:textColor, letterSpacing:'-0.01em' }}>
         {pct}%
       </span>
     </div>

@@ -364,7 +364,7 @@ export function BoardView({
             </span>
           )}
           <MembersBar members={members} currentMember={currentMember} isCreator={currentMember.role === 'creator'} onUpdateMemberRole={onUpdateMemberRole} />
-          <ProgressArc pct={progressPct} size={34} onDark />
+          <ProgressArc pct={progressPct} size={38} />
           {/* Separator */}
           <div style={{ width: 1, height: 22, background: '#E8E5F0', flexShrink: 0 }} />
           <button
