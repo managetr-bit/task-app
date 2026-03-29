@@ -130,7 +130,7 @@ export function TaskDetailModal({ task, members, currentMember, milestones, mile
                 onClick={() => setEditing(true)}
                 style={{
                   fontSize: '0.875rem',
-                  color: description ? '#374151' : '#C4BFBA',
+                  color: description ? '#374151' : '#9CA3AF',
                   cursor: 'pointer', lineHeight: 1.6,
                 }}
               >

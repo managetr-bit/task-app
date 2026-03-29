@@ -68,7 +68,7 @@ export function TaskCard({ task, members, currentMember, isDoneColumn, onAssign,
       {/* Description */}
       {task.description && !isDoneColumn && (
         <p style={{
-          fontSize: '0.6875rem', color: '#9CA3AF', lineHeight: 1.4, marginBottom: '0.5rem',
+          fontSize: '0.6875rem', color: '#6B7280', lineHeight: 1.4, marginBottom: '0.5rem',
           overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
         }}>
           {task.description}
