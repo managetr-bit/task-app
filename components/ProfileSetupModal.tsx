@@ -94,11 +94,11 @@ export function ProfileSetupModal({ onComplete, boardName, existingProfile }: Pr
               required
               style={{
                 width: '100%', padding: '0.625rem 0.875rem', borderRadius: 10,
-                border: '1.5px solid #E8E5E0', fontSize: '0.9rem', outline: 'none',
+                border: '1.5px solid #E8E5F0', fontSize: '0.9rem', outline: 'none',
                 boxSizing: 'border-box', fontFamily: 'inherit', color: '#1a1a1a',
               }}
-              onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
+              onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED' }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#E8E5F0' }}
             />
           </div>
 
@@ -114,11 +114,11 @@ export function ProfileSetupModal({ onComplete, boardName, existingProfile }: Pr
               placeholder="you@example.com"
               style={{
                 width: '100%', padding: '0.625rem 0.875rem', borderRadius: 10,
-                border: '1.5px solid #E8E5E0', fontSize: '0.9rem', outline: 'none',
+                border: '1.5px solid #E8E5F0', fontSize: '0.9rem', outline: 'none',
                 boxSizing: 'border-box', fontFamily: 'inherit', color: '#1a1a1a',
               }}
-              onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
-              onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
+              onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED' }}
+              onBlur={e => { e.currentTarget.style.borderColor = '#E8E5F0' }}
             />
           </div>
 
@@ -131,7 +131,7 @@ export function ProfileSetupModal({ onComplete, boardName, existingProfile }: Pr
             disabled={saving || !name.trim()}
             style={{
               marginTop: '0.25rem', padding: '0.7rem', borderRadius: 10,
-              border: 'none', background: '#c9a96e', color: '#fff',
+              border: 'none', background: '#7C3AED', color: '#fff',
               fontSize: '0.9rem', fontWeight: 600, cursor: saving || !name.trim() ? 'default' : 'pointer',
               opacity: saving || !name.trim() ? 0.6 : 1, fontFamily: 'inherit',
             }}
