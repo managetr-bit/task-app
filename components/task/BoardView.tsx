@@ -63,6 +63,7 @@ type Props = {
   onCompleteMilestone: (milestoneId: string, complete: boolean) => Promise<void>
   onLinkTask: (milestoneId: string, taskId: string) => Promise<void>
   onUnlinkTask: (milestoneId: string, taskId: string) => Promise<void>
+  onUpdateMilestoneDependency?: (milestoneId: string, dependsOnId: string | null, offsetDays: number) => Promise<void>
   // Cost module
   budgetLines: BudgetLine[]
   costTransactions: CostTransaction[]
@@ -99,7 +100,7 @@ export function BoardView({
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
   onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn, onReorderColumn,
   onUpdateFilePanelUrl, onUpdateBoardName,
-  onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onUpdateMilestoneName, onCompleteMilestone, onLinkTask, onUnlinkTask,
+  onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onUpdateMilestoneName, onCompleteMilestone, onLinkTask, onUnlinkTask, onUpdateMilestoneDependency,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   onAddBudgetLine, onUpdateBudgetLine, onDeleteBudgetLine, onImportBudgetLines, onChangeCurrency,
   onUpdateMemberRole,
@@ -213,9 +214,10 @@ export function BoardView({
     })
   }
 
-  async function handleUpdateMilestoneDependency(_milestoneId: string, _dependsOnId: string | null, _offsetDays: number) {
-    // For now, date update is already handled by onUpdateDate inside MilestoneTimeline.
-    // Future: also persist depends_on_id and offset_days to DB.
+  async function handleUpdateMilestoneDependency(milestoneId: string, dependsOnId: string | null, offsetDays: number) {
+    if (onUpdateMilestoneDependency) {
+      await onUpdateMilestoneDependency(milestoneId, dependsOnId, offsetDays)
+    }
   }
 
   async function handleAddColumn(e: React.FormEvent) {

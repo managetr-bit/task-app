@@ -449,6 +449,12 @@ export function BoardPageClient({ boardId }: Props) {
     if (error) console.error('completeMilestone error:', error)
   }, [])
 
+  const updateMilestoneDependency = useCallback(async (milestoneId: string, dependsOnId: string | null, offsetDays: number) => {
+    setMilestones(prev => prev.map(m => m.id === milestoneId ? { ...m, depends_on_id: dependsOnId, offset_days: offsetDays } : m))
+    const { error } = await supabase.from('milestones').update({ depends_on_id: dependsOnId, offset_days: offsetDays }).eq('id', milestoneId)
+    if (error) console.error('updateMilestoneDependency error:', error)
+  }, [])
+
   // ── Cost actions ──────────────────────────────────────────────────────────
   const addTransaction = useCallback(async (data: Omit<CostTransaction, 'id' | 'board_id' | 'created_at'>) => {
     const { data: tx, error } = await supabase
@@ -643,6 +649,7 @@ export function BoardPageClient({ boardId }: Props) {
           onCompleteMilestone={completeMilestone}
           onLinkTask={linkTask}
           onUnlinkTask={unlinkTask}
+          onUpdateMilestoneDependency={updateMilestoneDependency}
           onAddTransaction={addTransaction}
           onUpdateTransaction={updateTransaction}
           onDeleteTransaction={deleteTransaction}
