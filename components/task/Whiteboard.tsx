@@ -172,7 +172,6 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
         body: JSON.stringify({
           scriptUrl: cloudScriptUrl,
           fileName,
-          folder: 'whiteboard',
           data: canvas.toDataURL('image/png'),
           parentFolderId: driveFolderId,
         }),

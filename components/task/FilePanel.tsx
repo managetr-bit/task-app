@@ -161,7 +161,7 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
                 {showUploadSetup && (
                   <div style={{ padding: '0 1rem 0.875rem' }}>
                     <p style={{ fontSize: '0.68rem', color: '#9ca3af', marginBottom: '0.5rem', lineHeight: 1.5 }}>
-                      Notes export to <strong>notes/</strong> and whiteboard saves go to <strong>whiteboard/</strong> inside this Drive folder. Requires a Google Apps Script Web App URL.
+                      Notes and whiteboard images save directly into this Drive folder. Requires a Google Apps Script Web App URL.
                     </p>
                     <details style={{ marginBottom: '0.625rem', fontSize: '0.68rem', color: '#9ca3af', background: '#F3F4F6', borderRadius: 8, padding: '0.4rem 0.625rem' }}>
                       <summary style={{ cursor: 'pointer', fontWeight: 600 }}>How to set up (one-time)</summary>
@@ -175,10 +175,9 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
                       <pre style={{ marginTop: '0.5rem', background: '#fff', padding: '0.5rem', borderRadius: 6, fontSize: '0.62rem', overflowX: 'auto', border: '1px solid #E8E5E0', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>{`function doPost(e) {
   try {
     var d = JSON.parse(e.postData.contents);
-    var root = d.parentFolderId
+    var folder = d.parentFolderId
       ? DriveApp.getFolderById(d.parentFolderId)
       : DriveApp.getRootFolder();
-    var sub = getOrCreate(root, d.folder || 'files');
     var blob;
     if (d.data && d.data.indexOf('base64,') > -1) {
       var b64 = d.data.split('base64,')[1];
@@ -188,7 +187,7 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
       blob = Utilities.newBlob(
         d.data || '', 'text/plain', d.fileName);
     }
-    var file = sub.createFile(blob);
+    var file = folder.createFile(blob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK,
       DriveApp.Permission.VIEW);
     return ContentService
@@ -201,10 +200,6 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
         {success:false, error:err.toString()}))
       .setMimeType(ContentService.MimeType.JSON);
   }
-}
-function getOrCreate(parent, name) {
-  var it = parent.getFoldersByName(name);
-  return it.hasNext() ? it.next() : parent.createFolder(name);
 }`}</pre>
                     </details>
                     <input
