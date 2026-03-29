@@ -213,7 +213,7 @@ export function CostPanel({
   const [budgetModalDefaultType, setBudgetModalDefaultType] = useState<'expense' | 'income' | undefined>(undefined)
   const [showChart, setShowChart]           = useState(true)
   const [showBudgetSection, setShowBudgetSection] = useState(false)
-  const [txFilter, setTxFilter]             = useState<'all' | 'cash_in' | 'cash_out' | 'forecast'>('all')
+
   const [showSchedules, setShowSchedules]   = useState(true)
   const [showIncome, setShowIncome]         = useState(true)
   const [newPaymentLineId, setNewPaymentLineId] = useState<string | null>(null)
@@ -236,15 +236,6 @@ export function CostPanel({
   const netBalance    = totalReceived - totalSpent
 
   const budgetUsedPct = totalBudgetExpense > 0 ? Math.round((totalSpent / totalBudgetExpense) * 100) : null
-
-  // ── Filtered transactions ─────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let list = [...transactions].sort((a, b) => b.date.localeCompare(a.date))
-    if (txFilter === 'cash_in')  list = list.filter(t => t.type === 'cash_in')
-    if (txFilter === 'cash_out') list = list.filter(t => t.type === 'cash_out')
-    if (txFilter === 'forecast') list = list.filter(t => t.is_forecast)
-    return list
-  }, [transactions, txFilter])
 
   // ── Category breakdown (for budget vs actual) ─────────────────────────────
   const categoryBreakdown = useMemo(() => {
@@ -424,69 +415,6 @@ export function CostPanel({
           </div>
         </Section>
 
-        {/* ── Transactions ── */}
-        <Section title={`Transactions${transactions.length > 0 ? ` (${transactions.length})` : ''}`} emoji="🧾" open alwaysOpen>
-          {/* Filter bar */}
-          <div style={{ display: 'flex', gap: '0.25rem', padding: '0.375rem 0.75rem', borderBottom: '1px solid #EDE9FE' }}>
-            {([['all', 'All'], ['cash_out', '↑ Out'], ['cash_in', '↓ In'], ['forecast', '~Forecast']] as const).map(([id, label]) => (
-              <button key={id} onClick={() => setTxFilter(id)} style={{
-                padding: '0.2rem 0.5rem', borderRadius: 20, border: 'none', cursor: 'pointer', fontSize: '0.65rem', fontWeight: txFilter === id ? 700 : 500,
-                background: txFilter === id ? '#7C3AED' : '#F3F4F6',
-                color: txFilter === id ? '#fff' : '#6b7280',
-              }}>{label}</button>
-            ))}
-          </div>
-
-          {filtered.length === 0 ? (
-            <div style={{ padding: '1.5rem', textAlign: 'center', color: '#c4bfb9', fontSize: '0.8rem' }}>
-              {transactions.length === 0 ? 'No transactions yet' : 'No matching transactions'}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {filtered.map(tx => {
-                const isCashIn = tx.type === 'cash_in'
-                const line = budgetLines.find(l => l.id === tx.budget_line_id)
-                const ms   = milestones.find(m => m.id === tx.milestone_id)
-                return (
-                  <div
-                    key={tx.id}
-                    onClick={() => canEdit && (setEditingTx(tx), setShowTxModal(true))}
-                    style={{
-                      padding: '0.5rem 0.75rem', borderBottom: '1px solid #EDE9FE', display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-                      cursor: canEdit ? 'pointer' : 'default', background: '#fff',
-                    }}
-                    onMouseEnter={e => { if (canEdit) (e.currentTarget as HTMLDivElement).style.background = '#FAFAFE' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = '#fff' }}
-                  >
-                    <div style={{
-                      width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                      background: isCashIn ? '#F0FDF4' : '#FFF1F4',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.65rem', fontWeight: 700, color: isCashIn ? '#6ACA9A' : '#E86A8E',
-                      marginTop: 1,
-                    }}>
-                      {isCashIn ? '↓' : '↑'}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '0.7875rem', fontWeight: 600, color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {tx.description || (line ? line.name : isCashIn ? 'Cash In' : 'Cash Out')}
-                      </div>
-                      <div style={{ fontSize: '0.65rem', color: '#9ca3af', marginTop: 1 }}>
-                        {new Date(tx.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}
-                        {line && ` · ${COST_CATEGORIES[line.category]?.emoji} ${line.name}`}
-                        {ms && ` · ${ms.name}`}
-                        {tx.is_forecast && <span style={{ color: '#7C3AED', fontWeight: 600 }}> · forecast</span>}
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '0.8125rem', fontWeight: 700, color: isCashIn ? '#6ACA9A' : '#E86A8E', flexShrink: 0 }}>
-                      {isCashIn ? '+' : '-'}{fmtFull(tx.amount, currency)}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </Section>
       </div>
 
       {/* Modals */}
