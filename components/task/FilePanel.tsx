@@ -87,7 +87,7 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
           <button
             onClick={() => { setInputUrl(filePanelUrl ?? ''); setEditing(true) }}
             style={{ background: 'transparent', border: 'none', color: '#c4bfb9', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem', borderRadius: '6px', transition: 'color 0.15s ease' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c9a96e' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c4bfb9' }}
           >
             {filePanelUrl ? '✎' : '+ Link'}
@@ -107,11 +107,11 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
             rows={3}
             autoFocus
             style={{ width: '100%', fontSize: '0.75rem', border: '1.5px solid #E8E5E0', borderRadius: '8px', padding: '0.5rem 0.625rem', resize: 'none', fontFamily: 'inherit', color: '#1a1a1a', outline: 'none', lineHeight: 1.5, boxSizing: 'border-box' }}
-            onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
+            onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED' }}
             onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
           />
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '0.4rem 0.75rem', background: '#c9a96e', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}>
+            <button onClick={handleSave} disabled={saving} style={{ flex: 2, padding: '0.4rem 0.75rem', background: '#7C3AED', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.6 : 1 }}>
               {saving ? 'Saving…' : 'Save'}
             </button>
             <button onClick={handleCancel} style={{ flex: 1, padding: '0.4rem 0.5rem', background: 'transparent', color: '#9ca3af', border: '1.5px solid #E8E5E0', borderRadius: '8px', fontSize: '0.75rem', cursor: 'pointer' }}>
@@ -132,7 +132,7 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
             <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem', opacity: 0.4 }}>📂</div>
             <p style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#9ca3af', marginBottom: '0.375rem' }}>No folder linked yet</p>
             <p style={{ fontSize: '0.75rem', color: '#c4bfb9', lineHeight: 1.5 }}>Link a Google Drive or OneDrive shared folder to keep your team's files in one place.</p>
-            <button onClick={() => { setInputUrl(''); setEditing(true) }} style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#fdf6ed', color: '#c9a96e', border: '1.5px solid #f0e4d0', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
+            <button onClick={() => { setInputUrl(''); setEditing(true) }} style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: '#EDE9FE', color: '#7C3AED', border: '1.5px solid #DDD6FE', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}>
               + Link a folder
             </button>
           </div>
@@ -141,13 +141,13 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
             <div style={{ padding: '0.5rem 1rem', background: '#fafaf9', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: '0.375rem', flexShrink: 0 }}>
               <span style={{ fontSize: '0.75rem' }}>{PLATFORM_ICONS[embed!.type]}</span>
               <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 500 }}>{embed!.displayName}</span>
-              <a href={filePanelUrl!} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#c9a96e', textDecoration: 'none' }}>Open ↗</a>
+              <a href={filePanelUrl!} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#7C3AED', textDecoration: 'none' }}>Open ↗</a>
             </div>
             <iframe src={embed!.embedUrl} style={{ flex: 1, border: 'none', width: '100%', minHeight: 0 }} allow="clipboard-read; clipboard-write" />
 
             {/* ── Upload setup (only for Google Drive folders) ── */}
             {embed!.type === 'gdrive-folder' && (
-              <div style={{ flexShrink: 0, borderTop: '1px solid #F0EDE8', background: '#FAFAF9' }}>
+              <div style={{ flexShrink: 0, borderTop: '1px solid #E8E5F0', background: '#FAFAF9' }}>
                 <button
                   onClick={() => { setScriptDraft(cloudScriptUrl); setShowUploadSetup(p => !p) }}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.45rem 1rem', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
@@ -212,13 +212,13 @@ function getOrCreate(parent, name) {
                       onChange={e => setScriptDraft(e.target.value)}
                       placeholder="https://script.google.com/macros/s/…/exec"
                       style={{ width: '100%', padding: '0.45rem 0.6rem', borderRadius: 8, border: '1.5px solid #E8E5E0', fontSize: '0.7rem', outline: 'none', boxSizing: 'border-box', marginBottom: '0.5rem', fontFamily: 'monospace', color: '#374151' }}
-                      onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
+                      onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED' }}
                       onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
                     />
                     <div style={{ display: 'flex', gap: '0.375rem' }}>
                       <button
                         onClick={() => { onCloudScriptUrlChange(scriptDraft.trim()); setShowUploadSetup(false) }}
-                        style={{ flex: 1, padding: '0.4rem', borderRadius: 8, border: 'none', background: '#c9a96e', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+                        style={{ flex: 1, padding: '0.4rem', borderRadius: 8, border: 'none', background: '#7C3AED', color: '#fff', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
                       >Save</button>
                       {cloudScriptUrl && (
                         <button
@@ -235,9 +235,9 @@ function getOrCreate(parent, name) {
         ) : (
           <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <a href={embed!.embedUrl} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.875rem 1rem', background: '#fdf6ed', border: '1.5px solid #f0e4d0', borderRadius: '12px', textDecoration: 'none', transition: 'border-color 0.15s ease' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = '#c9a96e' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = '#f0e4d0' }}>
+              style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.875rem 1rem', background: '#EDE9FE', border: '1.5px solid #DDD6FE', borderRadius: '12px', textDecoration: 'none', transition: 'border-color 0.15s ease' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = '#7C3AED' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.borderColor = '#DDD6FE' }}>
               <span style={{ fontSize: '1.5rem' }}>{PLATFORM_ICONS[embed!.type]}</span>
               <div>
                 <div style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1a1a1a' }}>{embed!.displayName}</div>

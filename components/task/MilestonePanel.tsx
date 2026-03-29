@@ -24,7 +24,7 @@ function getMilestoneStatus(targetDate: string, linkedTasks: Task[], completedCo
   if (diffDays < 0) return { color: '#ef4444', bg: '#fef2f2', label: `${Math.abs(diffDays)}d overdue`, dot: '#ef4444' }
   if (diffDays === 0) return { color: '#f59e0b', bg: '#fffbeb', label: 'Today', dot: '#f59e0b' }
   if (diffDays <= 7) return { color: '#f59e0b', bg: '#fffbeb', label: `${diffDays}d left`, dot: '#f59e0b' }
-  return { color: '#9ca3af', bg: '#f9fafb', label: `${diffDays}d`, dot: '#c9a96e' }
+  return { color: '#9ca3af', bg: '#f9fafb', label: `${diffDays}d`, dot: '#7C3AED' }
 }
 
 function formatDate(dateStr: string) {
@@ -68,7 +68,7 @@ export function MilestonePanel({ milestones, milestoneTasks, tasks, onAdd, onDel
         <button
           onClick={() => setShowAdd(p => !p)}
           style={{ background: 'transparent', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: '1.1rem', lineHeight: 1, padding: '0.2rem 0.3rem', borderRadius: '6px' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c9a96e' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9ca3af' }}
         >
           +
@@ -147,9 +147,9 @@ export function MilestonePanel({ milestones, milestoneTasks, tasks, onAdd, onDel
                       <button onClick={() => setConfirmDeleteId(null)} style={{ fontSize: '0.65rem', color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
                     </>
                   ) : (
-                    <button onClick={() => setConfirmDeleteId(ms.id)} style={{ background: 'none', border: 'none', color: '#d1cdc7', cursor: 'pointer', fontSize: '0.8rem', padding: '0 0.1rem', lineHeight: 1 }}
+                    <button onClick={() => setConfirmDeleteId(ms.id)} style={{ background: 'none', border: 'none', color: '#C4B5FD', cursor: 'pointer', fontSize: '0.8rem', padding: '0 0.1rem', lineHeight: 1 }}
                       onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#d1cdc7' }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#C4B5FD' }}
                     >×</button>
                   )}
                 </div>
@@ -189,14 +189,14 @@ export function MilestonePanel({ milestones, milestoneTasks, tasks, onAdd, onDel
                     {tasks.filter(t => !t.completed_at || linkedTaskIds.includes(t.id)).map(t => {
                       const linked = linkedTaskIds.includes(t.id)
                       return (
-                        <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.25rem 0.375rem', borderRadius: '8px', background: linked ? '#fdf6ed' : 'transparent', transition: 'background 0.1s' }}>
+                        <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.25rem 0.375rem', borderRadius: '8px', background: linked ? '#EDE9FE' : 'transparent', transition: 'background 0.1s' }}>
                           <input
                             type="checkbox"
                             checked={linked}
                             onChange={() => linked ? onUnlinkTask(ms.id, t.id) : onLinkTask(ms.id, t.id)}
-                            style={{ accentColor: '#c9a96e', width: 13, height: 13, flexShrink: 0 }}
+                            style={{ accentColor: '#7C3AED', width: 13, height: 13, flexShrink: 0 }}
                           />
-                          <span style={{ fontSize: '0.75rem', color: linked ? '#c9a96e' : '#4b5563', fontWeight: linked ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: '0.75rem', color: linked ? '#7C3AED' : '#4b5563', fontWeight: linked ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {t.title}
                           </span>
                         </label>

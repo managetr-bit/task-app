@@ -571,7 +571,7 @@ export function BoardPageClient({ boardId }: Props) {
             height: 32,
             borderRadius: '50%',
             border: '3px solid #E8E5E0',
-            borderTopColor: '#c9a96e',
+            borderTopColor: '#7C3AED',
           }}
           className="animate-spin"
         />

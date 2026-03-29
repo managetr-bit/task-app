@@ -137,7 +137,7 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#FAFAFA', borderLeft: '1.5px solid #E8E5E0', width: 300, flexShrink: 0 }}>
       {/* Header */}
-      <div style={{ padding: '0.35rem 0.75rem', borderBottom: '1px solid #F0EDE8', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div style={{ padding: '0.35rem 0.75rem', borderBottom: '1px solid #E8E5F0', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Notes</span>
         {notes.length > 0 && (
           <span style={{ fontSize: '0.6rem', color: '#c4bfb9', background: '#F3F4F6', borderRadius: 10, padding: '0.05rem 0.45rem', fontWeight: 600 }}>{notes.length}</span>
@@ -159,14 +159,14 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
           </button>
         )}
         {onCollapse && (
-          <button onClick={onCollapse} title="Collapse notes" style={{ marginLeft: 'auto', color: '#c9a96e', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
+          <button onClick={onCollapse} title="Collapse notes" style={{ marginLeft: 'auto', color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.2rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}>
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6L7.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         )}
       </div>
 
       {/* New note input */}
-      <div style={{ padding: '0.625rem 0.75rem', borderBottom: '1px solid #F0EDE8', flexShrink: 0 }}>
+      <div style={{ padding: '0.625rem 0.75rem', borderBottom: '1px solid #E8E5F0', flexShrink: 0 }}>
         <textarea
           ref={textRef}
           value={draft}
@@ -180,7 +180,7 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
             background: '#fff', outline: 'none', fontFamily: 'inherit', lineHeight: 1.45,
             boxSizing: 'border-box',
           }}
-          onFocus={e => { (e.target as HTMLTextAreaElement).style.borderColor = '#c9a96e' }}
+          onFocus={e => { (e.target as HTMLTextAreaElement).style.borderColor = '#7C3AED' }}
           onBlur={e => { (e.target as HTMLTextAreaElement).style.borderColor = '#E8E5E0' }}
         />
         <button
@@ -188,7 +188,7 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
           disabled={!draft.trim()}
           style={{
             marginTop: '0.375rem', width: '100%', padding: '0.4rem',
-            background: draft.trim() ? '#c9a96e' : '#E8E5E0',
+            background: draft.trim() ? '#7C3AED' : '#E8E5E0',
             color: draft.trim() ? '#fff' : '#c4bfb9',
             border: 'none', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
             cursor: draft.trim() ? 'pointer' : 'default', transition: 'background 0.15s',
@@ -209,7 +209,7 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
         {sorted.map(note => (
           <div
             key={note.id}
-            style={{ background: '#fff', border: '1.5px solid #F0EDE8', borderRadius: 10, padding: '0.625rem 0.75rem' }}
+            style={{ background: '#fff', border: '1.5px solid #E8E5F0', borderRadius: 10, padding: '0.625rem 0.75rem' }}
           >
             <p style={{ margin: 0, fontSize: '0.8rem', color: '#1a1a1a', lineHeight: 1.5, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
               {note.content}
@@ -230,8 +230,8 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
                 <button
                   onClick={() => onConvertToTask(note.content)}
                   title="Convert to task"
-                  style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem', borderRadius: 6, border: '1px solid #E8E5E0', background: '#F9F7F5', color: '#c9a96e', cursor: 'pointer', fontWeight: 600 }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#c9a96e' }}
+                  style={{ fontSize: '0.65rem', padding: '0.15rem 0.45rem', borderRadius: 6, border: '1px solid #E8E5E0', background: '#F9F7F5', color: '#7C3AED', cursor: 'pointer', fontWeight: 600 }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#7C3AED' }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#E8E5E0' }}
                 >
                   → Task
@@ -249,9 +249,9 @@ export function NotesPanel({ boardId, authorName, onConvertToTask, onCollapse, c
                   </>
                 ) : (
                   <button onClick={() => setConfirmDeleteId(note.id)} title="Delete"
-                    style={{ fontSize: '0.65rem', padding: '0.15rem 0.35rem', borderRadius: 6, border: '1px solid transparent', background: 'transparent', color: '#d1cdc7', cursor: 'pointer' }}
+                    style={{ fontSize: '0.65rem', padding: '0.15rem 0.35rem', borderRadius: 6, border: '1px solid transparent', background: 'transparent', color: '#C4B5FD', cursor: 'pointer' }}
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#d1cdc7' }}>
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#C4B5FD' }}>
                     ✕
                   </button>
                 )}

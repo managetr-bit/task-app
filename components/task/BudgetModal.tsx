@@ -237,8 +237,8 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
             <button key={t} onClick={() => setTab(t)} style={{
               flex: 1, padding: '0.625rem', border: 'none', background: 'none', cursor: 'pointer',
               fontSize: '0.8125rem', fontWeight: tab === t ? 700 : 500,
-              color: tab === t ? '#c9a96e' : '#9ca3af',
-              borderBottom: tab === t ? '2px solid #c9a96e' : '2px solid transparent',
+              color: tab === t ? '#7C3AED' : '#9ca3af',
+              borderBottom: tab === t ? '2px solid #7C3AED' : '2px solid transparent',
             }}>
               {t === 'lines' ? '📋 Budget Lines' : '📂 Import from Excel'}
             </button>
@@ -280,7 +280,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
                         <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
                           {COST_CATEGORIES[line.category]?.label}
                           {line.milestone_id && milestones.find(m => m.id === line.milestone_id) && ` · ${milestones.find(m => m.id === line.milestone_id)!.name}`}
-                          {line.expected_date && <span style={{ color: '#c9a96e' }}> · {line.expected_date}</span>}
+                          {line.expected_date && <span style={{ color: '#7C3AED' }}> · {line.expected_date}</span>}
                         </div>
                       </div>
                       <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -300,7 +300,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
 
               {/* Edit/Add form */}
               {editing ? (
-                <form onSubmit={handleSave} style={{ background: '#FAFAFA', borderRadius: 12, border: '1.5px solid #c9a96e', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <form onSubmit={handleSave} style={{ background: '#FAFAFA', borderRadius: 12, border: '1.5px solid #7C3AED', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <div style={{ flex: 2 }}>
                       <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 3 }}>Name *</label>
@@ -367,7 +367,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
                     {editing.milestone_id && (() => {
                       const ms = milestones.find(m => m.id === editing.milestone_id)
                       return ms ? (
-                        <p style={{ fontSize: '0.68rem', color: '#c9a96e', marginTop: 3 }}>
+                        <p style={{ fontSize: '0.68rem', color: '#7C3AED', marginTop: 3 }}>
                           Auto-set from milestone "{ms.name}" · {ms.target_date}
                         </p>
                       ) : null
@@ -397,7 +397,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
               {/* Download sample — prominent CTA */}
-              <div style={{ background: 'linear-gradient(135deg, #fdf6ed 0%, #fef9f3 100%)', borderRadius: 12, border: '1.5px solid #e8d5b0', padding: '1rem' }}>
+              <div style={{ background: 'linear-gradient(135deg, #EDE9FE 0%, #fef9f3 100%)', borderRadius: 12, border: '1.5px solid #e8d5b0', padding: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
                   <span style={{ fontSize: '1.75rem', lineHeight: 1, flexShrink: 0 }}>📥</span>
                   <div style={{ flex: 1 }}>
@@ -411,7 +411,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
                       disabled={downloading}
                       style={{
                         padding: '0.5rem 1rem', borderRadius: 8, border: 'none',
-                        background: downloading ? '#e8d5b0' : '#c9a96e',
+                        background: downloading ? '#e8d5b0' : '#7C3AED',
                         color: '#fff', fontWeight: 700, fontSize: '0.8125rem',
                         cursor: downloading ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', gap: '0.375rem',
@@ -481,7 +481,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
               <button
                 onClick={handleImport}
                 disabled={importing || !importText.trim()}
-                style={{ width: '100%', padding: '0.75rem', borderRadius: 10, border: 'none', background: '#c9a96e', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem', opacity: importing || !importText.trim() ? 0.6 : 1 }}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: 10, border: 'none', background: '#7C3AED', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem', opacity: importing || !importText.trim() ? 0.6 : 1 }}
               >
                 {importing ? 'Importing…' : `Import ${parseImportText(importText).length} Lines`}
               </button>

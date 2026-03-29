@@ -4,7 +4,7 @@ import { useRef, useEffect, useState } from 'react'
 
 type Tool = 'pen' | 'eraser'
 
-const COLORS = ['#1a1a1a', '#c9a96e', '#ef4444', '#3b82f6', '#22c55e', '#8b5cf6', '#f59e0b', '#ec4899']
+const COLORS = ['#1a1a1a', '#7C3AED', '#ef4444', '#3b82f6', '#22c55e', '#8b5cf6', '#f59e0b', '#ec4899']
 const WIDTHS = [2, 5, 12]
 
 type SavedSketch = { id: string; dataUrl: string; title: string; savedAt: string }
@@ -208,8 +208,8 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
           {/* Tools */}
           {(['pen', 'eraser'] as Tool[]).map(t => (
             <button key={t} onClick={() => setTool(t)} title={t === 'pen' ? 'Pen' : 'Eraser'} style={{
-              width: 32, height: 32, borderRadius: 8, border: tool === t ? '2px solid #c9a96e' : '1.5px solid #E8E5E0',
-              background: tool === t ? '#fdf6ed' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 32, height: 32, borderRadius: 8, border: tool === t ? '2px solid #7C3AED' : '1.5px solid #E8E5E0',
+              background: tool === t ? '#EDE9FE' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '1rem',
             }}>
               {t === 'pen' ? '✏️' : '🧹'}
@@ -236,8 +236,8 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
             {WIDTHS.map(w => (
               <button key={w} onClick={() => setStrokeWidth(w)} style={{
                 width: 28, height: 28, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: strokeWidth === w ? '2px solid #c9a96e' : '1.5px solid #E8E5E0',
-                background: strokeWidth === w ? '#fdf6ed' : '#fff', cursor: 'pointer',
+                border: strokeWidth === w ? '2px solid #7C3AED' : '1.5px solid #E8E5E0',
+                background: strokeWidth === w ? '#EDE9FE' : '#fff', cursor: 'pointer',
               }}>
                 <div style={{ width: Math.min(w * 2.5, 16), height: Math.min(w * 2.5, 16), borderRadius: '50%', background: '#1a1a1a' }} />
               </button>
@@ -260,8 +260,8 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
             Gallery {savedSketches.length > 0 && `(${savedSketches.length})`}
           </button>
           <button onClick={() => setShowSaveDialog(true)} style={{
-            padding: '0.3rem 0.625rem', borderRadius: 8, border: '1.5px solid #c9a96e',
-            background: '#fdf6ed', color: '#c9a96e', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600,
+            padding: '0.3rem 0.625rem', borderRadius: 8, border: '1.5px solid #7C3AED',
+            background: '#EDE9FE', color: '#7C3AED', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600,
           }}>
             Save
           </button>
@@ -331,7 +331,7 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
                 style={{ width: '100%', padding: '0.5rem 0.75rem', borderRadius: 8, border: '1.5px solid #E8E5E0', fontSize: '0.85rem', outline: 'none', boxSizing: 'border-box', marginBottom: '0.75rem' }}
               />
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={saveSketch} style={{ flex: 1, padding: '0.5rem', borderRadius: 8, border: 'none', background: '#c9a96e', color: '#fff', fontSize: '0.825rem', fontWeight: 600, cursor: 'pointer' }}>Save</button>
+                <button onClick={saveSketch} style={{ flex: 1, padding: '0.5rem', borderRadius: 8, border: 'none', background: '#7C3AED', color: '#fff', fontSize: '0.825rem', fontWeight: 600, cursor: 'pointer' }}>Save</button>
                 <button onClick={() => setShowSaveDialog(false)} style={{ flex: 1, padding: '0.5rem', borderRadius: 8, border: '1.5px solid #E8E5E0', background: '#fff', fontSize: '0.825rem', cursor: 'pointer' }}>Cancel</button>
               </div>
             </div>
@@ -362,9 +362,9 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
                         <span style={{ fontSize: '0.7rem', color: '#6b7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sketch.title}</span>
                         <button
                           onClick={e => { e.stopPropagation(); deleteSketch(sketch.id) }}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#d1cdc7', fontSize: '0.8rem', padding: '0 0.2rem', flexShrink: 0 }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#C4B5FD', fontSize: '0.8rem', padding: '0 0.2rem', flexShrink: 0 }}
                           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#ef4444' }}
-                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#d1cdc7' }}
+                          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#C4B5FD' }}
                         >✕</button>
                       </div>
                     </div>

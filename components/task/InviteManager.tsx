@@ -158,7 +158,7 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
   }
 
   const roleBadge = (role: MemberRole) => {
-    if (role === 'creator') return { label: 'Creator', bg: '#fdf6ed', color: '#c9a96e', border: '#f0d9a8' }
+    if (role === 'creator') return { label: 'Creator', bg: '#EDE9FE', color: '#7C3AED', border: '#f0d9a8' }
     if (role === 'admin')   return { label: 'Admin',   bg: '#eff6ff', color: '#3b82f6', border: '#bfdbfe' }
     if (role === 'visitor') return { label: 'Visitor', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' }
     return                         { label: 'Member',  bg: '#F3F4F6', color: '#6b7280', border: '#E8E5E0' }
@@ -207,7 +207,7 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
                 const isSelf    = m.id === currentMember.id
                 const canChange = isCreator && m.role !== 'creator'
                 return (
-                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.4rem 0.625rem', borderRadius: 10, background: isSelf ? '#FEF9F0' : '#FAFAFA', border: `1.5px solid ${isSelf ? '#f0d9a8' : '#F0EDE8'}` }}>
+                  <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.4rem 0.625rem', borderRadius: 10, background: isSelf ? '#FEF9F0' : '#FAFAFA', border: `1.5px solid ${isSelf ? '#f0d9a8' : '#E8E5F0'}` }}>
                     <div style={{ width: 28, height: 28, borderRadius: '50%', background: m.color, color: '#fff', fontSize: '0.6rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {m.nickname.slice(0, 2).toUpperCase()}
                     </div>
@@ -223,7 +223,7 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
                         ]).map(({ r, label, ac, ab }) => (
                           <button key={r} onClick={() => changeRole(m.id, r)} disabled={updatingRole === m.id || m.role === r} style={{ padding: '0.2rem 0.55rem', borderRadius: 6, fontSize: '0.68rem', fontWeight: 600, cursor: m.role === r ? 'default' : 'pointer', fontFamily: 'inherit', border: m.role === r ? `1.5px solid ${ac}` : '1.5px solid #E8E5E0', background: m.role === r ? ab : '#fff', color: m.role === r ? ac : '#9ca3af' }}>{label}</button>
                         ))}
-                        {updatingRole === m.id && <span style={{ fontSize: '0.7rem', color: '#c9a96e', alignSelf: 'center' }}>…</span>}
+                        {updatingRole === m.id && <span style={{ fontSize: '0.7rem', color: '#7C3AED', alignSelf: 'center' }}>…</span>}
                       </div>
                     ) : (
                       <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '0.2rem 0.55rem', borderRadius: 6, border: `1.5px solid ${badge.border}`, background: badge.bg, color: badge.color, flexShrink: 0 }}>{badge.label}</span>
@@ -247,7 +247,7 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
                 placeholder="Label (e.g. Design team)"
                 maxLength={40}
                 style={inputStyle}
-                onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
+                onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED' }}
                 onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
               />
               {/* Email */}
@@ -257,7 +257,7 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
                 placeholder="Email address (optional — send invite directly)"
                 type="email"
                 style={inputStyle}
-                onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
+                onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED' }}
                 onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
                 onKeyDown={e => { if (e.key === 'Enter') createAndSend() }}
               />
@@ -268,7 +268,7 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
                   disabled={creating || (!!emailTo && !isValidEmail(emailTo))}
                   style={{
                     flex: 1, padding: '0.6rem 1rem', borderRadius: 8, border: 'none',
-                    background: emailTo && isValidEmail(emailTo) ? '#c9a96e' : '#c9a96e',
+                    background: emailTo && isValidEmail(emailTo) ? '#7C3AED' : '#7C3AED',
                     color: '#fff', fontSize: '0.85rem', fontWeight: 600,
                     cursor: creating ? 'default' : 'pointer',
                     opacity: creating || (!!emailTo && !isValidEmail(emailTo)) ? 0.6 : 1,
@@ -367,7 +367,7 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
                             placeholder="Send to email…"
                             type="email"
                             style={{ flex: 1, padding: '0.35rem 0.625rem', borderRadius: 7, border: '1.5px solid #E8E5E0', fontSize: '0.75rem', outline: 'none', fontFamily: 'inherit' }}
-                            onFocus={e => { e.currentTarget.style.borderColor = '#c9a96e' }}
+                            onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED' }}
                             onBlur={e => { e.currentTarget.style.borderColor = '#E8E5E0' }}
                             onKeyDown={e => { if (e.key === 'Enter' && isValidEmail(tEmail)) sendToTokenEmail(token, tEmail) }}
                           />
@@ -376,7 +376,7 @@ export function InviteManager({ boardId, boardName, profile, members, currentMem
                             disabled={!isValidEmail(tEmail) || tStatus === 'sending'}
                             style={{
                               padding: '0.35rem 0.75rem', borderRadius: 7, border: 'none',
-                              background: tStatus === 'sent' ? '#22c55e' : '#c9a96e',
+                              background: tStatus === 'sent' ? '#22c55e' : '#7C3AED',
                               color: '#fff', fontSize: '0.75rem', fontWeight: 600,
                               cursor: !isValidEmail(tEmail) || tStatus === 'sending' ? 'default' : 'pointer',
                               opacity: !isValidEmail(tEmail) ? 0.4 : 1,

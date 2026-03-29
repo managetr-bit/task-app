@@ -11,7 +11,7 @@ type Props = {
 }
 
 const ROLE_BADGE = {
-  creator: { label: 'Creator', bg: '#fdf6ed', color: '#c9a96e', border: '#f0d9a8' },
+  creator: { label: 'Creator', bg: '#EDE9FE', color: '#7C3AED', border: '#f0d9a8' },
   admin:   { label: 'Admin',   bg: '#eff6ff', color: '#3b82f6', border: '#bfdbfe' },
   member:  { label: 'Member',  bg: '#F3F4F6', color: '#6b7280', border: '#E8E5E0' },
   visitor: { label: 'Visitor', bg: '#f0fdf4', color: '#16a34a', border: '#bbf7d0' },
@@ -97,7 +97,7 @@ export function MembersBar({ members, currentMember, isCreator, onUpdateMemberRo
                   width: 30, height: 30, borderRadius: '50%', background: m.color,
                   color: '#fff', fontSize: 11, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  border: isCurrent ? '2px solid #c9a96e' : isOpen ? '2px solid #c9a96e' : '2px solid #FAF9F7',
+                  border: isCurrent ? '2px solid #7C3AED' : isOpen ? '2px solid #7C3AED' : '2px solid #FAF9F7',
                   boxShadow: isOpen ? '0 0 0 2px #f0d9a8' : '0 1px 4px rgba(0,0,0,0.12)',
                   flexShrink: 0, letterSpacing: '-0.02em',
                   cursor: 'pointer',
@@ -167,7 +167,7 @@ export function MembersBar({ members, currentMember, isCreator, onUpdateMemberRo
               width: 40, height: 40, borderRadius: '50%', background: openMember.color,
               color: '#fff', fontSize: '0.875rem', fontWeight: 700,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              border: openMember.id === currentMember.id ? '2px solid #c9a96e' : '2px solid #E8E5E0',
+              border: openMember.id === currentMember.id ? '2px solid #7C3AED' : '2px solid #E8E5E0',
               flexShrink: 0, letterSpacing: '-0.02em',
             }}>
               {openMember.nickname.slice(0, 2).toUpperCase()}
@@ -233,7 +233,7 @@ export function MembersBar({ members, currentMember, isCreator, onUpdateMemberRo
                 })}
               </div>
               {updating && (
-                <div style={{ fontSize: '0.65rem', color: '#c9a96e', marginTop: '0.375rem', textAlign: 'center' }}>Saving…</div>
+                <div style={{ fontSize: '0.65rem', color: '#7C3AED', marginTop: '0.375rem', textAlign: 'center' }}>Saving…</div>
               )}
             </div>
           )}
@@ -252,7 +252,7 @@ export function Avatar({ member, isCurrent, small }: { member: Member; isCurrent
         width: s, height: s, borderRadius: '50%', background: member.color,
         color: '#fff', fontSize: s * 0.38, fontWeight: 700,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        border: isCurrent ? '2px solid #c9a96e' : '2px solid #FAF9F7',
+        border: isCurrent ? '2px solid #7C3AED' : '2px solid #FAF9F7',
         boxShadow: '0 1px 4px rgba(0,0,0,0.12)',
         flexShrink: 0, letterSpacing: '-0.02em',
       }}
