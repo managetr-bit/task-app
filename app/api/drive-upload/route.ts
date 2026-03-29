@@ -19,9 +19,17 @@ export async function POST(req: NextRequest) {
 
     const text = await res.text()
     try {
-      return NextResponse.json(JSON.parse(text))
+      const json = JSON.parse(text)
+      return NextResponse.json(json)
     } catch {
-      return NextResponse.json({ success: true })
+      // Non-JSON response — usually an auth redirect or Apps Script error page.
+      // This is a real failure; do NOT report success.
+      console.error('Drive upload: non-JSON response from Apps Script:', text.slice(0, 300))
+      return NextResponse.json({
+        success: false,
+        error: 'Apps Script returned a non-JSON response. Check that the script is deployed as a Web App with "Anyone" access and the URL is correct.',
+        raw: text.slice(0, 200),
+      })
     }
   } catch (e: unknown) {
     return NextResponse.json({ error: String(e) }, { status: 500 })

@@ -172,11 +172,13 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
         body: JSON.stringify({
           scriptUrl: cloudScriptUrl,
           fileName,
+          folder: 'whiteboard',
           data: canvas.toDataURL('image/png'),
           parentFolderId: driveFolderId,
         }),
       })
       const json = await res.json()
+      if (!json.success) console.error('Drive upload failed:', json.error ?? json)
       setDriveStatus(json.success ? 'ok' : 'error')
     } catch {
       setDriveStatus('error')
