@@ -76,52 +76,6 @@ function labelOffset(level: 1 | 2 | 3): number {
   return 8 + (level - 1) * L_SPACING  // L1=8, L2=34, L3=60
 }
 
-// ── Auto-arrange: resolve overlaps by staggering rows then pushing horizontally ─
-function computeAutoArrangeOffsets(
-  milestones: Milestone[],
-  barWidthPx: number,
-  startDate: Date,
-  totalDays: number,
-): Record<string, { dx: number; dy: number }> {
-  if (milestones.length === 0) return {}
-
-  const LABEL_CHAR_PX = 5.5
-  const MIN_HW = 28
-  const H_GAP  = 4
-  const NUM_ROWS = 3
-
-  const items = milestones.map(ms => {
-    const d   = new Date(ms.target_date + 'T00:00:00')
-    const pct = Math.min(100, Math.max(0, diffDays(startDate, d) / totalDays * 100))
-    const cx  = pct / 100 * barWidthPx
-    const hw  = Math.max(MIN_HW, Math.max(ms.name.length, 6) * LABEL_CHAR_PX * 0.5)
-    return { id: ms.id, cx, hw, dx: 0, dy: 0 }
-  }).sort((a, b) => a.cx - b.cx)
-
-  const rowRight = Array.from({ length: NUM_ROWS }, () => -Infinity) as number[]
-
-  for (const item of items) {
-    let placed = false
-    for (let r = 0; r < NUM_ROWS; r++) {
-      if (item.cx - item.hw >= rowRight[r] + H_GAP) {
-        item.dy     = r * L_SPACING
-        rowRight[r] = item.cx + item.hw
-        placed      = true
-        break
-      }
-    }
-    if (!placed) {
-      const needed = rowRight[0] + H_GAP + item.hw
-      if (item.cx < needed) item.dx = needed - item.cx
-      item.dy     = 0
-      rowRight[0] = item.cx + item.dx + item.hw
-    }
-  }
-
-  const result: Record<string, { dx: number; dy: number }> = {}
-  for (const item of items) result[item.id] = { dx: item.dx, dy: item.dy }
-  return result
-}
 
 export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransactions, budgetLines, currency = 'USD', onAdd, onDelete, onLinkTask, onUnlinkTask, onUpdateDate, onUpdateName, onComplete, onCollapse, onUpdateDependency }: Props) {
   const barRef = useRef<HTMLDivElement>(null)
@@ -198,14 +152,14 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
     dragRef.current.totalDays  = totalDays
   }, [milestones, startDate, totalDays])
 
-  // Auto-arrange labels
+  // Reset label drag offsets when milestone set changes
   const prevMsIds = useRef<string>('')
   useEffect(() => {
     if (barWidth <= 0) return
     const ids = milestones.map(m => m.id).sort().join(',')
     if (ids === prevMsIds.current) return
     prevMsIds.current = ids
-    setLabelOffsets(computeAutoArrangeOffsets(milestones, barWidth, startDate, totalDays))
+    setLabelOffsets({})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [milestones, barWidth])
 
@@ -809,15 +763,8 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
                           color: isSelected ? status.color : isDragging ? '#7C3AED' : '#374151',
                           opacity: isDragging ? 0.7 : 1,
                           lineHeight: 1.3,
-                        }}>{ms.name}</div>
-                        <div style={{
-                          fontSize: '0.55rem', fontWeight: 500,
-                          color: status.color,
-                          opacity: isDragging ? 0.6 : 0.9,
-                          marginTop: 1,
-                          lineHeight: 1.2,
                           textDecoration: status.done ? 'line-through' : 'none',
-                        }}>{formatLabel(ms.target_date)}</div>
+                        }}>{ms.name}</div>
                       </div>
                     )
                   })()}
@@ -1054,32 +1001,6 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
                       </div>
                     )}
                   </div>
-                )
-              })}
-
-              {/* Milestone trigger diamonds on zero line — only when balance line is shown */}
-              {showBalance && milestones.map(ms => {
-                if (!costTransactions?.some(tx => tx.milestone_id === ms.id)) return null
-                const msPct = pctOf(new Date(ms.target_date + 'T00:00:00'))
-                if (msPct < 0 || msPct > 100) return null
-                return (
-                  <div
-                    key={ms.id}
-                    title={ms.name}
-                    style={{
-                      position: 'absolute',
-                      left: `${msPct}%`,
-                      top: CF_CENTER - 5,
-                      width: 10, height: 10,
-                      transform: 'translateX(-50%) rotate(45deg)',
-                      background: '#7C3AED',
-                      border: '2px solid #fff',
-                      borderRadius: 2,
-                      zIndex: 8,
-                      pointerEvents: 'none',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
-                    }}
-                  />
                 )
               })}
 
