@@ -348,12 +348,22 @@ export function BoardView({
               ? `https://www.openstreetmap.org/export/embed.html?bbox=${locLng! - 0.008},${locLat! - 0.008},${locLng! + 0.008},${locLat! + 0.008}&layer=mapnik&marker=${locLat},${locLng}`
               : null)
           if (!hasLocation || !headerMapSrc) return null
-          // Build an openable map URL from whatever we have stored
-          const mapLink = locAddr && !locAddr.startsWith('https://www.google.com/maps/embed')
-            ? locAddr  // short link or coordinates URL — open directly
-            : locAddr?.startsWith('https://www.google.com/maps/embed')
-              ? locAddr.replace('https://www.google.com/maps/embed', 'https://www.google.com/maps').replace(/\?pb=/, '?')
-              : `https://www.openstreetmap.org/?mlat=${locLat}&mlon=${locLng}#map=15/${locLat}/${locLng}`
+          // Build an openable map URL — prefer lat/lng for exact pin
+          let mapLink: string
+          if (locLat !== null && locLng !== null) {
+            mapLink = `https://www.google.com/maps/search/?api=1&query=${locLat},${locLng}`
+          } else if (locAddr && !locAddr.startsWith('https://www.google.com/maps/embed')) {
+            mapLink = locAddr // short link — open directly
+          } else if (locAddr) {
+            // embed URL: try to extract coords from pb= param, fallback to maps homepage
+            const latM = locAddr.match(/!3d(-?\d+\.?\d*)/)
+            const lngM = locAddr.match(/!4d(-?\d+\.?\d*)/)
+            mapLink = latM && lngM
+              ? `https://www.google.com/maps/search/?api=1&query=${latM[1]},${lngM[1]}`
+              : 'https://www.google.com/maps'
+          } else {
+            mapLink = 'https://www.google.com/maps'
+          }
           return (
             <div
               onClick={() => window.open(mapLink, '_blank', 'noopener')}
