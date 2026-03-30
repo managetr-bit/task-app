@@ -126,6 +126,7 @@ export function BoardView({
   const [showWhiteboard, setShowWhiteboard] = useState(false)
   const [showInviteManager, setShowInviteManager] = useState(false)
   const [showProjectInfo, setShowProjectInfo] = useState(false)
+  const [headerLightbox, setHeaderLightbox] = useState<number | null>(null)
   const [noteTaskDraft, setNoteTaskDraft] = useState<string | null>(null)
   type SidebarTab = 'notes' | 'files' | 'cost'
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('notes')
@@ -296,7 +297,7 @@ export function BoardView({
     <div style={{ minHeight: '100vh', background: '#F5F4FD', display: 'flex', flexDirection: 'column' }}>
       {/* ── Command Header ─────────────────────────────────────────────────── */}
       <header className="command-header">
-        {/* Left: breadcrumb + project name */}
+        {/* Left: breadcrumb + project name + location + photos */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: 0, flexShrink: 0 }}>
           <button
             title="All projects"
@@ -317,10 +318,11 @@ export function BoardView({
             Projects
           </button>
           <span style={{ color: '#E8E5F0', margin: '0 0.375rem', fontSize: '0.75rem' }}>/</span>
+          {/* Project name — click opens modal */}
           <div
             onClick={() => setShowProjectInfo(true)}
-            title="Click to view project info"
-            style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.05rem' }}
+            title="Click to edit project info"
+            style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.05rem', flexShrink: 0 }}
           >
             <h1 style={{
               fontSize: '0.9375rem', fontWeight: 700, color: '#111827',
@@ -340,68 +342,69 @@ export function BoardView({
               </span>
             )}
           </div>
+
+          {/* Location + photos — inline next to name */}
+          {(() => {
+            const locAddr = board.location_address
+            const locLat = board.location_lat
+            const locLng = board.location_lng
+            const hasLocation = !!(locAddr || (locLat !== null && locLng !== null))
+            const headerPhotos = board.photos?.length ? board.photos.slice(0, 3) : []
+            const headerMapSrc = locAddr?.startsWith('https://www.google.com/maps/embed')
+              ? locAddr
+              : (locLat !== null && locLng !== null
+                ? `https://www.openstreetmap.org/export/embed.html?bbox=${locLng! - 0.008},${locLat! - 0.008},${locLng! + 0.008},${locLat! + 0.008}&layer=mapnik&marker=${locLat},${locLng}`
+                : null)
+
+            if (!hasLocation && headerPhotos.length === 0) return null
+
+            return (
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.375rem', height: 44, marginLeft: '0.75rem', flexShrink: 0 }}>
+                {/* Location thumbnail — click opens modal */}
+                {hasLocation && headerMapSrc && (
+                  <div
+                    onClick={() => setShowProjectInfo(true)}
+                    title="Click to edit location"
+                    style={{
+                      width: 400, height: 44, borderRadius: 8, overflow: 'hidden',
+                      border: '1.5px solid #E8E5F0', flexShrink: 0, position: 'relative', cursor: 'pointer',
+                    }}
+                  >
+                    <iframe
+                      src={headerMapSrc}
+                      width="400" height="44"
+                      style={{ border: 'none', display: 'block', pointerEvents: 'none' }}
+                      title="Project Location"
+                      loading="lazy"
+                      scrolling="no"
+                    />
+                    <div style={{ position: 'absolute', inset: 0, background: 'transparent' }} />
+                  </div>
+                )}
+
+                {/* Photo thumbnails — click opens lightbox */}
+                {headerPhotos.map((url, i) => (
+                  <div
+                    key={i}
+                    onClick={e => { e.stopPropagation(); setHeaderLightbox(i) }}
+                    title="Click to view photo"
+                    style={{
+                      width: 80, height: 44, borderRadius: 8, overflow: 'hidden',
+                      border: '1.5px solid #E8E5F0', flexShrink: 0, cursor: 'zoom-in',
+                    }}
+                  >
+                    <img
+                      src={url}
+                      alt={`Photo ${i + 1}`}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
-
-        {/* Center: location + photos (shown when data exists) */}
-        {(() => {
-          const locAddr = board.location_address
-          const locLat = board.location_lat
-          const locLng = board.location_lng
-          const hasLocation = !!(locAddr || (locLat !== null && locLng !== null))
-          const headerPhotos = board.photos?.length ? board.photos.slice(0, 3) : []
-          const headerMapSrc = locAddr?.startsWith('https://www.google.com/maps/embed')
-            ? locAddr
-            : (locLat !== null && locLng !== null
-              ? `https://www.openstreetmap.org/export/embed.html?bbox=${locLng! - 0.008},${locLat! - 0.008},${locLng! + 0.008},${locLat! + 0.008}&layer=mapnik&marker=${locLat},${locLng}`
-              : null)
-
-          if (!hasLocation && headerPhotos.length === 0) return null
-
-          return (
-            <div
-              onClick={() => setShowProjectInfo(true)}
-              title="Click to edit project info"
-              style={{
-                display: 'flex', alignItems: 'stretch', gap: '0.375rem',
-                height: 44, cursor: 'pointer', flexShrink: 0,
-              }}
-            >
-              {/* Location thumbnail */}
-              {hasLocation && headerMapSrc && (
-                <div style={{
-                  width: 200, height: 44, borderRadius: 8, overflow: 'hidden',
-                  border: '1.5px solid #E8E5F0', flexShrink: 0, position: 'relative',
-                }}>
-                  <iframe
-                    src={headerMapSrc}
-                    width="200" height="44"
-                    style={{ border: 'none', display: 'block', pointerEvents: 'none', transform: 'scale(1)', transformOrigin: 'top left' }}
-                    title="Project Location"
-                    loading="lazy"
-                    scrolling="no"
-                  />
-                  {/* overlay to prevent iframe stealing clicks */}
-                  <div style={{ position: 'absolute', inset: 0, background: 'transparent' }} />
-                </div>
-              )}
-
-              {/* Photo thumbnails */}
-              {headerPhotos.map((url, i) => (
-                <div key={i} style={{
-                  width: 80, height: 44, borderRadius: 8, overflow: 'hidden',
-                  border: '1.5px solid #E8E5F0', flexShrink: 0,
-                }}>
-                  <img
-                    src={url}
-                    alt={`Photo ${i + 1}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }}
-                  />
-                </div>
-              ))}
-            </div>
-          )
-        })()}
 
         {/* Right: team, progress, actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
@@ -850,6 +853,37 @@ export function BoardView({
       {showWhiteboard && (
         <Whiteboard boardId={board.id} onClose={() => setShowWhiteboard(false)} cloudScriptUrl={cloudScriptUrl || undefined} driveFolderId={driveFolderId} />
       )}
+
+      {/* Header photo lightbox */}
+      {headerLightbox !== null && (() => {
+        const photos = board.photos ?? []
+        return (
+          <div
+            onClick={() => setHeaderLightbox(null)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <img
+              src={photos[headerLightbox]}
+              alt={`Photo ${headerLightbox + 1}`}
+              onClick={e => e.stopPropagation()}
+              style={{ maxWidth: '88vw', maxHeight: '86vh', objectFit: 'contain', borderRadius: 8, boxShadow: '0 8px 48px rgba(0,0,0,0.5)' }}
+            />
+            <button onClick={() => setHeaderLightbox(null)} style={{ position: 'absolute', top: 20, right: 20, width: 38, height: 38, border: 'none', borderRadius: 8, background: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+            </button>
+            {photos.length > 1 && (
+              <>
+                <button onClick={e => { e.stopPropagation(); setHeaderLightbox(i => ((i ?? 0) - 1 + photos.length) % photos.length) }} style={{ position: 'absolute', left: 20, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, border: 'none', borderRadius: 8, background: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <button onClick={e => { e.stopPropagation(); setHeaderLightbox(i => ((i ?? 0) + 1) % photos.length) }} style={{ position: 'absolute', right: 20, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, border: 'none', borderRadius: 8, background: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6l-4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+              </>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Project info modal */}
       {showProjectInfo && (
