@@ -296,164 +296,151 @@ export function BoardView({
   return (
     <div style={{ minHeight: '100vh', background: '#F5F4FD', display: 'flex', flexDirection: 'column' }}>
       {/* ── Command Header (120px, 2-column) ──────────────────────────────── */}
+      {/* ── Command Header — single flat row ────────────────────────────── */}
       <header className="command-header">
 
-        {/* ── LEFT: name/description | map | photos (horizontal row) ── */}
-        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', flex: 1, minWidth: 0 }}>
-
-          {/* Name + description (vertical, centered, left-padded) */}
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.25rem', padding: '0.75rem 0.75rem 0.75rem 1.25rem', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-              <button
-                title="All projects"
-                onClick={() => { if (window.confirm('Go back to all projects?')) window.location.href = '/' }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.375rem',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  color: '#9CA3AF', fontSize: '0.8rem', fontWeight: 500,
-                  padding: '0 0.5rem 0 0', borderRadius: 6,
-                  transition: 'color 0.15s ease', flexShrink: 0,
-                }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
-              >
-                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 7h10M2 7l4-4M2 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Projects
-              </button>
-              <span style={{ color: '#E8E5F0', margin: '0 0.375rem', fontSize: '0.75rem' }}>/</span>
-              <div
-                onClick={() => setShowProjectInfo(true)}
-                title="Click to edit project info"
-                style={{ cursor: 'pointer' }}
-              >
-                <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
-                  {board.name}
-                </h1>
-              </div>
-            </div>
-            {board.description && (
-              <span style={{ fontSize: '0.65rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.3, paddingLeft: '0.1rem', whiteSpace: 'nowrap' }}>
-                {board.description}
-              </span>
-            )}
-          </div>
-
-          {/* Map + photos — stretch to full header height */}
-          {(() => {
-            const locAddr = board.location_address
-            const locLat = board.location_lat
-            const locLng = board.location_lng
-            const hasLocation = !!(locAddr || (locLat !== null && locLng !== null))
-            const headerPhotos = board.photos?.length ? board.photos.slice(0, 3) : []
-            const headerMapSrc = locAddr?.startsWith('https://www.google.com/maps/embed')
-              ? locAddr
-              : (locLat !== null && locLng !== null
-                ? `https://www.openstreetmap.org/export/embed.html?bbox=${locLng! - 0.008},${locLat! - 0.008},${locLng! + 0.008},${locLat! + 0.008}&layer=mapnik&marker=${locLat},${locLng}`
-                : null)
-            if (!hasLocation && headerPhotos.length === 0) return null
-            return (
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.375rem', padding: '0.5rem 0.75rem 0.5rem 0', alignSelf: 'stretch' }}>
-                {hasLocation && headerMapSrc && (
-                  <div
-                    onClick={() => setShowProjectInfo(true)}
-                    title="Click to edit location"
-                    style={{ width: 140, borderRadius: 8, overflow: 'hidden', border: '1.5px solid #E8E5F0', flexShrink: 0, position: 'relative', cursor: 'pointer' }}
-                  >
-                    <iframe src={headerMapSrc} style={{ border: 'none', display: 'block', pointerEvents: 'none', width: '100%', height: '100%', position: 'absolute', inset: 0 }} title="Project Location" loading="lazy" scrolling="no" />
-                    <div style={{ position: 'absolute', inset: 0, background: 'transparent' }} />
-                  </div>
-                )}
-                {headerPhotos.map((url, i) => (
-                  <div
-                    key={i}
-                    onClick={e => { e.stopPropagation(); setHeaderLightbox(i) }}
-                    title="Click to view photo"
-                    style={{ width: 90, borderRadius: 8, overflow: 'hidden', border: '1.5px solid #E8E5F0', flexShrink: 0, cursor: 'zoom-in' }}
-                  >
-                    <img src={url} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }} />
-                  </div>
-                ))}
-              </div>
-            )
-          })()}
+        {/* 1. Projects button */}
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.875rem', borderRight: '1px solid #E8E5F0', flexShrink: 0 }}>
+          <button
+            title="All projects"
+            onClick={() => { if (window.confirm('Go back to all projects?')) window.location.href = '/' }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.375rem',
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: '#9CA3AF', fontSize: '0.8rem', fontWeight: 500,
+              padding: 0, borderRadius: 6, transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 7h10M2 7l4-4M2 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Projects
+          </button>
         </div>
 
-        {/* ── RIGHT: KPIs + actions ── */}
-        {!isMobile && (
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '0.75rem 1.25rem', borderLeft: '1px solid #E8E5F0', flexShrink: 0, minWidth: 380 }}>
+        {/* 2. Project Name / Description */}
+        <div
+          onClick={() => setShowProjectInfo(true)}
+          title="Click to edit project info"
+          style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.2rem', padding: '0 1rem', borderRight: '1px solid #E8E5F0', flexShrink: 0, cursor: 'pointer', minWidth: 140 }}
+        >
+          <h1 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+            {board.name}
+          </h1>
+          {board.description && (
+            <span style={{ fontSize: '0.625rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
+              {board.description}
+            </span>
+          )}
+        </div>
 
-            {/* Action buttons row */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'flex-end' }}>
-              {momentumCount > 0 && (
-                <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: '#7C3AED', background: '#EDE9FE', border: '1px solid #DDD6FE', borderRadius: '20px', padding: '0.2rem 0.6rem', whiteSpace: 'nowrap' }}>
-                  🔥 {momentumCount} done today
-                </span>
-              )}
-              <MembersBar members={members} currentMember={currentMember} isCreator={currentMember.role === 'creator'} onUpdateMemberRole={onUpdateMemberRole} />
-              <ProgressArc pct={progressPct} size={32} />
-              <div style={{ width: 1, height: 18, background: '#E8E5F0', flexShrink: 0 }} />
-              <button
-                className="btn-ghost"
-                onClick={() => setShowInviteManager(true)}
-                title="Invite people"
-                style={{ color: '#6B7280', fontSize: '0.75rem', padding: '0.25rem 0.5rem', gap: '0.3rem' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED'; (e.currentTarget as HTMLButtonElement).style.background = '#F3F0FA' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6B7280'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-              >
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="4" r="2.25" stroke="currentColor" strokeWidth="1.3"/><path d="M1 11.5c0-2.485 2.015-4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M11 8v4M9 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
-                Invite
-              </button>
-              <button
-                className="btn-ghost"
-                onClick={() => setShowWhiteboard(true)}
-                title="Whiteboard"
-                style={{ color: '#6B7280', fontSize: '0.75rem', padding: '0.25rem 0.5rem', gap: '0.3rem' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED'; (e.currentTarget as HTMLButtonElement).style.background = '#F3F0FA' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6B7280'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
-              >
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M4 12h6M7 10.5V12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M4 6l2 2 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                Board
-              </button>
+        {/* 3. Location map — full height */}
+        {(() => {
+          const locAddr = board.location_address
+          const locLat = board.location_lat
+          const locLng = board.location_lng
+          const hasLocation = !!(locAddr || (locLat !== null && locLng !== null))
+          const headerMapSrc = locAddr?.startsWith('https://www.google.com/maps/embed')
+            ? locAddr
+            : (locLat !== null && locLng !== null
+              ? `https://www.openstreetmap.org/export/embed.html?bbox=${locLng! - 0.008},${locLat! - 0.008},${locLng! + 0.008},${locLat! + 0.008}&layer=mapnik&marker=${locLat},${locLng}`
+              : null)
+          if (!hasLocation || !headerMapSrc) return null
+          return (
+            <div
+              onClick={() => setShowProjectInfo(true)}
+              title="Click to edit location"
+              style={{ width: 140, borderRight: '1px solid #E8E5F0', flexShrink: 0, position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
+            >
+              <iframe src={headerMapSrc} style={{ border: 'none', pointerEvents: 'none', position: 'absolute', inset: 0, width: '100%', height: '100%' }} title="Project Location" loading="lazy" scrolling="no" />
+              <div style={{ position: 'absolute', inset: 0 }} />
             </div>
+          )
+        })()}
 
-            {/* KPI row */}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem' }}>
+        {/* 4–6. Photos — full height, each in its own cell */}
+        {(board.photos?.length ? board.photos.slice(0, 3) : []).map((url, i) => (
+          <div
+            key={i}
+            onClick={e => { e.stopPropagation(); setHeaderLightbox(i) }}
+            title="Click to view photo"
+            style={{ width: 90, borderRight: '1px solid #E8E5F0', flexShrink: 0, overflow: 'hidden', cursor: 'zoom-in' }}
+          >
+            <img src={url} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }} />
+          </div>
+        ))}
+
+        {/* 7. KPIs — takes remaining space */}
+        {!isMobile && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.5rem', padding: '0.6rem 1rem', borderRight: '1px solid #E8E5F0', minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
               <div className="kpi-item" style={{ gap: '0.4rem' }}>
-                <div>
-                  <div className="kpi-value">{totalTasks}</div>
-                  <div className="kpi-label">Total Tasks</div>
-                </div>
+                <div><div className="kpi-value">{totalTasks}</div><div className="kpi-label">Total Tasks</div></div>
                 <span className="badge badge-blue">Active</span>
               </div>
               <div style={{ width: 1, height: 28, background: '#E8E5F0', flexShrink: 0 }} />
               <div className="kpi-item" style={{ gap: '0.4rem' }}>
-                <div>
-                  <div className="kpi-value" style={{ color: '#10B981' }}>{doneTasks}</div>
-                  <div className="kpi-label">Completed</div>
-                </div>
+                <div><div className="kpi-value" style={{ color: '#10B981' }}>{doneTasks}</div><div className="kpi-label">Completed</div></div>
                 <span className="badge badge-green">+{momentumCount} today</span>
               </div>
               <div style={{ width: 1, height: 28, background: '#E8E5F0', flexShrink: 0 }} />
               <div className="kpi-item" style={{ gap: '0.4rem' }}>
-                <div>
-                  <div className="kpi-value" style={{ color: '#7C3AED' }}>{progressPct}%</div>
-                  <div className="kpi-label">Progress</div>
-                </div>
+                <div><div className="kpi-value" style={{ color: '#7C3AED' }}>{progressPct}%</div><div className="kpi-label">Progress</div></div>
                 <span className="badge badge-purple">{progressPct === 100 ? '✓ Done' : 'On Track'}</span>
               </div>
               <div style={{ width: 1, height: 28, background: '#E8E5F0', flexShrink: 0 }} />
               <div className="kpi-item">
-                <div>
-                  <div className="kpi-value">{members.length}</div>
-                  <div className="kpi-label">Team Members</div>
-                </div>
+                <div><div className="kpi-value">{members.length}</div><div className="kpi-label">Team Members</div></div>
               </div>
             </div>
-
+            {momentumCount > 0 && (
+              <span style={{ fontSize: '0.6rem', fontWeight: 600, color: '#7C3AED', letterSpacing: '0.02em' }}>🔥 {momentumCount} done today</span>
+            )}
           </div>
         )}
+
+        {/* 8. Progress arc */}
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.75rem', borderRight: '1px solid #E8E5F0', flexShrink: 0 }}>
+            <ProgressArc pct={progressPct} size={32} />
+          </div>
+        )}
+
+        {/* 9. Avatars */}
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.75rem', borderRight: '1px solid #E8E5F0', flexShrink: 0 }}>
+            <MembersBar members={members} currentMember={currentMember} isCreator={currentMember.role === 'creator'} onUpdateMemberRole={onUpdateMemberRole} />
+          </div>
+        )}
+
+        {/* 10. Invite + Board */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0 0.875rem', flexShrink: 0 }}>
+          <button
+            className="btn-ghost"
+            onClick={() => setShowInviteManager(true)}
+            title="Invite people"
+            style={{ color: '#6B7280', fontSize: '0.75rem', padding: '0.25rem 0.5rem', gap: '0.3rem' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED'; (e.currentTarget as HTMLButtonElement).style.background = '#F3F0FA' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6B7280'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="5.5" cy="4" r="2.25" stroke="currentColor" strokeWidth="1.3"/><path d="M1 11.5c0-2.485 2.015-4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M11 8v4M9 10h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+            Invite
+          </button>
+          <button
+            className="btn-ghost"
+            onClick={() => setShowWhiteboard(true)}
+            title="Whiteboard"
+            style={{ color: '#6B7280', fontSize: '0.75rem', padding: '0.25rem 0.5rem', gap: '0.3rem' }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED'; (e.currentTarget as HTMLButtonElement).style.background = '#F3F0FA' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#6B7280'; (e.currentTarget as HTMLButtonElement).style.background = 'transparent' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="2" width="11" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.3"/><path d="M4 12h6M7 10.5V12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><path d="M4 6l2 2 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Board
+          </button>
+        </div>
+
       </header>
 
       {/* ── Board body ── */}
