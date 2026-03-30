@@ -348,11 +348,17 @@ export function BoardView({
               ? `https://www.openstreetmap.org/export/embed.html?bbox=${locLng! - 0.008},${locLat! - 0.008},${locLng! + 0.008},${locLat! + 0.008}&layer=mapnik&marker=${locLat},${locLng}`
               : null)
           if (!hasLocation || !headerMapSrc) return null
+          // Build an openable map URL from whatever we have stored
+          const mapLink = locAddr && !locAddr.startsWith('https://www.google.com/maps/embed')
+            ? locAddr  // short link or coordinates URL — open directly
+            : locAddr?.startsWith('https://www.google.com/maps/embed')
+              ? locAddr.replace('https://www.google.com/maps/embed', 'https://www.google.com/maps').replace(/\?pb=/, '?')
+              : `https://www.openstreetmap.org/?mlat=${locLat}&mlon=${locLng}#map=15/${locLat}/${locLng}`
           return (
             <div
-              onClick={() => setShowProjectInfo(true)}
-              title="Click to edit location"
-              style={{ width: 140, flexShrink: 0, position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
+              onClick={() => window.open(mapLink, '_blank', 'noopener')}
+              title="Click to open map"
+              style={{ width: 140, flexShrink: 0, position: 'relative', cursor: 'pointer', overflow: 'hidden', marginLeft: '0.5rem' }}
             >
               <iframe src={headerMapSrc} style={{ border: 'none', pointerEvents: 'none', position: 'absolute', inset: 0, width: '100%', height: '100%' }} title="Project Location" loading="lazy" scrolling="no" />
               <div style={{ position: 'absolute', inset: 0 }} />
@@ -366,7 +372,7 @@ export function BoardView({
             key={i}
             onClick={e => { e.stopPropagation(); setHeaderLightbox(i) }}
             title="Click to view photo"
-            style={{ width: 135, flexShrink: 0, overflow: 'hidden', cursor: 'zoom-in' }}
+            style={{ width: 135, flexShrink: 0, overflow: 'hidden', cursor: 'zoom-in', marginLeft: '0.375rem' }}
           >
             <img src={url} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }} />
           </div>
