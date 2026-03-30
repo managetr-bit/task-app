@@ -1,20 +1,32 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { type Board } from '@/lib/types'
 
-// ── Parse Google Maps URL or "lat, lng" string ──
+// ── Extract Google Maps embed src from iframe HTML ──
+function extractEmbedSrc(input: string): string | null {
+  const m = input.match(/src="(https:\/\/www\.google\.com\/maps\/embed[^"]*)"/)
+  return m ? m[1] : null
+}
+
+// ── Parse lat/lng from various Google Maps URL formats ──
 function parseLatLng(input: string): { lat: number; lng: number } | null {
-  // @lat,lng in Google Maps URL
   const atMatch = input.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/)
   if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) }
-  // ?q=lat,lng
   const qMatch = input.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/)
   if (qMatch) return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) }
+  // extract from pb= parameter: !3dLAT!4dLNG
+  const pbLat = input.match(/!3d(-?\d+\.?\d*)/)
+  const pbLng = input.match(/!4d(-?\d+\.?\d*)/)
+  if (pbLat && pbLng) return { lat: parseFloat(pbLat[1]), lng: parseFloat(pbLng[1]) }
   // plain "lat, lng"
   const plainMatch = input.trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
   if (plainMatch) return { lat: parseFloat(plainMatch[1]), lng: parseFloat(plainMatch[2]) }
   return null
+}
+
+function isShortLink(val: string) {
+  return /maps\.app\.goo\.gl/.test(val)
 }
 
 const DUMMY_PHOTOS = [
@@ -39,11 +51,21 @@ type Props = {
 }
 
 export function ProjectInfoModal({ board, onClose, onSave }: Props) {
-  const [name, setName] = useState(board.name)
+  const [name, setName]               = useState(board.name)
   const [description, setDescription] = useState(board.description ?? '')
-  const [locationInput, setLocationInput] = useState(board.location_address ?? '')
+  const [locationInput, setLocationInput] = useState(
+    // If address is a Google embed URL, show friendly label in the input
+    board.location_address?.startsWith('https://www.google.com/maps/embed')
+      ? '' : (board.location_address ?? '')
+  )
   const [lat, setLat] = useState<number | null>(board.location_lat ?? null)
   const [lng, setLng] = useState<number | null>(board.location_lng ?? null)
+  // embedUrl: used directly as iframe src (Google Maps embed)
+  const [embedUrl, setEmbedUrl] = useState<string | null>(
+    board.location_address?.startsWith('https://www.google.com/maps/embed')
+      ? board.location_address : null
+  )
+  const [resolving, setResolving] = useState(false)
   const [photos, setPhotos] = useState<string[]>(
     board.photos?.length ? board.photos : DUMMY_PHOTOS
   )
@@ -53,11 +75,44 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
   const [hoveredPhoto, setHoveredPhoto] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
 
+  // ── Resolve short links (maps.app.goo.gl) via server ──
+  useEffect(() => {
+    if (!isShortLink(locationInput)) return
+    let cancelled = false
+    setResolving(true)
+    fetch(`/api/resolve-maps?url=${encodeURIComponent(locationInput.trim())}`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled || !data.finalUrl) return
+        const parsed = parseLatLng(data.finalUrl)
+        if (parsed) { setLat(parsed.lat); setLng(parsed.lng) }
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setResolving(false) })
+    return () => { cancelled = true }
+  }, [locationInput])
+
   function handleLocationChange(val: string) {
     setLocationInput(val)
+    setEmbedUrl(null) // clear any previous embed
+
+    if (!val.trim()) { setLat(null); setLng(null); return }
+
+    // Case 1: iframe embed code pasted
+    const src = extractEmbedSrc(val)
+    if (src) { setEmbedUrl(src); setLat(null); setLng(null); return }
+
+    // Case 2: raw embed URL pasted
+    if (val.trim().startsWith('https://www.google.com/maps/embed')) {
+      setEmbedUrl(val.trim()); setLat(null); setLng(null); return
+    }
+
+    // Case 3: short link — handled by useEffect above
+
+    // Case 4: long Google Maps URL or plain coordinates
     const parsed = parseLatLng(val)
     if (parsed) { setLat(parsed.lat); setLng(parsed.lng) }
-    else if (!val) { setLat(null); setLng(null) }
+    else { setLat(null); setLng(null) }
   }
 
   async function handleSave() {
@@ -65,7 +120,8 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
     await onSave({
       name: name.trim() || board.name,
       description,
-      location_address: locationInput,
+      // Store embed URL as location_address when available
+      location_address: embedUrl ?? locationInput,
       location_lat: lat,
       location_lng: lng,
       photos,
@@ -74,11 +130,11 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
     onClose()
   }
 
-  const mapSrc = lat !== null && lng !== null
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.008},${lat - 0.008},${lng + 0.008},${lat + 0.008}&layer=mapnik&marker=${lat},${lng}`
-    : locationInput.trim()
-    ? `https://www.openstreetmap.org/search?query=${encodeURIComponent(locationInput)}`
-    : null
+  // Map iframe src: prefer Google embed URL, fallback to OpenStreetMap
+  const mapSrc = embedUrl
+    ?? (lat !== null && lng !== null
+      ? `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.008},${lat - 0.008},${lng + 0.008},${lat + 0.008}&layer=mapnik&marker=${lat},${lng}`
+      : null)
 
   const inputStyle: React.CSSProperties = {
     width: '100%', fontFamily: 'inherit',
@@ -189,15 +245,26 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
               <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.35rem' }}>
                 Location
               </label>
-              <input
+              <textarea
                 value={locationInput}
                 onChange={e => handleLocationChange(e.target.value)}
-                placeholder="Paste Google Maps URL or lat, lng coordinates…"
-                style={{ ...inputStyle, fontSize: '0.775rem', padding: '0.45rem 0.75rem' }}
+                placeholder={'Paste any of:\n• Google Maps short link (maps.app.goo.gl/…)\n• Embed iframe code (<iframe src="…">)\n• Coordinates (lat, lng)'}
+                rows={3}
+                style={{ ...inputStyle, fontSize: '0.72rem', padding: '0.45rem 0.75rem', resize: 'none', lineHeight: 1.5 }}
                 onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.background = '#fff' }}
                 onBlur={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.background = '#F9FAFB' }}
               />
-              {lat !== null && lng !== null && (
+              {/* Status feedback */}
+              {resolving && (
+                <div style={{ fontSize: '0.6rem', color: '#9CA3AF', marginTop: '0.3rem' }}>⏳ Resolving link…</div>
+              )}
+              {embedUrl && !resolving && (
+                <div style={{ fontSize: '0.6rem', color: '#059669', marginTop: '0.3rem', fontWeight: 500 }}>
+                  ✓ Google Maps embed loaded
+                  <button onClick={() => { setEmbedUrl(null); setLocationInput('') }} style={{ marginLeft: '0.4rem', background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: '0.6rem' }}>✕ clear</button>
+                </div>
+              )}
+              {lat !== null && lng !== null && !embedUrl && !resolving && (
                 <div style={{ fontSize: '0.6rem', color: '#7C3AED', marginTop: '0.3rem', fontWeight: 500 }}>
                   📍 {lat.toFixed(5)}, {lng.toFixed(5)}
                 </div>
