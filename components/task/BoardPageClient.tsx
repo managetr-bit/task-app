@@ -384,9 +384,29 @@ export function BoardPageClient({ boardId }: Props) {
         .single()
       if (data) {
         setBoard(data)
-        // Update recent boards list too
         const session = getSession(boardId)
         if (session) saveRecentBoard(boardId, name, session.nickname)
+      }
+    },
+    [boardId]
+  )
+
+  const updateBoardInfo = useCallback(
+    async (updates: {
+      name: string; description: string
+      location_address: string; location_lat: number | null; location_lng: number | null
+      photos: string[]
+    }) => {
+      const { data } = await supabase
+        .from('boards')
+        .update(updates)
+        .eq('id', boardId)
+        .select()
+        .single()
+      if (data) {
+        setBoard(data)
+        const session = getSession(boardId)
+        if (session) saveRecentBoard(boardId, updates.name, session.nickname)
       }
     },
     [boardId]
@@ -642,6 +662,7 @@ export function BoardPageClient({ boardId }: Props) {
           onReorderColumn={reorderColumn}
           onUpdateFilePanelUrl={updateFilePanelUrl}
           onUpdateBoardName={updateBoardName}
+          onUpdateBoardInfo={updateBoardInfo}
           onAddMilestone={addMilestone}
           onDeleteMilestone={deleteMilestone}
           onUpdateMilestoneDate={updateMilestoneDate}

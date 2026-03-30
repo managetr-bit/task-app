@@ -4,6 +4,11 @@ export type Board = {
   file_panel_url: string | null
   created_at: string
   currency: 'TRY' | 'USD'
+  description: string | null
+  location_address: string | null
+  location_lat: number | null
+  location_lng: number | null
+  photos: string[] | null
 }
 
 export type Column = {

@@ -27,6 +27,7 @@ import { NotesPanel } from './NotesPanel'
 import { Whiteboard } from './Whiteboard'
 import { InviteManager } from './InviteManager'
 import { CostPanel } from './CostPanel'
+import { ProjectInfoModal } from './ProjectInfoModal'
 import { getLocalProfile } from '@/lib/profile'
 
 type Props = {
@@ -56,6 +57,7 @@ type Props = {
   onReorderColumn: (columnId: string, newIndex: number) => Promise<void>
   onUpdateFilePanelUrl: (url: string | null) => Promise<void>
   onUpdateBoardName: (name: string) => Promise<void>
+  onUpdateBoardInfo: (updates: { name: string; description: string; location_address: string; location_lat: number | null; location_lng: number | null; photos: string[] }) => Promise<void>
   onAddMilestone: (name: string, targetDate: string) => Promise<void>
   onDeleteMilestone: (milestoneId: string) => Promise<void>
   onUpdateMilestoneDate: (milestoneId: string, newDate: string) => Promise<void>
@@ -99,7 +101,7 @@ export function BoardView({
   budgetLines, costTransactions,
   onCreateTask, onMoveTask, onReorderTask, onAssignTask,
   onUpdateTask, onDeleteTask, onAddColumn, onDeleteColumn, onRenameColumn, onReorderColumn,
-  onUpdateFilePanelUrl, onUpdateBoardName,
+  onUpdateFilePanelUrl, onUpdateBoardName, onUpdateBoardInfo,
   onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate, onUpdateMilestoneName, onCompleteMilestone, onLinkTask, onUnlinkTask, onUpdateMilestoneDependency,
   onAddTransaction, onUpdateTransaction, onDeleteTransaction,
   onAddBudgetLine, onUpdateBudgetLine, onDeleteBudgetLine, onImportBudgetLines, onChangeCurrency,
@@ -123,6 +125,7 @@ export function BoardView({
   const [showNotes, setShowNotes] = useState(true)
   const [showWhiteboard, setShowWhiteboard] = useState(false)
   const [showInviteManager, setShowInviteManager] = useState(false)
+  const [showProjectInfo, setShowProjectInfo] = useState(false)
   const [noteTaskDraft, setNoteTaskDraft] = useState<string | null>(null)
   type SidebarTab = 'notes' | 'files' | 'cost'
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('notes')
@@ -314,41 +317,29 @@ export function BoardView({
             Projects
           </button>
           <span style={{ color: '#E8E5F0', margin: '0 0.375rem', fontSize: '0.75rem' }}>/</span>
-          {editingBoardName ? (
-            <input
-              value={boardNameDraft}
-              onChange={e => setBoardNameDraft(e.target.value)}
-              onBlur={async () => {
-                const name = boardNameDraft.trim()
-                if (name && name !== board.name) await onUpdateBoardName(name)
-                else setBoardNameDraft(board.name)
-                setEditingBoardName(false)
-              }}
-              onKeyDown={async e => {
-                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                if (e.key === 'Escape') { setBoardNameDraft(board.name); setEditingBoardName(false) }
-              }}
-              autoFocus
-              style={{
-                fontSize: '0.9375rem', fontWeight: 700,
-                color: '#111827', background: 'transparent',
-                border: 'none', borderBottom: '1.5px solid rgba(124,58,237,0.5)',
-                outline: 'none', width: 200, letterSpacing: '-0.01em',
-              }}
-            />
-          ) : (
-            <h1
-              onClick={() => setEditingBoardName(true)}
-              title="Click to rename"
-              style={{
-                fontSize: '0.9375rem', fontWeight: 700, color: '#111827',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                cursor: 'pointer', letterSpacing: '-0.01em', maxWidth: 280,
-              }}
-            >
+          <div
+            onClick={() => setShowProjectInfo(true)}
+            title="Click to view project info"
+            style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.05rem' }}
+          >
+            <h1 style={{
+              fontSize: '0.9375rem', fontWeight: 700, color: '#111827',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              letterSpacing: '-0.01em', maxWidth: 280, margin: 0,
+              lineHeight: 1.2,
+            }}>
               {board.name}
             </h1>
-          )}
+            {board.description && (
+              <span style={{
+                fontSize: '0.65rem', color: '#9CA3AF', fontWeight: 400,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                maxWidth: 280, lineHeight: 1.3,
+              }}>
+                {board.description}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Right: team, progress, actions */}
@@ -797,6 +788,18 @@ export function BoardView({
       {/* Whiteboard modal */}
       {showWhiteboard && (
         <Whiteboard boardId={board.id} onClose={() => setShowWhiteboard(false)} cloudScriptUrl={cloudScriptUrl || undefined} driveFolderId={driveFolderId} />
+      )}
+
+      {/* Project info modal */}
+      {showProjectInfo && (
+        <ProjectInfoModal
+          board={board}
+          onClose={() => setShowProjectInfo(false)}
+          onSave={async updates => {
+            await onUpdateBoardInfo(updates)
+            setBoardNameDraft(updates.name)
+          }}
+        />
       )}
 
       {/* Invite manager modal */}
