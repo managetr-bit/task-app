@@ -480,12 +480,15 @@ export function BoardView({
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: 24, height: 24, padding: 0,
-                      color: '#7C3AED', background: '#F5F4FD', border: '1px solid #DDD6FE',
-                      borderRadius: 6, cursor: 'pointer',
+                      border: '1px solid #E8E5F0', borderRadius: 6,
+                      background: 'none', color: '#9CA3AF',
+                      cursor: 'pointer', transition: 'all 0.12s',
                     }}
+                    onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#7C3AED'; b.style.borderColor = '#7C3AED'; b.style.background = '#F5F4FD' }}
+                    onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#9CA3AF'; b.style.borderColor = '#E8E5F0'; b.style.background = 'none' }}
                   >
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                      <path d="M2 4.5L6 8.5L10 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M2 4.5L6 8.5L10 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
                 </div>
@@ -511,14 +514,15 @@ export function BoardView({
                     style={{
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       width: 24, height: 24, padding: 0,
-                      color: '#6B7280', background: 'none', border: '1px solid #E8E5F0',
-                      borderRadius: 6, cursor: 'pointer', transition: 'all 0.12s',
+                      border: '1px solid #E8E5F0', borderRadius: 6,
+                      background: 'none', color: '#9CA3AF',
+                      cursor: 'pointer', transition: 'all 0.12s',
                     }}
                     onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#7C3AED'; b.style.borderColor = '#7C3AED'; b.style.background = '#F5F4FD' }}
-                    onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#6B7280'; b.style.borderColor = '#E8E5F0'; b.style.background = 'none' }}
+                    onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#9CA3AF'; b.style.borderColor = '#E8E5F0'; b.style.background = 'none' }}
                   >
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                      <path d={showKanban ? 'M2 4.5L6 8.5L10 4.5' : 'M4.5 2L8.5 6L4.5 10'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d={showKanban ? 'M2 4.5L6 8.5L10 4.5' : 'M4.5 2L8.5 6L4.5 10'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
                 </div>
@@ -627,18 +631,29 @@ export function BoardView({
                 onClick={() => setSidebarCollapsed(p => !p)}
                 title={sidebarCollapsed ? 'Expand panel' : 'Collapse panel'}
                 style={{
-                  width: 40, flexShrink: 0, border: 'none', background: 'none', cursor: 'pointer',
+                  width: 40, flexShrink: 0, cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#9CA3AF', padding: 0,
+                  background: 'none', padding: 0,
                   borderBottom: '2px solid transparent',
+                  border: 'none',
                   transition: 'color 0.12s',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
               >
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-                  <path d={sidebarCollapsed ? 'M4.5 2L8.5 6L4.5 10' : 'M7.5 2L3.5 6L7.5 10'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <div
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    width: 24, height: 24,
+                    border: '1px solid #E8E5F0', borderRadius: 6,
+                    background: 'none', color: '#9CA3AF',
+                    transition: 'all 0.12s',
+                  }}
+                  onMouseEnter={e => { const d = e.currentTarget as HTMLDivElement; d.style.color = '#7C3AED'; d.style.borderColor = '#7C3AED'; d.style.background = '#F5F4FD' }}
+                  onMouseLeave={e => { const d = e.currentTarget as HTMLDivElement; d.style.color = '#9CA3AF'; d.style.borderColor = '#E8E5F0'; d.style.background = 'none' }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                    <path d={sidebarCollapsed ? 'M4.5 2L8.5 6L4.5 10' : 'M7.5 2L3.5 6L7.5 10'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
               </button>
             </div>
 

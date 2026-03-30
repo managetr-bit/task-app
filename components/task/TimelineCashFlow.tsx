@@ -461,27 +461,6 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
 
       {/* ── KPI bar — always visible ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem', flexWrap: 'wrap' }}>
-        {/* Collapse button */}
-        {onCollapse && (
-          <button
-            onClick={onCollapse}
-            title="Collapse"
-            style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              width: 24, height: 24, padding: 0,
-              border: '1px solid #E8E5F0', borderRadius: 6,
-              background: '#F5F4FD', color: '#7C3AED',
-              cursor: 'pointer', flexShrink: 0,
-            }}
-            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#EDE9FE'; b.style.borderColor = '#7C3AED' }}
-            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#F5F4FD'; b.style.borderColor = '#E8E5F0' }}
-          >
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-              <path d="M2 8.5L6 4.5L10 8.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-        )}
-        <div style={{ width: 1, height: 16, background: '#E8E5F0', flexShrink: 0 }} />
         {/* KPI chips — clickable to toggle graph layers */}
         {[
           { label: 'Cash In',    value: formatCfAmount(totalCashIn,  currency), color: '#6ACA9A', bg: '#F0FBF5', on: showCashIn,     set: setShowCashIn },
@@ -507,6 +486,28 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: kpi.on ? kpi.color : '#c4c4c4' }}>{kpi.value}</span>
           </button>
         ))}
+        {/* Spacer pushes collapse button to the right */}
+        <div style={{ flex: 1 }} />
+        {/* Collapse button — right side, matches section-strip toggle style */}
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            title="Collapse"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, padding: 0, flexShrink: 0,
+              border: '1px solid #E8E5F0', borderRadius: 6,
+              background: 'none', color: '#9CA3AF',
+              cursor: 'pointer', transition: 'all 0.12s',
+            }}
+            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#7C3AED'; b.style.borderColor = '#7C3AED'; b.style.background = '#F5F4FD' }}
+            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#9CA3AF'; b.style.borderColor = '#E8E5F0'; b.style.background = 'none' }}
+          >
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+              <path d="M2 8.5L6 4.5L10 8.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* ── Combined chart area ── */}
