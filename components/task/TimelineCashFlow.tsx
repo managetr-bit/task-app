@@ -127,7 +127,7 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
   const [editingDateId, setEditingDateId] = useState<string | null>(null)
 
   // ── Cash flow toggles ──
-  const [cashFlowMode, setCashFlowMode]     = useState<'all' | 'actual' | 'forecast'>('all')
+  const cashFlowMode = 'all' as const
   const [cfHoverMonth, setCfHoverMonth]     = useState<string | null>(null)
   const [showMilestones, setShowMilestones] = useState(true)
   const [showCashIn, setShowCashIn]         = useState(true)
@@ -468,73 +468,55 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
     <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5F0', flexShrink: 0, position: 'relative', zIndex: 10 }}>
 
       {/* ── KPI bar — always visible ── */}
-      {(
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1.5rem 0', flexWrap: 'wrap' }}>
-          {[
-            { label: 'Cash In',    value: formatCfAmount(totalCashIn,  currency), color: '#6ACA9A', bg: '#F0FBF5' },
-            { label: 'Cash Out',   value: formatCfAmount(totalCashOut, currency), color: '#E86A8E', bg: '#FDF2F6' },
-            { label: 'Balance',    value: (runningBalance >= 0 ? '+' : '') + formatCfAmount(runningBalance, currency), color: runningBalance >= 0 ? '#7C3AED' : '#E86A8E', bg: '#F5F4FD' },
-            { label: 'Milestones', value: String(milestoneCount), color: '#7C3AED', bg: '#EDE9FE' },
-          ].map(kpi => (
-            <div key={kpi.label} style={{
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.4rem 1rem', flexWrap: 'wrap' }}>
+        {/* Collapse button */}
+        {onCollapse && (
+          <button
+            onClick={onCollapse}
+            title="Collapse"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.25rem',
+              fontSize: '0.6rem', fontWeight: 600, padding: '0.25rem 0.6rem',
+              border: '1px solid #E8E5F0', borderRadius: 6,
+              background: '#F5F4FD', color: '#7C3AED',
+              cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+            }}
+            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#EDE9FE'; b.style.borderColor = '#7C3AED' }}
+            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#F5F4FD'; b.style.borderColor = '#E8E5F0' }}
+          >
+            <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+              <path d="M2 8.5L6 4.5L10 8.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Hide
+          </button>
+        )}
+        <div style={{ width: 1, height: 16, background: '#E8E5F0', flexShrink: 0 }} />
+        {/* KPI chips — clickable to toggle graph layers */}
+        {[
+          { label: 'Cash In',    value: formatCfAmount(totalCashIn,  currency), color: '#6ACA9A', bg: '#F0FBF5', on: showCashIn,     set: setShowCashIn },
+          { label: 'Cash Out',   value: formatCfAmount(totalCashOut, currency), color: '#E86A8E', bg: '#FDF2F6', on: showCashOut,    set: setShowCashOut },
+          { label: 'Balance',    value: (runningBalance >= 0 ? '+' : '') + formatCfAmount(runningBalance, currency), color: runningBalance >= 0 ? '#7C3AED' : '#E86A8E', bg: '#F5F4FD', on: showBalance,    set: setShowBalance },
+          { label: 'Milestones', value: String(milestoneCount),                                                     color: '#7C3AED',                                     bg: '#EDE9FE', on: showMilestones, set: setShowMilestones },
+        ].map(kpi => (
+          <button
+            key={kpi.label}
+            onClick={() => kpi.set(v => !v)}
+            title={kpi.on ? `Hide ${kpi.label}` : `Show ${kpi.label}`}
+            style={{
               display: 'flex', alignItems: 'center', gap: '0.35rem',
-              background: kpi.bg,
-              border: `1px solid ${kpi.color}30`,
-              borderRadius: 10,
-              padding: '0.2rem 0.6rem',
-            }}>
-              <span style={{ fontSize: '0.55rem', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{kpi.label}</span>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, color: kpi.color }}>{kpi.value}</span>
-            </div>
-          ))}
-          <div style={{ flex: 1 }} />
-          {/* Toggle row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexWrap: 'wrap' }}>
-            {/* Element toggles */}
-            {[
-              { key: 'milestones', label: 'Milestones', on: showMilestones, set: setShowMilestones, color: '#7C3AED' },
-              { key: 'cashin',     label: 'Cash In',    on: showCashIn,     set: setShowCashIn,     color: '#6ACA9A' },
-              { key: 'cashout',    label: 'Cash Out',   on: showCashOut,    set: setShowCashOut,    color: '#E86A8E' },
-              { key: 'balance',    label: 'Balance',    on: showBalance,    set: setShowBalance,    color: '#7C3AED' },
-            ].map(tog => (
-              <button
-                key={tog.key}
-                onClick={() => tog.set(v => !v)}
-                style={{
-                  fontSize: '0.55rem', fontWeight: 600, padding: '0.15rem 0.5rem',
-                  border: '1px solid',
-                  borderColor: tog.on ? tog.color : '#E8E5F0',
-                  borderRadius: 20,
-                  background: tog.on ? `${tog.color}18` : '#fff',
-                  color: tog.on ? tog.color : '#9ca3af',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  transition: 'all 0.12s',
-                }}
-              >{tog.label}</button>
-            ))}
-            <div style={{ width: 1, height: 14, background: '#E8E5F0', margin: '0 0.1rem' }} />
-            {/* Mode toggles */}
-            {(['all', 'actual', 'forecast'] as const).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setCashFlowMode(mode)}
-                style={{
-                  fontSize: '0.55rem', fontWeight: 600, padding: '0.15rem 0.5rem',
-                  border: '1px solid',
-                  borderColor: cashFlowMode === mode ? '#7C3AED' : '#E8E5F0',
-                  borderRadius: 20,
-                  background: cashFlowMode === mode ? '#7C3AED' : '#fff',
-                  color: cashFlowMode === mode ? '#fff' : '#9ca3af',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  transition: 'all 0.12s',
-                }}
-              >
-                {mode === 'all' ? 'All' : mode === 'actual' ? 'Actuals' : 'Forecast'}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+              background: kpi.on ? kpi.bg : '#F9F9F9',
+              border: `1px solid ${kpi.on ? kpi.color + '50' : '#E8E5F0'}`,
+              borderRadius: 10, padding: '0.2rem 0.6rem',
+              cursor: 'pointer', fontFamily: 'inherit',
+              opacity: kpi.on ? 1 : 0.5,
+              transition: 'all 0.15s',
+            }}
+          >
+            <span style={{ fontSize: '0.55rem', fontWeight: 600, color: kpi.on ? '#9ca3af' : '#c4c4c4', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{kpi.label}</span>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: kpi.on ? kpi.color : '#c4c4c4' }}>{kpi.value}</span>
+          </button>
+        ))}
+      </div>
 
       {/* ── Combined chart area ── */}
       <div style={{ padding: `${paddingTopPx}px 1rem 0`, position: 'relative' }}>
@@ -1039,7 +1021,7 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
                 }}>
                   {(costTransactions ?? []).length === 0
                     ? 'Add transactions in the Cost tab to see cash flow'
-                    : `No ${cashFlowMode === 'all' ? '' : cashFlowMode + ' '}transactions in this date range`}
+                    : `No transactions in this date range`}
                 </div>
               )}
             </div>

@@ -445,7 +445,7 @@ export function BoardView({
         {/* ── LEFT: Timeline + Kanban ── */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
 
-          {/* Timeline (hidden on mobile when not active tab) */}
+          {/* Timeline + Cash Flow (hidden on mobile when not active tab) */}
           {(!isMobile || mobileTab === 'timeline') && (
             showTimeline ? (
               <TimelineCashFlow
@@ -471,10 +471,22 @@ export function BoardView({
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ color: '#9CA3AF', flexShrink: 0 }}>
                     <path d="M1 3h10M1 6h10M1 9h6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                   </svg>
-                  <span className="section-label">Timeline</span>
+                  <span className="section-label">Timeline &amp; Cash Flow</span>
                   {milestones.length > 0 && <span style={{ fontSize: '0.6rem', color: '#9CA3AF', background: '#F5F4FD', borderRadius: 10, padding: '0.1rem 0.45rem', fontWeight: 700, border: '1px solid #E8E5F0' }}>{milestones.length}</span>}
-                  <button onClick={() => setShowTimeline(true)} title="Expand timeline" style={{ color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.15rem', lineHeight: 1, display: 'flex', alignItems: 'center', marginLeft: 2 }}>
-                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <div style={{ flex: 1 }} />
+                  <button
+                    onClick={() => setShowTimeline(true)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.25rem',
+                      color: '#7C3AED', background: '#F5F4FD', border: '1px solid #DDD6FE',
+                      borderRadius: 6, cursor: 'pointer', padding: '0.2rem 0.6rem',
+                      fontSize: '0.6rem', fontWeight: 600, fontFamily: 'inherit',
+                    }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 4.5L6 8.5L10 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Show
                   </button>
                 </div>
               )
@@ -492,10 +504,24 @@ export function BoardView({
                     <rect x="6.5" y="1.5" width="3.5" height="6" rx="1" stroke="currentColor" strokeWidth="1.3"/>
                   </svg>
                   <span className="section-label">Board</span>
-                  <button onClick={() => setShowKanban(p => !p)} title={showKanban ? 'Collapse board' : 'Expand board'} style={{ color: '#7C3AED', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.15rem', lineHeight: 1, display: 'flex', alignItems: 'center', marginLeft: 2 }}>
-                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                      <path d={showKanban ? 'M2 4.5L6 8.5L10 4.5' : 'M4.5 2L8.5 6L4.5 10'} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  <div style={{ flex: 1 }} />
+                  <button
+                    onClick={() => setShowKanban(p => !p)}
+                    title={showKanban ? 'Collapse board' : 'Expand board'}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.25rem',
+                      color: '#6B7280', background: 'none', border: '1px solid #E8E5F0',
+                      borderRadius: 6, cursor: 'pointer', padding: '0.2rem 0.5rem',
+                      fontSize: '0.6rem', fontWeight: 600, fontFamily: 'inherit',
+                      transition: 'all 0.12s',
+                    }}
+                    onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#7C3AED'; b.style.borderColor = '#7C3AED'; b.style.background = '#F5F4FD' }}
+                    onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#6B7280'; b.style.borderColor = '#E8E5F0'; b.style.background = 'none' }}
+                  >
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                      <path d={showKanban ? 'M2 4.5L6 8.5L10 4.5' : 'M4.5 2L8.5 6L4.5 10'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
+                    {showKanban ? 'Collapse' : 'Expand'}
                   </button>
                 </div>
               )}
