@@ -298,49 +298,49 @@ export function BoardView({
       {/* ── Command Header (120px, 2-column) ──────────────────────────────── */}
       <header className="command-header">
 
-        {/* ── LEFT: breadcrumb / name / description / map+photos ── */}
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.3rem', padding: '0.75rem 1.25rem', minWidth: 0, flex: 1 }}>
+        {/* ── LEFT: name/description | map | photos (horizontal row) ── */}
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', flex: 1, minWidth: 0 }}>
 
-          {/* Row 1: breadcrumb + name */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <button
-              title="All projects"
-              onClick={() => { if (window.confirm('Go back to all projects?')) window.location.href = '/' }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.375rem',
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: '#9CA3AF', fontSize: '0.8rem', fontWeight: 500,
-                padding: '0 0.5rem 0 0', borderRadius: 6,
-                transition: 'color 0.15s ease', flexShrink: 0,
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M2 7h10M2 7l4-4M2 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Projects
-            </button>
-            <span style={{ color: '#E8E5F0', margin: '0 0.375rem', fontSize: '0.75rem' }}>/</span>
-            <div
-              onClick={() => setShowProjectInfo(true)}
-              title="Click to edit project info"
-              style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '0.05rem' }}
-            >
-              <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em' }}>
-                {board.name}
-              </h1>
+          {/* Name + description (vertical, centered, left-padded) */}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.25rem', padding: '0.75rem 0.75rem 0.75rem 1.25rem', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+              <button
+                title="All projects"
+                onClick={() => { if (window.confirm('Go back to all projects?')) window.location.href = '/' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.375rem',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#9CA3AF', fontSize: '0.8rem', fontWeight: 500,
+                  padding: '0 0.5rem 0 0', borderRadius: 6,
+                  transition: 'color 0.15s ease', flexShrink: 0,
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 7h10M2 7l4-4M2 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Projects
+              </button>
+              <span style={{ color: '#E8E5F0', margin: '0 0.375rem', fontSize: '0.75rem' }}>/</span>
+              <div
+                onClick={() => setShowProjectInfo(true)}
+                title="Click to edit project info"
+                style={{ cursor: 'pointer' }}
+              >
+                <h1 style={{ fontSize: '1rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
+                  {board.name}
+                </h1>
+              </div>
             </div>
+            {board.description && (
+              <span style={{ fontSize: '0.65rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.3, paddingLeft: '0.1rem', whiteSpace: 'nowrap' }}>
+                {board.description}
+              </span>
+            )}
           </div>
 
-          {/* Row 2: description */}
-          {board.description && (
-            <span style={{ fontSize: '0.65rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.3, paddingLeft: '0.1rem' }}>
-              {board.description}
-            </span>
-          )}
-
-          {/* Row 3: map + photos */}
+          {/* Map + photos — stretch to full header height */}
           {(() => {
             const locAddr = board.location_address
             const locLat = board.location_lat
@@ -354,14 +354,14 @@ export function BoardView({
                 : null)
             if (!hasLocation && headerPhotos.length === 0) return null
             return (
-              <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.375rem', height: 52 }}>
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: '0.375rem', padding: '0.5rem 0.75rem 0.5rem 0', alignSelf: 'stretch' }}>
                 {hasLocation && headerMapSrc && (
                   <div
                     onClick={() => setShowProjectInfo(true)}
                     title="Click to edit location"
-                    style={{ width: 280, height: 52, borderRadius: 8, overflow: 'hidden', border: '1.5px solid #E8E5F0', flexShrink: 0, position: 'relative', cursor: 'pointer' }}
+                    style={{ width: 140, borderRadius: 8, overflow: 'hidden', border: '1.5px solid #E8E5F0', flexShrink: 0, position: 'relative', cursor: 'pointer' }}
                   >
-                    <iframe src={headerMapSrc} width="280" height="52" style={{ border: 'none', display: 'block', pointerEvents: 'none' }} title="Project Location" loading="lazy" scrolling="no" />
+                    <iframe src={headerMapSrc} style={{ border: 'none', display: 'block', pointerEvents: 'none', width: '100%', height: '100%', position: 'absolute', inset: 0 }} title="Project Location" loading="lazy" scrolling="no" />
                     <div style={{ position: 'absolute', inset: 0, background: 'transparent' }} />
                   </div>
                 )}
@@ -370,7 +370,7 @@ export function BoardView({
                     key={i}
                     onClick={e => { e.stopPropagation(); setHeaderLightbox(i) }}
                     title="Click to view photo"
-                    style={{ width: 80, height: 52, borderRadius: 8, overflow: 'hidden', border: '1.5px solid #E8E5F0', flexShrink: 0, cursor: 'zoom-in' }}
+                    style={{ width: 90, borderRadius: 8, overflow: 'hidden', border: '1.5px solid #E8E5F0', flexShrink: 0, cursor: 'zoom-in' }}
                   >
                     <img src={url} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }} />
                   </div>
