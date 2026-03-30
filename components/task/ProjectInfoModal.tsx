@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { type Board } from '@/lib/types'
+import { supabase } from '@/lib/supabase'
 
 // ── Extract Google Maps embed src from iframe HTML ──
 function extractEmbedSrc(input: string): string | null {
@@ -46,21 +47,20 @@ type BoardInfoUpdates = {
 
 type Props = {
   board: Board
+  boardId: string
   onClose: () => void
   onSave: (updates: BoardInfoUpdates) => Promise<void>
 }
 
-export function ProjectInfoModal({ board, onClose, onSave }: Props) {
+export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
   const [name, setName]               = useState(board.name)
   const [description, setDescription] = useState(board.description ?? '')
   const [locationInput, setLocationInput] = useState(
-    // If address is a Google embed URL, show friendly label in the input
     board.location_address?.startsWith('https://www.google.com/maps/embed')
       ? '' : (board.location_address ?? '')
   )
   const [lat, setLat] = useState<number | null>(board.location_lat ?? null)
   const [lng, setLng] = useState<number | null>(board.location_lng ?? null)
-  // embedUrl: used directly as iframe src (Google Maps embed)
   const [embedUrl, setEmbedUrl] = useState<string | null>(
     board.location_address?.startsWith('https://www.google.com/maps/embed')
       ? board.location_address : null
@@ -73,6 +73,8 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
   const [editingPhotoIdx, setEditingPhotoIdx] = useState<number | null>(null)
   const [photoUrlDraft, setPhotoUrlDraft] = useState('')
   const [hoveredPhoto, setHoveredPhoto] = useState<number | null>(null)
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   // ── Resolve short links (maps.app.goo.gl) via server ──
@@ -94,25 +96,42 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
 
   function handleLocationChange(val: string) {
     setLocationInput(val)
-    setEmbedUrl(null) // clear any previous embed
+    setEmbedUrl(null)
 
     if (!val.trim()) { setLat(null); setLng(null); return }
 
-    // Case 1: iframe embed code pasted
     const src = extractEmbedSrc(val)
     if (src) { setEmbedUrl(src); setLat(null); setLng(null); return }
 
-    // Case 2: raw embed URL pasted
     if (val.trim().startsWith('https://www.google.com/maps/embed')) {
       setEmbedUrl(val.trim()); setLat(null); setLng(null); return
     }
 
-    // Case 3: short link — handled by useEffect above
-
-    // Case 4: long Google Maps URL or plain coordinates
     const parsed = parseLatLng(val)
     if (parsed) { setLat(parsed.lat); setLng(parsed.lng) }
     else { setLat(null); setLng(null) }
+  }
+
+  async function handleFileUpload(photoIdx: number, file: File) {
+    setUploadingIdx(photoIdx)
+    setUploadError(null)
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg'
+      const path = `${boardId}/${Date.now()}_${photoIdx}.${ext}`
+      const { data, error } = await supabase.storage
+        .from('board-photos')
+        .upload(path, file, { upsert: true, contentType: file.type })
+      if (error) throw error
+      const { data: { publicUrl } } = supabase.storage
+        .from('board-photos')
+        .getPublicUrl(data.path)
+      setPhotos(p => p.map((u, i) => i === photoIdx ? publicUrl : u))
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Upload failed'
+      setUploadError(msg)
+    } finally {
+      setUploadingIdx(null)
+    }
   }
 
   async function handleSave() {
@@ -120,7 +139,6 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
     await onSave({
       name: name.trim() || board.name,
       description,
-      // Store embed URL as location_address when available
       location_address: embedUrl ?? locationInput,
       location_lat: lat,
       location_lng: lng,
@@ -130,7 +148,6 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
     onClose()
   }
 
-  // Map iframe src: prefer Google embed URL, fallback to OpenStreetMap
   const mapSrc = embedUrl
     ?? (lat !== null && lng !== null
       ? `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.008},${lat - 0.008},${lng + 0.008},${lat + 0.008}&layer=mapnik&marker=${lat},${lng}`
@@ -254,7 +271,6 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
                 onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.background = '#fff' }}
                 onBlur={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.background = '#F9FAFB' }}
               />
-              {/* Status feedback */}
               {resolving && (
                 <div style={{ fontSize: '0.6rem', color: '#9CA3AF', marginTop: '0.3rem' }}>⏳ Resolving link…</div>
               )}
@@ -306,9 +322,21 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
 
           {/* ── Col 3: Photos ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-            <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block' }}>
-              Photos
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                Photos
+              </label>
+              <span style={{ fontSize: '0.55rem', color: '#C4B9D0', letterSpacing: '0.02em' }}>
+                — hover a photo to upload or change
+              </span>
+            </div>
+
+            {uploadError && (
+              <div style={{ fontSize: '0.65rem', color: '#DC2626', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 6, padding: '0.35rem 0.6rem' }}>
+                Upload error: {uploadError}
+                <button onClick={() => setUploadError(null)} style={{ marginLeft: '0.5rem', background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: '0.6rem' }}>✕</button>
+              </div>
+            )}
 
             {/* Photo grid: large top + 2 bottom */}
             <div style={{ flex: 1, display: 'grid', gridTemplateRows: '1fr 1fr', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', minHeight: 300 }}>
@@ -321,8 +349,10 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
                 <PhotoSlot
                   url={photos[0]}
                   hovered={hoveredPhoto === 0}
+                  uploading={uploadingIdx === 0}
                   onView={() => setLightboxIdx(0)}
                   onEdit={() => { setEditingPhotoIdx(0); setPhotoUrlDraft(photos[0]) }}
+                  onFileSelected={file => handleFileUpload(0, file)}
                   editing={editingPhotoIdx === 0}
                   photoUrlDraft={photoUrlDraft}
                   setPhotoUrlDraft={setPhotoUrlDraft}
@@ -344,8 +374,10 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
                   <PhotoSlot
                     url={photos[i]}
                     hovered={hoveredPhoto === i}
+                    uploading={uploadingIdx === i}
                     onView={() => setLightboxIdx(i)}
                     onEdit={() => { setEditingPhotoIdx(i); setPhotoUrlDraft(photos[i]) }}
+                    onFileSelected={file => handleFileUpload(i, file)}
                     editing={editingPhotoIdx === i}
                     photoUrlDraft={photoUrlDraft}
                     setPhotoUrlDraft={setPhotoUrlDraft}
@@ -411,7 +443,6 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
             onClick={e => e.stopPropagation()}
             style={{ maxWidth: '88vw', maxHeight: '86vh', objectFit: 'contain', borderRadius: 8, boxShadow: '0 8px 48px rgba(0,0,0,0.5)' }}
           />
-          {/* Close */}
           <button
             onClick={() => setLightboxIdx(null)}
             style={{
@@ -423,7 +454,6 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
           >
             <svg width="15" height="15" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
           </button>
-          {/* Prev */}
           <button
             onClick={e => { e.stopPropagation(); setLightboxIdx(i => ((i ?? 0) - 1 + photos.length) % photos.length) }}
             style={{
@@ -435,7 +465,6 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
           >
             <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M7.5 2L3.5 6l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
-          {/* Next */}
           <button
             onClick={e => { e.stopPropagation(); setLightboxIdx(i => ((i ?? 0) + 1) % photos.length) }}
             style={{
@@ -455,36 +484,83 @@ export function ProjectInfoModal({ board, onClose, onSave }: Props) {
 
 // ── PhotoSlot sub-component ──
 function PhotoSlot({
-  url, hovered, onView, onEdit, editing,
+  url, hovered, uploading, onView, onEdit, onFileSelected, editing,
   photoUrlDraft, setPhotoUrlDraft, onSaveUrl, onCancelEdit,
 }: {
   url: string
   hovered: boolean
+  uploading: boolean
   onView: () => void
   onEdit: () => void
+  onFileSelected: (file: File) => void
   editing: boolean
   photoUrlDraft: string
   setPhotoUrlDraft: (v: string) => void
   onSaveUrl: () => void
   onCancelEdit: () => void
 }) {
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) onFileSelected(file)
+    // reset so same file can be re-selected
+    e.target.value = ''
+  }
+
+  if (uploading) {
+    return (
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', background: '#F5F4FD' }}>
+        {/* Spinner */}
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}>
+          <circle cx="14" cy="14" r="11" stroke="#DDD6FE" strokeWidth="2.5"/>
+          <path d="M14 3a11 11 0 0 1 11 11" stroke="#7C3AED" strokeWidth="2.5" strokeLinecap="round"/>
+        </svg>
+        <span style={{ fontSize: '0.6rem', color: '#9CA3AF', fontWeight: 500 }}>Uploading…</span>
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      </div>
+    )
+  }
+
   if (editing) {
     return (
       <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.97)', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '0.75rem', zIndex: 2 }}>
-        <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Photo URL</span>
+        <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Change Photo</span>
+        {/* File upload button */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.4rem',
+            padding: '0.35rem 0.6rem', background: '#F5F4FD', border: '1.5px solid #DDD6FE',
+            borderRadius: 6, cursor: 'pointer', fontSize: '0.65rem', fontWeight: 600,
+            color: '#7C3AED', fontFamily: 'inherit', width: '100%', justifyContent: 'center',
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none">
+            <path d="M7 9.5V3.5M4.5 6L7 3.5L9.5 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2.5 11.5h9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+          Upload from device
+        </button>
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#D1D5DB' }}>
+          <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
+          <span style={{ fontSize: '0.55rem', fontWeight: 500, letterSpacing: '0.06em' }}>OR URL</span>
+          <div style={{ flex: 1, height: 1, background: '#E5E7EB' }} />
+        </div>
         <input
           autoFocus
           value={photoUrlDraft}
           onChange={e => setPhotoUrlDraft(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') onSaveUrl(); if (e.key === 'Escape') onCancelEdit() }}
           placeholder="https://..."
-          style={{ fontSize: '0.72rem', padding: '0.35rem 0.5rem', border: '1.5px solid #DDD6FE', borderRadius: 6, outline: 'none', fontFamily: 'inherit', color: '#374151' }}
+          style={{ fontSize: '0.72rem', padding: '0.35rem 0.5rem', border: '1.5px solid #E5E7EB', borderRadius: 6, outline: 'none', fontFamily: 'inherit', color: '#374151' }}
         />
         <div style={{ display: 'flex', gap: '0.4rem' }}>
           <button
             onClick={onSaveUrl}
             style={{ flex: 1, padding: '0.3rem', background: '#7C3AED', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: '0.65rem', fontWeight: 600, fontFamily: 'inherit' }}
-          >Set</button>
+          >Set URL</button>
           <button
             onClick={onCancelEdit}
             style={{ flex: 1, padding: '0.3rem', background: 'none', color: '#9CA3AF', border: '1px solid #E8E5F0', borderRadius: 6, cursor: 'pointer', fontSize: '0.65rem', fontFamily: 'inherit' }}
@@ -496,6 +572,8 @@ function PhotoSlot({
 
   return (
     <>
+      {/* Hidden file input for direct upload from hover overlay */}
+      <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
       <img
         src={url}
         alt="Project photo"
@@ -512,16 +590,32 @@ function PhotoSlot({
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem',
         pointerEvents: hovered ? 'auto' : 'none',
       }}>
+        {/* View */}
         <button
           onClick={e => { e.stopPropagation(); onView() }}
           title="View full size"
           style={{ width: 32, height: 32, border: 'none', borderRadius: 6, background: 'rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3"/><path d="M7 4.5v5M4.5 7h5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.3"/>
+            <path d="M10 10l2.5 2.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
         </button>
+        {/* Upload from device */}
+        <button
+          onClick={e => { e.stopPropagation(); fileInputRef.current?.click() }}
+          title="Upload from device"
+          style={{ width: 32, height: 32, border: 'none', borderRadius: 6, background: 'rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+            <path d="M7 9.5V3.5M4.5 6L7 3.5L9.5 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2.5 11.5h9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+          </svg>
+        </button>
+        {/* Enter URL */}
         <button
           onClick={e => { e.stopPropagation(); onEdit() }}
-          title="Change photo"
+          title="Change photo URL"
           style={{ width: 32, height: 32, border: 'none', borderRadius: 6, background: 'rgba(255,255,255,0.15)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <svg width="13" height="13" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2-7 7H1.5v-2l7-7z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg>

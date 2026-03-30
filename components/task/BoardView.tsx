@@ -297,7 +297,7 @@ export function BoardView({
       {/* ── Command Header ─────────────────────────────────────────────────── */}
       <header className="command-header">
         {/* Left: breadcrumb + project name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 0, minWidth: 0, flexShrink: 0 }}>
           <button
             title="All projects"
             onClick={() => { if (window.confirm('Go back to all projects?')) window.location.href = '/' }}
@@ -341,6 +341,67 @@ export function BoardView({
             )}
           </div>
         </div>
+
+        {/* Center: location + photos (shown when data exists) */}
+        {(() => {
+          const locAddr = board.location_address
+          const locLat = board.location_lat
+          const locLng = board.location_lng
+          const hasLocation = !!(locAddr || (locLat !== null && locLng !== null))
+          const headerPhotos = board.photos?.length ? board.photos.slice(0, 3) : []
+          const headerMapSrc = locAddr?.startsWith('https://www.google.com/maps/embed')
+            ? locAddr
+            : (locLat !== null && locLng !== null
+              ? `https://www.openstreetmap.org/export/embed.html?bbox=${locLng! - 0.008},${locLat! - 0.008},${locLng! + 0.008},${locLat! + 0.008}&layer=mapnik&marker=${locLat},${locLng}`
+              : null)
+
+          if (!hasLocation && headerPhotos.length === 0) return null
+
+          return (
+            <div
+              onClick={() => setShowProjectInfo(true)}
+              title="Click to edit project info"
+              style={{
+                display: 'flex', alignItems: 'stretch', gap: '0.375rem',
+                height: 44, cursor: 'pointer', flexShrink: 0,
+              }}
+            >
+              {/* Location thumbnail */}
+              {hasLocation && headerMapSrc && (
+                <div style={{
+                  width: 200, height: 44, borderRadius: 8, overflow: 'hidden',
+                  border: '1.5px solid #E8E5F0', flexShrink: 0, position: 'relative',
+                }}>
+                  <iframe
+                    src={headerMapSrc}
+                    width="200" height="44"
+                    style={{ border: 'none', display: 'block', pointerEvents: 'none', transform: 'scale(1)', transformOrigin: 'top left' }}
+                    title="Project Location"
+                    loading="lazy"
+                    scrolling="no"
+                  />
+                  {/* overlay to prevent iframe stealing clicks */}
+                  <div style={{ position: 'absolute', inset: 0, background: 'transparent' }} />
+                </div>
+              )}
+
+              {/* Photo thumbnails */}
+              {headerPhotos.map((url, i) => (
+                <div key={i} style={{
+                  width: 80, height: 44, borderRadius: 8, overflow: 'hidden',
+                  border: '1.5px solid #E8E5F0', flexShrink: 0,
+                }}>
+                  <img
+                    src={url}
+                    alt={`Photo ${i + 1}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }}
+                  />
+                </div>
+              ))}
+            </div>
+          )
+        })()}
 
         {/* Right: team, progress, actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', flexShrink: 0 }}>
@@ -794,6 +855,7 @@ export function BoardView({
       {showProjectInfo && (
         <ProjectInfoModal
           board={board}
+          boardId={board.id}
           onClose={() => setShowProjectInfo(false)}
           onSave={async updates => {
             await onUpdateBoardInfo(updates)
