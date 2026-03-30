@@ -476,17 +476,17 @@ export function BoardView({
                   <div style={{ flex: 1 }} />
                   <button
                     onClick={() => setShowTimeline(true)}
+                    title="Expand"
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '0.25rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 24, height: 24, padding: 0,
                       color: '#7C3AED', background: '#F5F4FD', border: '1px solid #DDD6FE',
-                      borderRadius: 6, cursor: 'pointer', padding: '0.2rem 0.6rem',
-                      fontSize: '0.6rem', fontWeight: 600, fontFamily: 'inherit',
+                      borderRadius: 6, cursor: 'pointer',
                     }}
                   >
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                       <path d="M2 4.5L6 8.5L10 4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    Show
                   </button>
                 </div>
               )
@@ -507,13 +507,12 @@ export function BoardView({
                   <div style={{ flex: 1 }} />
                   <button
                     onClick={() => setShowKanban(p => !p)}
-                    title={showKanban ? 'Collapse board' : 'Expand board'}
+                    title={showKanban ? 'Collapse' : 'Expand'}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: '0.25rem',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 24, height: 24, padding: 0,
                       color: '#6B7280', background: 'none', border: '1px solid #E8E5F0',
-                      borderRadius: 6, cursor: 'pointer', padding: '0.2rem 0.5rem',
-                      fontSize: '0.6rem', fontWeight: 600, fontFamily: 'inherit',
-                      transition: 'all 0.12s',
+                      borderRadius: 6, cursor: 'pointer', transition: 'all 0.12s',
                     }}
                     onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#7C3AED'; b.style.borderColor = '#7C3AED'; b.style.background = '#F5F4FD' }}
                     onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = '#6B7280'; b.style.borderColor = '#E8E5F0'; b.style.background = 'none' }}
@@ -521,7 +520,6 @@ export function BoardView({
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                       <path d={showKanban ? 'M2 4.5L6 8.5L10 4.5' : 'M4.5 2L8.5 6L4.5 10'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
-                    {showKanban ? 'Collapse' : 'Expand'}
                   </button>
                 </div>
               )}
@@ -631,14 +629,16 @@ export function BoardView({
                 style={{
                   width: 40, flexShrink: 0, border: 'none', background: 'none', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#9CA3AF', fontSize: '0.75rem', padding: 0,
+                  color: '#9CA3AF', padding: 0,
                   borderBottom: '2px solid transparent',
                   transition: 'color 0.12s',
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#9CA3AF' }}
               >
-                {sidebarCollapsed ? '‹' : '›'}
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                  <path d={sidebarCollapsed ? 'M4.5 2L8.5 6L4.5 10' : 'M7.5 2L3.5 6L7.5 10'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </button>
             </div>
 

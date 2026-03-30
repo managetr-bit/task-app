@@ -467,19 +467,18 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
             onClick={onCollapse}
             title="Collapse"
             style={{
-              display: 'flex', alignItems: 'center', gap: '0.25rem',
-              fontSize: '0.6rem', fontWeight: 600, padding: '0.25rem 0.6rem',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: 24, height: 24, padding: 0,
               border: '1px solid #E8E5F0', borderRadius: 6,
               background: '#F5F4FD', color: '#7C3AED',
-              cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
+              cursor: 'pointer', flexShrink: 0,
             }}
             onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#EDE9FE'; b.style.borderColor = '#7C3AED' }}
             onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = '#F5F4FD'; b.style.borderColor = '#E8E5F0' }}
           >
-            <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
               <path d="M2 8.5L6 4.5L10 8.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Hide
           </button>
         )}
         <div style={{ width: 1, height: 16, background: '#E8E5F0', flexShrink: 0 }} />
