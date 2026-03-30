@@ -426,18 +426,10 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
     else                      cfByMonth[key].forecastOut += bl.budgeted_amount
   }
 
-  function cfIn(m: typeof cfByMonth[string]) {
-    if (cashFlowMode === 'forecast') return m.forecastIn
-    if (cashFlowMode === 'actual')   return m.cashIn
-    return m.cashIn + m.forecastIn
-  }
-  function cfOut(m: typeof cfByMonth[string]) {
-    if (cashFlowMode === 'forecast') return m.forecastOut
-    if (cashFlowMode === 'actual')   return m.cashOut
-    return m.cashOut + m.forecastOut
-  }
+  function cfIn(m: typeof cfByMonth[string])  { return m.cashIn + m.forecastIn }
+  function cfOut(m: typeof cfByMonth[string]) { return m.cashOut + m.forecastOut }
   function isForecastOnly(m: typeof cfByMonth[string]) {
-    return cashFlowMode === 'all' && m.cashIn === 0 && m.cashOut === 0
+    return m.cashIn === 0 && m.cashOut === 0
   }
 
   const cfMonthKeys = Object.keys(cfByMonth).sort()
