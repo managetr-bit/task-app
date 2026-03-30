@@ -300,7 +300,7 @@ export function BoardView({
       <header className="command-header">
 
         {/* 1. Projects button */}
-        <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.875rem', borderRight: '1px solid #E8E5F0', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.875rem', flexShrink: 0 }}>
           <button
             title="All projects"
             onClick={() => { if (window.confirm('Go back to all projects?')) window.location.href = '/' }}
@@ -324,7 +324,7 @@ export function BoardView({
         <div
           onClick={() => setShowProjectInfo(true)}
           title="Click to edit project info"
-          style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.2rem', padding: '0 1rem', borderRight: '1px solid #E8E5F0', flexShrink: 0, cursor: 'pointer', minWidth: 140 }}
+          style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.2rem', padding: '0 1rem', flexShrink: 0, cursor: 'pointer', minWidth: 140 }}
         >
           <h1 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
             {board.name}
@@ -352,7 +352,7 @@ export function BoardView({
             <div
               onClick={() => setShowProjectInfo(true)}
               title="Click to edit location"
-              style={{ width: 140, borderRight: '1px solid #E8E5F0', flexShrink: 0, position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
+              style={{ width: 140, flexShrink: 0, position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
             >
               <iframe src={headerMapSrc} style={{ border: 'none', pointerEvents: 'none', position: 'absolute', inset: 0, width: '100%', height: '100%' }} title="Project Location" loading="lazy" scrolling="no" />
               <div style={{ position: 'absolute', inset: 0 }} />
@@ -366,31 +366,34 @@ export function BoardView({
             key={i}
             onClick={e => { e.stopPropagation(); setHeaderLightbox(i) }}
             title="Click to view photo"
-            style={{ width: 90, borderRight: '1px solid #E8E5F0', flexShrink: 0, overflow: 'hidden', cursor: 'zoom-in' }}
+            style={{ width: 135, flexShrink: 0, overflow: 'hidden', cursor: 'zoom-in' }}
           >
             <img src={url} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }} />
           </div>
         ))}
 
-        {/* 7. KPIs — takes remaining space */}
+        {/* spacer — pushes KPIs + avatars + actions to the right */}
+        <div style={{ flex: 1 }} />
+
+        {/* 7. KPIs — right-aligned, next to avatars */}
         {!isMobile && (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.5rem', padding: '0.6rem 1rem', borderRight: '1px solid #E8E5F0', minWidth: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.5rem', padding: '0.6rem 1rem', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
               <div className="kpi-item" style={{ gap: '0.4rem' }}>
                 <div><div className="kpi-value">{totalTasks}</div><div className="kpi-label">Total Tasks</div></div>
                 <span className="badge badge-blue">Active</span>
               </div>
-              <div style={{ width: 1, height: 28, background: '#E8E5F0', flexShrink: 0 }} />
+              <div style={{ width: 1, height: 22, background: '#E8E5F0', opacity: 0.6, flexShrink: 0 }} />
               <div className="kpi-item" style={{ gap: '0.4rem' }}>
                 <div><div className="kpi-value" style={{ color: '#10B981' }}>{doneTasks}</div><div className="kpi-label">Completed</div></div>
                 <span className="badge badge-green">+{momentumCount} today</span>
               </div>
-              <div style={{ width: 1, height: 28, background: '#E8E5F0', flexShrink: 0 }} />
+              <div style={{ width: 1, height: 22, background: '#E8E5F0', opacity: 0.6, flexShrink: 0 }} />
               <div className="kpi-item" style={{ gap: '0.4rem' }}>
                 <div><div className="kpi-value" style={{ color: '#7C3AED' }}>{progressPct}%</div><div className="kpi-label">Progress</div></div>
                 <span className="badge badge-purple">{progressPct === 100 ? '✓ Done' : 'On Track'}</span>
               </div>
-              <div style={{ width: 1, height: 28, background: '#E8E5F0', flexShrink: 0 }} />
+              <div style={{ width: 1, height: 22, background: '#E8E5F0', opacity: 0.6, flexShrink: 0 }} />
               <div className="kpi-item">
                 <div><div className="kpi-value">{members.length}</div><div className="kpi-label">Team Members</div></div>
               </div>
@@ -403,14 +406,14 @@ export function BoardView({
 
         {/* 8. Progress arc */}
         {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.75rem', borderRight: '1px solid #E8E5F0', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.75rem', flexShrink: 0 }}>
             <ProgressArc pct={progressPct} size={32} />
           </div>
         )}
 
         {/* 9. Avatars */}
         {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.75rem', borderRight: '1px solid #E8E5F0', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', padding: '0 0.75rem', flexShrink: 0 }}>
             <MembersBar members={members} currentMember={currentMember} isCreator={currentMember.role === 'creator'} onUpdateMemberRole={onUpdateMemberRole} />
           </div>
         )}
