@@ -20,6 +20,9 @@ function parseLatLng(input: string): { lat: number; lng: number } | null {
   const pbLat = input.match(/!3d(-?\d+\.?\d*)/)
   const pbLng = input.match(/!4d(-?\d+\.?\d*)/) ?? input.match(/!2d(-?\d+\.?\d*)/)
   if (pbLat && pbLng) return { lat: parseFloat(pbLat[1]), lng: parseFloat(pbLng[1]) }
+  // /search/LAT,+LNG path format (what maps.app.goo.gl short links resolve to)
+  const searchMatch = input.match(/\/search\/(-?\d+\.?\d*),\+?(-?\d+\.?\d*)/)
+  if (searchMatch) return { lat: parseFloat(searchMatch[1]), lng: parseFloat(searchMatch[2]) }
   // plain "lat, lng"
   const plainMatch = input.trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
   if (plainMatch) return { lat: parseFloat(plainMatch[1]), lng: parseFloat(plainMatch[2]) }
@@ -66,6 +69,7 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
       ? board.location_address : null
   )
   const [resolving, setResolving] = useState(false)
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
   const [photos, setPhotos] = useState<string[]>(
     board.photos?.length ? board.photos : DUMMY_PHOTOS
   )
@@ -79,13 +83,14 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
 
   // ── Resolve short links (maps.app.goo.gl) via server ──
   useEffect(() => {
-    if (!isShortLink(locationInput)) return
+    if (!isShortLink(locationInput)) { setResolvedUrl(null); return }
     let cancelled = false
     setResolving(true)
     fetch(`/api/resolve-maps?url=${encodeURIComponent(locationInput.trim())}`)
       .then(r => r.json())
       .then(data => {
         if (cancelled || !data.finalUrl) return
+        setResolvedUrl(data.finalUrl) // store the full URL so we can save it
         const parsed = parseLatLng(data.finalUrl)
         if (parsed) { setLat(parsed.lat); setLng(parsed.lng) }
       })
@@ -97,6 +102,7 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
   function handleLocationChange(val: string) {
     setLocationInput(val)
     setEmbedUrl(null)
+    setResolvedUrl(null)
 
     if (!val.trim()) { setLat(null); setLng(null); return }
 
@@ -136,17 +142,21 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
 
   async function handleSave() {
     setSaving(true)
-    // If we have an embed URL but no lat/lng, extract them from the embed URL
+    // If lat/lng are missing, try to extract them from embedUrl or resolvedUrl
     let finalLat = lat
     let finalLng = lng
-    if ((finalLat === null || finalLng === null) && embedUrl) {
-      const parsed = parseLatLng(embedUrl)
-      if (parsed) { finalLat = parsed.lat; finalLng = parsed.lng }
+    if (finalLat === null || finalLng === null) {
+      const fallbackUrl = embedUrl ?? resolvedUrl
+      if (fallbackUrl) {
+        const parsed = parseLatLng(fallbackUrl)
+        if (parsed) { finalLat = parsed.lat; finalLng = parsed.lng }
+      }
     }
     await onSave({
       name: name.trim() || board.name,
       description,
-      location_address: embedUrl ?? locationInput,
+      // prefer embedUrl, then resolved long URL (for short links), then raw input
+      location_address: embedUrl ?? resolvedUrl ?? locationInput,
       location_lat: finalLat,
       location_lng: finalLng,
       photos,
