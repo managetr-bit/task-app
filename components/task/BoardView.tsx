@@ -355,9 +355,9 @@ export function BoardView({
           } else if (locAddr && !locAddr.startsWith('https://www.google.com/maps/embed')) {
             mapLink = locAddr // short link — open directly
           } else if (locAddr) {
-            // embed URL: try to extract coords from pb= param, fallback to maps homepage
+            // embed URL: try to extract coords from pb= param (!2d=lng in embed, !4d=lng in share links)
             const latM = locAddr.match(/!3d(-?\d+\.?\d*)/)
-            const lngM = locAddr.match(/!4d(-?\d+\.?\d*)/)
+            const lngM = locAddr.match(/!4d(-?\d+\.?\d*)/) ?? locAddr.match(/!2d(-?\d+\.?\d*)/)
             mapLink = latM && lngM
               ? `https://www.google.com/maps/search/?api=1&query=${latM[1]},${lngM[1]}`
               : 'https://www.google.com/maps'

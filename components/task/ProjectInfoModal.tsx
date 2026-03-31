@@ -16,9 +16,9 @@ function parseLatLng(input: string): { lat: number; lng: number } | null {
   if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) }
   const qMatch = input.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/)
   if (qMatch) return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) }
-  // extract from pb= parameter: !3dLAT!4dLNG
+  // extract from pb= parameter: !3dLAT!4dLNG (share link) or !2dLNG!3dLAT (embed URL)
   const pbLat = input.match(/!3d(-?\d+\.?\d*)/)
-  const pbLng = input.match(/!4d(-?\d+\.?\d*)/)
+  const pbLng = input.match(/!4d(-?\d+\.?\d*)/) ?? input.match(/!2d(-?\d+\.?\d*)/)
   if (pbLat && pbLng) return { lat: parseFloat(pbLat[1]), lng: parseFloat(pbLng[1]) }
   // plain "lat, lng"
   const plainMatch = input.trim().match(/^(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)$/)
@@ -136,12 +136,19 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
 
   async function handleSave() {
     setSaving(true)
+    // If we have an embed URL but no lat/lng, extract them from the embed URL
+    let finalLat = lat
+    let finalLng = lng
+    if ((finalLat === null || finalLng === null) && embedUrl) {
+      const parsed = parseLatLng(embedUrl)
+      if (parsed) { finalLat = parsed.lat; finalLng = parsed.lng }
+    }
     await onSave({
       name: name.trim() || board.name,
       description,
       location_address: embedUrl ?? locationInput,
-      location_lat: lat,
-      location_lng: lng,
+      location_lat: finalLat,
+      location_lng: finalLng,
       photos,
     })
     setSaving(false)
