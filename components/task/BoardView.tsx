@@ -330,7 +330,7 @@ export function BoardView({
             {board.name}
           </h1>
           {board.description && (
-            <span style={{ fontSize: '0.625rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>
+            <span style={{ fontSize: '0.625rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', maxWidth: 220 }}>
               {board.description}
             </span>
           )}
@@ -376,8 +376,8 @@ export function BoardView({
           )
         })()}
 
-        {/* 4–6. Photos — full height, each in its own cell */}
-        {(board.photos?.length ? board.photos.slice(0, 3) : []).map((url, i) => (
+        {/* 4–8. Photos — full height, each in its own cell */}
+        {(board.photos?.length ? board.photos.slice(0, 5) : []).map((url, i) => (
           <div
             key={i}
             onClick={e => { e.stopPropagation(); setHeaderLightbox(i) }}
@@ -390,42 +390,6 @@ export function BoardView({
 
         {/* spacer — pushes KPIs + avatars + actions to the right */}
         <div style={{ flex: 1 }} />
-
-        {/* 7. KPIs — right-aligned, next to avatars */}
-        {!isMobile && (
-          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.5rem', padding: '0.6rem 1rem', flexShrink: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-              <div className="kpi-item" style={{ gap: '0.4rem' }}>
-                <div><div className="kpi-value">{totalTasks}</div><div className="kpi-label">Total Tasks</div></div>
-                <span className="badge badge-blue">Active</span>
-              </div>
-              <div style={{ width: 1, height: 22, background: '#E8E5F0', opacity: 0.6, flexShrink: 0 }} />
-              <div className="kpi-item" style={{ gap: '0.4rem' }}>
-                <div><div className="kpi-value" style={{ color: '#10B981' }}>{doneTasks}</div><div className="kpi-label">Completed</div></div>
-                <span className="badge badge-green">+{momentumCount} today</span>
-              </div>
-              <div style={{ width: 1, height: 22, background: '#E8E5F0', opacity: 0.6, flexShrink: 0 }} />
-              <div className="kpi-item" style={{ gap: '0.4rem' }}>
-                <div><div className="kpi-value" style={{ color: '#7C3AED' }}>{progressPct}%</div><div className="kpi-label">Progress</div></div>
-                <span className="badge badge-purple">{progressPct === 100 ? '✓ Done' : 'On Track'}</span>
-              </div>
-              <div style={{ width: 1, height: 22, background: '#E8E5F0', opacity: 0.6, flexShrink: 0 }} />
-              <div className="kpi-item">
-                <div><div className="kpi-value">{members.length}</div><div className="kpi-label">Team Members</div></div>
-              </div>
-            </div>
-            {momentumCount > 0 && (
-              <span style={{ fontSize: '0.6rem', fontWeight: 600, color: '#7C3AED', letterSpacing: '0.02em' }}>🔥 {momentumCount} done today</span>
-            )}
-          </div>
-        )}
-
-        {/* 8. Progress arc */}
-        {!isMobile && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 0.75rem', flexShrink: 0 }}>
-            <ProgressArc pct={progressPct} size={32} />
-          </div>
-        )}
 
         {/* 9. Avatars */}
         {!isMobile && (

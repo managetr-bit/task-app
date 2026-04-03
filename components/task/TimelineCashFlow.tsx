@@ -794,8 +794,8 @@ export function TimelineCashFlow({ milestones, milestoneTasks, tasks, costTransa
               )
             })}
 
-            {/* Dependency arrows */}
-            {milestones.filter(ms => ms.depends_on_id).map(ms => {
+            {/* Dependency arrows — only visible when milestones are shown */}
+            {showMilestones && milestones.filter(ms => ms.depends_on_id).map(ms => {
               const depMs = milestones.find(m => m.id === ms.depends_on_id)
               if (!depMs) return null
               const fromPct = pctOf(new Date(depMs.target_date + 'T00:00:00'))

@@ -377,7 +377,7 @@ export function BudgetModal({ currency, budgetLines, milestones, defaultLineType
                     <label style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', display: 'block', marginBottom: 3 }}>Notes</label>
                     <input className="input-base" type="text" placeholder="Optional note" value={editing.notes} onChange={e => setEditing(p => p ? { ...p, notes: e.target.value } : p)} maxLength={200} style={{ fontSize: '0.8125rem' }} />
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', position: 'sticky', bottom: 0, background: '#FAFAFA', paddingTop: '0.25rem', zIndex: 2 }}>
                     <button type="button" onClick={() => setEditing(null)} className="btn-ghost" style={{ flex: 1, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>Cancel</button>
                     <button type="submit" disabled={saving} className="btn-primary" style={{ flex: 2, justifyContent: 'center', padding: '0.5rem', fontSize: '0.8125rem' }}>
                       {saving ? 'Saving…' : editing.id ? 'Update Line' : 'Add Line'}

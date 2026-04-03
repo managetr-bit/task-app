@@ -37,6 +37,8 @@ const DUMMY_PHOTOS = [
   'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=900&q=80',
   'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=900&q=80',
   'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=900&q=80',
+  'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=900&q=80',
+  'https://images.unsplash.com/photo-1590496793929-36417d3117de?w=900&q=80',
 ]
 
 type BoardInfoUpdates = {
@@ -355,11 +357,11 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
               </div>
             )}
 
-            {/* Photo grid: large top + 2 bottom */}
-            <div style={{ flex: 1, display: 'grid', gridTemplateRows: '1fr 1fr', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', minHeight: 300 }}>
+            {/* Photo grid: 1 large left + 2x2 grid right */}
+            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', minHeight: 300 }}>
               {/* Photo 0 — spans both rows on left */}
               <div
-                style={{ gridRow: '1 / 3', gridColumn: '1', position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1.5px solid #E8E5F0', background: '#F5F4FD', cursor: 'zoom-in' }}
+                style={{ gridRow: '1 / 3', position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1.5px solid #E8E5F0', background: '#F5F4FD', cursor: 'zoom-in' }}
                 onMouseEnter={() => setHoveredPhoto(0)}
                 onMouseLeave={() => setHoveredPhoto(null)}
               >
@@ -380,32 +382,34 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
                   onCancelEdit={() => { setEditingPhotoIdx(null); setPhotoUrlDraft('') }}
                 />
               </div>
-              {/* Photos 1 + 2 — stacked on right */}
-              {[1, 2].map(i => (
-                <div
-                  key={i}
-                  style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1.5px solid #E8E5F0', background: '#F5F4FD', cursor: 'zoom-in' }}
-                  onMouseEnter={() => setHoveredPhoto(i)}
-                  onMouseLeave={() => setHoveredPhoto(null)}
-                >
-                  <PhotoSlot
-                    url={photos[i]}
-                    hovered={hoveredPhoto === i}
-                    uploading={uploadingIdx === i}
-                    onView={() => setLightboxIdx(i)}
-                    onEdit={() => { setEditingPhotoIdx(i); setPhotoUrlDraft(photos[i]) }}
-                    onFileSelected={file => handleFileUpload(i, file)}
-                    editing={editingPhotoIdx === i}
-                    photoUrlDraft={photoUrlDraft}
-                    setPhotoUrlDraft={setPhotoUrlDraft}
-                    onSaveUrl={() => {
-                      if (photoUrlDraft.trim()) setPhotos(p => p.map((u, pi) => pi === i ? photoUrlDraft.trim() : u))
-                      setEditingPhotoIdx(null); setPhotoUrlDraft('')
-                    }}
-                    onCancelEdit={() => { setEditingPhotoIdx(null); setPhotoUrlDraft('') }}
-                  />
-                </div>
-              ))}
+              {/* Photos 1–4 — 2×2 grid on right */}
+              <div style={{ display: 'grid', gridTemplateRows: '1fr 1fr', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', gridRow: '1 / 3' }}>
+                {[1, 2, 3, 4].map(i => (
+                  <div
+                    key={i}
+                    style={{ position: 'relative', borderRadius: 10, overflow: 'hidden', border: '1.5px solid #E8E5F0', background: '#F5F4FD', cursor: 'zoom-in' }}
+                    onMouseEnter={() => setHoveredPhoto(i)}
+                    onMouseLeave={() => setHoveredPhoto(null)}
+                  >
+                    <PhotoSlot
+                      url={photos[i]}
+                      hovered={hoveredPhoto === i}
+                      uploading={uploadingIdx === i}
+                      onView={() => setLightboxIdx(i)}
+                      onEdit={() => { setEditingPhotoIdx(i); setPhotoUrlDraft(photos[i]) }}
+                      onFileSelected={file => handleFileUpload(i, file)}
+                      editing={editingPhotoIdx === i}
+                      photoUrlDraft={photoUrlDraft}
+                      setPhotoUrlDraft={setPhotoUrlDraft}
+                      onSaveUrl={() => {
+                        if (photoUrlDraft.trim()) setPhotos(p => p.map((u, pi) => pi === i ? photoUrlDraft.trim() : u))
+                        setEditingPhotoIdx(null); setPhotoUrlDraft('')
+                      }}
+                      onCancelEdit={() => { setEditingPhotoIdx(null); setPhotoUrlDraft('') }}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
