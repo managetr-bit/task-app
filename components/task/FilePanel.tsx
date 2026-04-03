@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 type Props = {
   boardId: string
@@ -16,6 +16,8 @@ type EmbedInfo = {
   embedUrl: string
   displayName: string
 }
+
+type UploadStatus = { name: string; status: 'uploading' | 'done' | 'error'; error?: string }
 
 function parseUrl(url: string): EmbedInfo | null {
   if (!url) return null
@@ -76,6 +78,10 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
   const [showUploadSetup, setShowUploadSetup] = useState(false)
   const [scriptDraft, setScriptDraft] = useState(cloudScriptUrl)
   const [copied, setCopied] = useState(false)
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
+  const [uploads, setUploads] = useState<UploadStatus[]>([])
+  const [iframeKey, setIframeKey] = useState(0)
+  const dragCounter = useRef(0)
 
   function copyScript() {
     navigator.clipboard.writeText(APPS_SCRIPT_CODE).then(() => {
@@ -100,6 +106,7 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
 
   const embed = filePanelUrl ? parseUrl(filePanelUrl) : null
   const canEmbed = embed?.type === 'gdrive-folder' || embed?.type === 'gdrive-file'
+  const folderId = filePanelUrl ? (filePanelUrl.match(/\/folders\/([a-zA-Z0-9_-]+)/) ?? [])[1] : null
 
   async function handleSave() {
     setSaving(true)
@@ -113,24 +120,146 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
     setEditing(false)
   }
 
+  async function uploadFiles(files: File[]) {
+    if (!cloudScriptUrl || !folderId) return
+    const newUploads: UploadStatus[] = files.map(f => ({ name: f.name, status: 'uploading' }))
+    setUploads(prev => [...newUploads, ...prev])
+
+    await Promise.all(files.map(async (file, idx) => {
+      try {
+        const data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = reject
+          reader.readAsDataURL(file)
+        })
+        const res = await fetch(cloudScriptUrl, {
+          method: 'POST',
+          body: JSON.stringify({ parentFolderId: folderId, data, fileName: file.name }),
+        })
+        const json = await res.json()
+        setUploads(prev => prev.map((u, i) => {
+          const match = i < newUploads.length && u.name === newUploads[idx].name
+          return match ? { ...u, status: json.success ? 'done' : 'error', error: json.error } : u
+        }))
+        if (json.success) {
+          // Refresh iframe after a short delay to show the new file
+          setTimeout(() => setIframeKey(k => k + 1), 2000)
+        }
+      } catch (err) {
+        setUploads(prev => prev.map((u, i) => {
+          const match = i < newUploads.length && u.name === newUploads[idx].name
+          return match ? { ...u, status: 'error', error: String(err) } : u
+        }))
+      }
+    }))
+
+    setTimeout(() => setUploads(prev => prev.filter(u => u.status !== 'done')), 4000)
+  }
+
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault()
+    dragCounter.current++
+    if (e.dataTransfer.types.includes('Files')) setIsDraggingOver(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    dragCounter.current--
+    if (dragCounter.current === 0) setIsDraggingOver(false)
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    dragCounter.current = 0
+    setIsDraggingOver(false)
+    const files = Array.from(e.dataTransfer.files)
+    if (files.length > 0) uploadFiles(files)
+  }
+
+  const canUpload = !!(cloudScriptUrl && folderId)
+
   return (
-    <div style={{ width: 300, flexShrink: 0, borderLeft: '1.5px solid #E8E5E0', background: '#FFFFFF', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div
+      style={{ width: 300, flexShrink: 0, borderLeft: '1.5px solid #E8E5E0', background: '#FFFFFF', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', position: 'relative' }}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag-over overlay */}
+      {isDraggingOver && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 50,
+          background: canUpload ? 'rgba(124,58,237,0.08)' : 'rgba(0,0,0,0.04)',
+          border: `2px dashed ${canUpload ? '#7C3AED' : '#c4bfb9'}`,
+          borderRadius: 8,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          pointerEvents: 'none',
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📂</div>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: canUpload ? '#7C3AED' : '#9ca3af' }}>
+            {canUpload ? 'Drop to upload to Drive' : 'Set up uploads first'}
+          </div>
+          {!canUpload && (
+            <div style={{ fontSize: '0.68rem', color: '#c4bfb9', marginTop: '0.25rem', textAlign: 'center', padding: '0 1.5rem' }}>
+              Enable uploads in the panel below
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Upload progress toasts */}
+      {uploads.length > 0 && (
+        <div style={{ position: 'absolute', top: 48, right: 8, left: 8, zIndex: 40, display: 'flex', flexDirection: 'column', gap: '0.3rem', pointerEvents: 'none' }}>
+          {uploads.map((u, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              background: u.status === 'error' ? '#FEF2F2' : '#F5F3FF',
+              border: `1px solid ${u.status === 'error' ? '#FECACA' : '#DDD6FE'}`,
+              borderRadius: 8, padding: '0.375rem 0.625rem',
+            }}>
+              <span style={{ fontSize: '0.75rem' }}>
+                {u.status === 'uploading' ? '⏳' : u.status === 'done' ? '✅' : '❌'}
+              </span>
+              <span style={{ fontSize: '0.7rem', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{u.name}</span>
+              {u.status === 'uploading' && (
+                <span style={{ fontSize: '0.65rem', color: '#7C3AED' }}>uploading…</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Panel header */}
       <div style={{ padding: '0.875rem 1rem', borderBottom: '1.5px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <span style={{ fontSize: '0.85rem' }}>📁</span>
           <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1a1a1a' }}>Files</span>
         </div>
-        {!editing && (
-          <button
-            onClick={() => { setInputUrl(filePanelUrl ?? ''); setEditing(true) }}
-            style={{ background: 'transparent', border: 'none', color: '#c4bfb9', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem', borderRadius: '6px', transition: 'color 0.15s ease' }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c4bfb9' }}
-          >
-            {filePanelUrl ? '✎' : '+ Link'}
-          </button>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {canUpload && !editing && (
+            <label style={{ cursor: 'pointer', fontSize: '0.7rem', color: '#7C3AED', fontWeight: 600, padding: '0.2rem 0.5rem', background: '#EDE9FE', borderRadius: 6, lineHeight: 1 }} title="Upload files">
+              + Upload
+              <input type="file" multiple style={{ display: 'none' }} onChange={e => { if (e.target.files) uploadFiles(Array.from(e.target.files)); e.target.value = '' }} />
+            </label>
+          )}
+          {!editing && (
+            <button
+              onClick={() => { setInputUrl(filePanelUrl ?? ''); setEditing(true) }}
+              style={{ background: 'transparent', border: 'none', color: '#c4bfb9', cursor: 'pointer', fontSize: '0.8rem', padding: '0.2rem 0.4rem', borderRadius: '6px', transition: 'color 0.15s ease' }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7C3AED' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#c4bfb9' }}
+            >
+              {filePanelUrl ? '✎' : '+ Link'}
+            </button>
+          )}
+        </div>
       </div>
 
       {editing && (
@@ -181,7 +310,16 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
               <span style={{ fontSize: '0.7rem', color: '#9ca3af', fontWeight: 500 }}>{embed!.displayName}</span>
               <a href={filePanelUrl!} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#7C3AED', textDecoration: 'none' }}>Open ↗</a>
             </div>
-            <iframe src={embed!.embedUrl} style={{ flex: 1, border: 'none', width: '100%', minHeight: 0 }} allow="clipboard-read; clipboard-write" />
+
+            {/* iframe wrapper — pointer-events disabled during drag so drop events reach our handler */}
+            <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+              <iframe
+                key={iframeKey}
+                src={embed!.embedUrl}
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', pointerEvents: isDraggingOver ? 'none' : 'auto' }}
+                allow="clipboard-read; clipboard-write"
+              />
+            </div>
 
             {/* ── Upload setup (only for Google Drive folders) ── */}
             {embed!.type === 'gdrive-folder' && (
@@ -192,7 +330,7 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
                 >
                   <span style={{ fontSize: '0.65rem' }}>{cloudScriptUrl ? '🟢' : '⚪'}</span>
                   <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#9ca3af' }}>
-                    {cloudScriptUrl ? 'Upload enabled' : 'Enable uploads (Notes & Whiteboard)'}
+                    {cloudScriptUrl ? 'Upload enabled — drag & drop files here' : 'Enable uploads (drag & drop)'}
                   </span>
                   <span style={{ marginLeft: 'auto', fontSize: '0.6rem', color: '#c4bfb9' }}>{showUploadSetup ? '▲' : '▼'}</span>
                 </button>
