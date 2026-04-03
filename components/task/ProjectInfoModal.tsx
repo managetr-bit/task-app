@@ -72,9 +72,11 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
   )
   const [resolving, setResolving] = useState(false)
   const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
-  const [photos, setPhotos] = useState<string[]>(
-    board.photos?.length ? board.photos : DUMMY_PHOTOS
-  )
+  const [photos, setPhotos] = useState<string[]>(() => {
+    // Always ensure 5 slots so indices 3 and 4 are accessible
+    const base = board.photos?.length ? board.photos : DUMMY_PHOTOS
+    return Array.from({ length: 5 }, (_, i) => base[i] ?? '')
+  })
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
   const [editingPhotoIdx, setEditingPhotoIdx] = useState<number | null>(null)
   const [photoUrlDraft, setPhotoUrlDraft] = useState('')
@@ -161,7 +163,7 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
       location_address: embedUrl ?? resolvedUrl ?? locationInput,
       location_lat: finalLat,
       location_lng: finalLng,
-      photos,
+      photos: photos.filter(p => p.trim()),  // strip empty slots before saving
     })
     setSaving(false)
     onClose()
@@ -595,13 +597,25 @@ function PhotoSlot({
     <>
       {/* Hidden file input for direct upload from hover overlay */}
       <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileChange} style={{ display: 'none' }} />
-      <img
-        src={url}
-        alt="Project photo"
-        onClick={onView}
-        style={{ width: '100%', height: '100%', minHeight: 80, objectFit: 'cover', display: 'block' }}
-        onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0.2' }}
-      />
+      {url ? (
+        <img
+          src={url}
+          alt="Project photo"
+          onClick={onView}
+          style={{ width: '100%', height: '100%', minHeight: 80, objectFit: 'cover', display: 'block' }}
+          onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0.2' }}
+        />
+      ) : (
+        <div
+          onClick={onEdit}
+          style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.3rem', background: '#F5F4FD', cursor: 'pointer' }}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{ opacity: 0.35 }}>
+            <path d="M10 4v12M4 10h12" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+          <span style={{ fontSize: '0.55rem', color: '#C4B5FD', fontWeight: 600 }}>Add photo</span>
+        </div>
+      )}
       {/* Hover overlay */}
       <div style={{
         position: 'absolute', inset: 0,
