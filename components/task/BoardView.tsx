@@ -330,7 +330,7 @@ export function BoardView({
             {board.name}
           </h1>
           {board.description && (
-            <span style={{ fontSize: '0.625rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', maxWidth: 220 }}>
+            <span title={board.description} style={{ fontSize: '0.625rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', maxWidth: 260 }}>
               {board.description}
             </span>
           )}
@@ -376,17 +376,31 @@ export function BoardView({
           )
         })()}
 
-        {/* 4–8. Photos — full height, each in its own cell */}
-        {(board.photos?.length ? board.photos.slice(0, 5) : []).map((url, i) => (
-          <div
-            key={i}
-            onClick={e => { e.stopPropagation(); setHeaderLightbox(i) }}
-            title="Click to view photo"
-            style={{ width: 135, flexShrink: 0, overflow: 'hidden', cursor: 'zoom-in', marginLeft: '0.375rem' }}
-          >
-            <img src={url} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }} />
-          </div>
-        ))}
+        {/* 4–8. Photos — always 5 slots; empty slots open project info to add photos */}
+        {Array.from({ length: 5 }, (_, i) => {
+          const url = board.photos?.[i]
+          return url ? (
+            <div
+              key={i}
+              onClick={e => { e.stopPropagation(); setHeaderLightbox(i) }}
+              title="Click to view photo"
+              style={{ width: 110, flexShrink: 0, overflow: 'hidden', cursor: 'zoom-in', marginLeft: '0.375rem' }}
+            >
+              <img src={url} alt={`Photo ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={e => { (e.currentTarget as HTMLImageElement).style.opacity = '0' }} />
+            </div>
+          ) : (
+            <div
+              key={i}
+              onClick={e => { e.stopPropagation(); setShowProjectInfo(true) }}
+              title="Click to add photo"
+              style={{ width: 110, flexShrink: 0, overflow: 'hidden', cursor: 'pointer', marginLeft: '0.375rem', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F5F4FD', border: '1.5px dashed #D1C7F0' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ opacity: 0.35 }}>
+                <path d="M9 4v10M4 9h10" stroke="#7C3AED" strokeWidth="1.8" strokeLinecap="round"/>
+              </svg>
+            </div>
+          )
+        })}
 
         {/* spacer — pushes KPIs + avatars + actions to the right */}
         <div style={{ flex: 1 }} />
