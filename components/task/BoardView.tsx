@@ -324,13 +324,13 @@ export function BoardView({
         <div
           onClick={() => setShowProjectInfo(true)}
           title="Click to edit project info"
-          style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.2rem', padding: '0 1rem', flexShrink: 0, cursor: 'pointer', minWidth: 140 }}
+          style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '0.2rem', padding: '0 1rem', flexShrink: 0, cursor: 'pointer', minWidth: 180, maxWidth: 340 }}
         >
           <h1 style={{ fontSize: '0.9375rem', fontWeight: 700, color: '#111827', margin: 0, lineHeight: 1.2, letterSpacing: '-0.01em', whiteSpace: 'nowrap' }}>
             {board.name}
           </h1>
           {board.description && (
-            <span title={board.description} style={{ fontSize: '0.625rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', maxWidth: 260 }}>
+            <span title={board.description} style={{ fontSize: '0.625rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', maxWidth: 320 }}>
               {board.description}
             </span>
           )}
