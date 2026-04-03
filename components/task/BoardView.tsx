@@ -95,6 +95,42 @@ const columnAwareCollision: CollisionDetection = (args) => {
   })
 }
 
+// Render basic markdown (bold, italic, bullets, numbered) to React nodes
+function renderMd(text: string): React.ReactNode {
+  return text.split('\n').map((line, i) => {
+    const bullet = line.match(/^[-*]\s+(.*)/)
+    const numbered = line.match(/^\d+\.\s+(.*)/)
+    const content = bullet ? bullet[1] : numbered ? numbered[1] : line
+    const nodes = inlineMd(content)
+    if (bullet) return <div key={i} style={{ display: 'flex', gap: '0.3em' }}><span>•</span><span>{nodes}</span></div>
+    if (numbered) return <div key={i} style={{ display: 'flex', gap: '0.3em' }}><span>{line.match(/^\d+/)![0]}.</span><span>{nodes}</span></div>
+    return <div key={i}>{nodes}</div>
+  })
+}
+
+function inlineMd(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = []
+  let remaining = text
+  let key = 0
+  while (remaining) {
+    const bold = remaining.match(/^(.*?)\*\*(.+?)\*\*(.*)$/)
+    const italic = remaining.match(/^(.*?)\*(.+?)\*(.*)$/)
+    if (bold && (!italic || bold[1].length <= italic[1].length)) {
+      if (bold[1]) parts.push(bold[1])
+      parts.push(<strong key={key++}>{bold[2]}</strong>)
+      remaining = bold[3]
+    } else if (italic) {
+      if (italic[1]) parts.push(italic[1])
+      parts.push(<em key={key++}>{italic[2]}</em>)
+      remaining = italic[3]
+    } else {
+      parts.push(remaining)
+      break
+    }
+  }
+  return parts.length === 1 ? parts[0] : parts
+}
+
 export function BoardView({
   board, columns, members, tasks, currentMember, isCreator,
   milestones, milestoneTasks,
@@ -330,9 +366,9 @@ export function BoardView({
             {board.name}
           </h1>
           {board.description && (
-            <span title={board.description} style={{ fontSize: '0.625rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', maxWidth: 320 }}>
-              {board.description}
-            </span>
+            <div title={board.description} style={{ fontSize: '0.625rem', color: '#9CA3AF', fontWeight: 400, lineHeight: 1.5, maxWidth: 320, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical' }}>
+              {renderMd(board.description)}
+            </div>
           )}
         </div>
 

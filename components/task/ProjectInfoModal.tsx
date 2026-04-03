@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { type Board } from '@/lib/types'
 import { supabase } from '@/lib/supabase'
 
@@ -55,6 +55,82 @@ type Props = {
   boardId: string
   onClose: () => void
   onSave: (updates: BoardInfoUpdates) => Promise<void>
+}
+
+// ── Minimal rich-text toolbar for the description textarea ──
+function RichTextarea({ value, onChange, inputStyle }: { value: string; onChange: (v: string) => void; inputStyle: React.CSSProperties }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  const wrap = useCallback((before: string, after: string) => {
+    const el = ref.current
+    if (!el) return
+    const { selectionStart: s, selectionEnd: e, value: v } = el
+    const sel = v.slice(s, e)
+    const replacement = sel ? `${before}${sel}${after}` : `${before}placeholder${after}`
+    const next = v.slice(0, s) + replacement + v.slice(e)
+    onChange(next)
+    requestAnimationFrame(() => {
+      el.focus()
+      const cursor = s + before.length + (sel ? sel.length : 'placeholder'.length)
+      el.setSelectionRange(sel ? s + before.length : s + before.length, cursor)
+    })
+  }, [onChange])
+
+  const insertLine = useCallback((prefix: string) => {
+    const el = ref.current
+    if (!el) return
+    const { selectionStart: s, value: v } = el
+    const lineStart = v.lastIndexOf('\n', s - 1) + 1
+    const alreadyHas = v.slice(lineStart).startsWith(prefix)
+    const next = alreadyHas
+      ? v.slice(0, lineStart) + v.slice(lineStart + prefix.length)
+      : v.slice(0, lineStart) + prefix + v.slice(lineStart)
+    onChange(next)
+    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(s + (alreadyHas ? -prefix.length : prefix.length), s + (alreadyHas ? -prefix.length : prefix.length)) })
+  }, [onChange])
+
+  const tools: { label: string; title: string; action: () => void }[] = [
+    { label: 'B', title: 'Bold', action: () => wrap('**', '**') },
+    { label: 'I', title: 'Italic', action: () => wrap('*', '*') },
+    { label: '•', title: 'Bullet list', action: () => insertLine('- ') },
+    { label: '1.', title: 'Numbered list', action: () => insertLine('1. ') },
+  ]
+
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      {/* toolbar */}
+      <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '0.25rem' }}>
+        {tools.map(t => (
+          <button
+            key={t.label}
+            type="button"
+            title={t.title}
+            onMouseDown={e => { e.preventDefault(); t.action() }}
+            style={{
+              padding: '0.15rem 0.45rem', borderRadius: 5, border: '1px solid #E5E7EB',
+              background: '#F9FAFB', color: '#4B5563', fontSize: t.label === 'B' ? '0.75rem' : '0.7rem',
+              fontWeight: t.label === 'B' ? 700 : t.label === 'I' ? 400 : 500,
+              fontStyle: t.label === 'I' ? 'italic' : 'normal',
+              cursor: 'pointer', lineHeight: 1.4,
+            }}
+          >{t.label}</button>
+        ))}
+      </div>
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="Brief project overview..."
+        style={{
+          ...inputStyle, flex: 1, minHeight: 110,
+          fontSize: '0.8125rem', lineHeight: 1.55,
+          padding: '0.5rem 0.75rem', resize: 'none',
+        }}
+        onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.background = '#fff' }}
+        onBlur={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.background = '#F9FAFB' }}
+      />
+    </div>
+  )
 }
 
 export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
@@ -258,18 +334,7 @@ export function ProjectInfoModal({ board, boardId, onClose, onSave }: Props) {
               <label style={{ fontSize: '0.6rem', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '0.35rem' }}>
                 Description
               </label>
-              <textarea
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-                placeholder="Brief project overview..."
-                style={{
-                  ...inputStyle, flex: 1, minHeight: 120,
-                  fontSize: '0.8125rem', lineHeight: 1.55,
-                  padding: '0.5rem 0.75rem', resize: 'none',
-                }}
-                onFocus={e => { e.currentTarget.style.borderColor = '#7C3AED'; e.currentTarget.style.background = '#fff' }}
-                onBlur={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.background = '#F9FAFB' }}
-              />
+              <RichTextarea value={description} onChange={setDescription} inputStyle={inputStyle} />
             </div>
             <div style={{ fontSize: '0.65rem', color: '#C4B9D0', lineHeight: 1.6 }}>
               <div>Created {new Date(board.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</div>

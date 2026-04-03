@@ -17,7 +17,7 @@ type EmbedInfo = {
   displayName: string
 }
 
-type UploadStatus = { name: string; status: 'uploading' | 'done' | 'error'; error?: string }
+type UploadStatus = { id: string; name: string; status: 'uploading' | 'done' | 'error'; error?: string }
 
 function parseUrl(url: string): EmbedInfo | null {
   if (!url) return null
@@ -122,10 +122,12 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
 
   async function uploadFiles(files: File[]) {
     if (!cloudScriptUrl || !folderId) return
-    const newUploads: UploadStatus[] = files.map(f => ({ name: f.name, status: 'uploading' }))
+    const ids = files.map(() => `${Date.now()}_${Math.random()}`)
+    const newUploads: UploadStatus[] = files.map((f, i) => ({ id: ids[i], name: f.name, status: 'uploading' }))
     setUploads(prev => [...newUploads, ...prev])
 
     await Promise.all(files.map(async (file, idx) => {
+      const id = ids[idx]
       try {
         const data = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
@@ -133,28 +135,21 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
           reader.onerror = reject
           reader.readAsDataURL(file)
         })
-        const res = await fetch(cloudScriptUrl, {
+        // Route through Next.js proxy to avoid CORS restrictions
+        const res = await fetch('/api/drive-upload', {
           method: 'POST',
-          body: JSON.stringify({ parentFolderId: folderId, data, fileName: file.name }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scriptUrl: cloudScriptUrl, parentFolderId: folderId, data, fileName: file.name }),
         })
         const json = await res.json()
-        setUploads(prev => prev.map((u, i) => {
-          const match = i < newUploads.length && u.name === newUploads[idx].name
-          return match ? { ...u, status: json.success ? 'done' : 'error', error: json.error } : u
-        }))
-        if (json.success) {
-          // Refresh iframe after a short delay to show the new file
-          setTimeout(() => setIframeKey(k => k + 1), 2000)
-        }
+        setUploads(prev => prev.map(u => u.id === id ? { ...u, status: json.success ? 'done' : 'error', error: json.error || json.raw } : u))
+        if (json.success) setTimeout(() => setIframeKey(k => k + 1), 2000)
       } catch (err) {
-        setUploads(prev => prev.map((u, i) => {
-          const match = i < newUploads.length && u.name === newUploads[idx].name
-          return match ? { ...u, status: 'error', error: String(err) } : u
-        }))
+        setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'error', error: String(err) } : u))
       }
     }))
 
-    setTimeout(() => setUploads(prev => prev.filter(u => u.status !== 'done')), 4000)
+    setTimeout(() => setUploads(prev => prev.filter(u => u.status !== 'done')), 5000)
   }
 
   function handleDragEnter(e: React.DragEvent) {
@@ -228,8 +223,9 @@ export function FilePanel({ boardId, filePanelUrl, isCreator, onUpdate, cloudScr
                 {u.status === 'uploading' ? '⏳' : u.status === 'done' ? '✅' : '❌'}
               </span>
               <span style={{ fontSize: '0.7rem', color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{u.name}</span>
-              {u.status === 'uploading' && (
-                <span style={{ fontSize: '0.65rem', color: '#7C3AED' }}>uploading…</span>
+              {u.status === 'uploading' && <span style={{ fontSize: '0.65rem', color: '#7C3AED' }}>uploading…</span>}
+              {u.status === 'error' && u.error && (
+                <span style={{ fontSize: '0.6rem', color: '#dc2626', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={u.error}>{u.error}</span>
               )}
             </div>
           ))}
