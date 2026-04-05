@@ -183,9 +183,9 @@ export function BoardViewV2(props: Props) {
       {/* ── Top nav ── */}
       <header style={{
         height: 48, background: '#FFFFFF', borderBottom: '1.5px solid #E8E5F0',
-        display: 'flex', alignItems: 'center', padding: '0 1rem', gap: '0.625rem',
         flexShrink: 0, position: 'sticky', top: 0, zIndex: 30,
       }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', height: '100%', display: 'flex', alignItems: 'center', padding: '0 1rem', gap: '0.625rem' }}>
         <button
           onClick={() => { if (window.confirm('Go back to all projects?')) window.location.href = '/' }}
           style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', fontSize: '0.75rem', fontWeight: 500, padding: '0.2rem 0.375rem', borderRadius: 5, flexShrink: 0 }}
@@ -201,10 +201,12 @@ export function BoardViewV2(props: Props) {
         <button onClick={() => setShowInvite(true)} style={{ flexShrink: 0, padding: '0.3rem 0.625rem', background: '#EDE9FE', color: '#7C3AED', border: '1px solid #DDD6FE', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>+ Invite</button>
         <button onClick={() => setShowCost(true)} style={{ flexShrink: 0, padding: '0.3rem 0.5rem', background: 'none', color: '#9CA3AF', border: '1px solid #E8E5F0', borderRadius: 6, fontSize: '0.72rem', cursor: 'pointer' }} title="Budget & Cost">💰</button>
         <a href={`/${board.id}`} style={{ flexShrink: 0, padding: '0.3rem 0.5rem', background: 'none', color: '#9CA3AF', border: '1px solid #E8E5F0', borderRadius: 6, fontSize: '0.72rem', textDecoration: 'none' }} title="Switch to v1 Kanban">v1</a>
+      </div>{/* end header inner */}
       </header>
 
       {/* ── Scrollable body ── */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, overflowY: 'auto', background: '#F0EFF8' }}>
+      <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', flexDirection: 'column', background: '#fff', boxShadow: '0 0 0 1px #E8E5F0' }}>
 
         {/* ── Cover photo ── */}
         <div
@@ -436,6 +438,7 @@ export function BoardViewV2(props: Props) {
           </div>
         </div>
 
+      </div>{/* end max-width container */}
       </div>{/* end scrollable body */}
 
       {/* ── Modals ── */}
