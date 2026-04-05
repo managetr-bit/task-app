@@ -19,11 +19,12 @@ import {
 } from '@/lib/types'
 import { BoardView } from './BoardView'
 import { BoardViewV2 } from './BoardViewV2'
+import { BoardViewV3 } from './BoardViewV3'
 import { ProfileSetupModal } from '@/components/ProfileSetupModal'
 import { getLocalProfile, saveLocalProfile, generateProfileId } from '@/lib/profile'
 import { type Profile } from '@/lib/types'
 
-type Props = { boardId: string; version?: 'v1' | 'v2' }
+type Props = { boardId: string; version?: 'v1' | 'v2' | 'v3' }
 
 function getSession(boardId: string): LocalSession | null {
   try {
@@ -660,9 +661,9 @@ export function BoardPageClient({ boardId, version = 'v1' }: Props) {
           onDeleteBudgetLine: deleteBudgetLine, onImportBudgetLines: importBudgetLines,
           onChangeCurrency: changeCurrency, onUpdateMemberRole: updateMemberRole,
         }
-        return version === 'v2'
-          ? <BoardViewV2 {...sharedProps} />
-          : <BoardView {...sharedProps} />
+        if (version === 'v3') return <BoardViewV3 {...sharedProps} />
+        if (version === 'v2') return <BoardViewV2 {...sharedProps} />
+        return <BoardView {...sharedProps} />
       })()}
     </>
   )
