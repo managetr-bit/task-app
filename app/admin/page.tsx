@@ -98,6 +98,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   const [search, setSearch]         = useState('')
   const [confirmId, setConfirmId]   = useState<string | null>(null)
   const [deleting, setDeleting]     = useState<string | null>(null)
+  const [duplicating, setDuplicating] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true); setError('')
@@ -114,6 +115,27 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
   }, [token, onLogout])
 
   useEffect(() => { load() }, [load])
+
+  async function handleDuplicate(id: string) {
+    setDuplicating(id)
+    try {
+      const res = await fetch('/api/duplicate-board', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+        body: JSON.stringify({ sourceBoardId: id }),
+      })
+      const data = await res.json()
+      if (data.newBoardId) {
+        await load()
+        window.open(`/v2/${data.newBoardId}`, '_blank')
+      } else {
+        setError(data.error ?? 'Duplicate failed.')
+      }
+    } catch {
+      setError('Duplicate failed.')
+    }
+    setDuplicating(null)
+  }
 
   async function handleDelete(id: string) {
     setDeleting(id)
@@ -181,8 +203,8 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
         ) : (
           <div style={{ background: '#fff', border: '1.5px solid #E8E5E0', borderRadius: 14, overflow: 'hidden' }}>
             {/* Table head */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 60px 60px 60px 120px 44px', gap: '0 1rem', padding: '0.6rem 1rem', background: '#F9F7F5', borderBottom: '1px solid #F0EDE8' }}>
-              {['Proje Adı', 'Oluşturulma', 'Üye', 'Görev', 'Milestone', '', ''].map((h, i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 60px 60px 60px 80px 80px 44px', gap: '0 1rem', padding: '0.6rem 1rem', background: '#F9F7F5', borderBottom: '1px solid #F0EDE8' }}>
+              {['Proje Adı', 'Oluşturulma', 'Üye', 'Görev', 'Milestone', '', '', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: '0.65rem', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: i >= 2 ? 'center' : 'left' }}>{h}</div>
               ))}
             </div>
@@ -193,7 +215,7 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                 key={board.id}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 100px 60px 60px 60px 120px 44px',
+                  gridTemplateColumns: '1fr 100px 60px 60px 60px 80px 80px 44px',
                   gap: '0 1rem',
                   padding: '0.75rem 1rem',
                   alignItems: 'center',
@@ -227,8 +249,18 @@ function AdminDashboard({ token, onLogout }: { token: string; onLogout: () => vo
                   rel="noopener noreferrer"
                   style={{ fontSize: '0.75rem', color: '#c9a96e', textDecoration: 'none', fontWeight: 600, textAlign: 'center', display: 'block' }}
                 >
-                  Projeyi Aç ↗
+                  Aç v1 ↗
                 </a>
+
+                {/* Duplicate → open in v2 */}
+                <button
+                  onClick={() => handleDuplicate(board.id)}
+                  disabled={duplicating === board.id}
+                  title="Duplicate to v2"
+                  style={{ padding: '0.25rem 0.5rem', borderRadius: 6, border: '1.5px solid #DDD6FE', background: '#F5F3FF', color: '#7C3AED', fontSize: '0.7rem', fontWeight: 700, cursor: duplicating === board.id ? 'default' : 'pointer', opacity: duplicating === board.id ? 0.6 : 1, fontFamily: 'inherit', display: 'block', width: '100%' }}
+                >
+                  {duplicating === board.id ? '…' : 'Dup → v2'}
+                </button>
 
                 {/* Delete */}
                 <div style={{ display: 'flex', justifyContent: 'center' }}>

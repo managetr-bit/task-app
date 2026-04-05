@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "task-app",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/Users/omercimen/Desktop/task-app/.claude/start-dev.sh",
+      "runtimeArgs": [],
       "port": 3002
     }
   ]

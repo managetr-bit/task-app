@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { DEFAULT_COLUMNS } from '@/lib/types'
 import { getLocalProfile } from '@/lib/profile'
@@ -12,6 +12,7 @@ type RecentBoard = { boardId: string; name: string; nickname: string; visitedAt:
 
 export default function LandingPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [boardName, setBoardName]             = useState('')
   const [creating, setCreating]               = useState(false)
   const [error, setError]                     = useState('')
@@ -22,6 +23,12 @@ export default function LandingPage() {
   const [profile, setProfile]                 = useState<Profile | null>(null)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [pendingCreate, setPendingCreate]     = useState(false)
+  const [activeVersion, setActiveVersion]     = useState<'v1' | 'v2'>('v1')
+
+  // Pre-select v2 tab if ?v=2 is in the URL (e.g. redirected from /v2)
+  useEffect(() => {
+    if (searchParams.get('v') === '2') setActiveVersion('v2')
+  }, [searchParams])
 
   useEffect(() => {
     try {
@@ -67,7 +74,7 @@ export default function LandingPage() {
       } catch { /* ignore */ }
     }
 
-    router.push(`/${board.id}`)
+    router.push(activeVersion === 'v2' ? `/v2/${board.id}` : `/${board.id}`)
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -206,10 +213,34 @@ export default function LandingPage() {
           </h1>
           <p style={{
             fontSize: '0.9375rem', color: '#6B7280',
-            textAlign: 'center', maxWidth: 400, lineHeight: 1.6, marginBottom: '2rem',
+            textAlign: 'center', maxWidth: 400, lineHeight: 1.6, marginBottom: '1.5rem',
           }}>
             Timeline · Kanban board · Budget tracking · Team collaboration — all in one place.
           </p>
+
+          {/* Version switcher */}
+          <div style={{ display: 'flex', gap: '0.375rem', background: '#EEEBF8', borderRadius: 10, padding: '0.25rem', marginBottom: '1.5rem' }}>
+            {(['v1', 'v2'] as const).map(v => (
+              <button
+                key={v}
+                onClick={() => setActiveVersion(v)}
+                style={{
+                  padding: '0.375rem 1.125rem', borderRadius: 7, border: 'none', cursor: 'pointer',
+                  fontSize: '0.8125rem', fontWeight: 700, transition: 'all 0.15s ease',
+                  background: activeVersion === v ? '#FFFFFF' : 'transparent',
+                  color: activeVersion === v ? '#7C3AED' : '#9CA3AF',
+                  boxShadow: activeVersion === v ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+                }}
+              >
+                {v === 'v1' ? 'v1 — Kanban' : 'v2 — Dashboard'}
+              </button>
+            ))}
+          </div>
+          {activeVersion === 'v2' && (
+            <p style={{ fontSize: '0.75rem', color: '#7C3AED', marginBottom: '1rem', fontWeight: 500 }}>
+              Projects created or opened in v2 will use the new dashboard layout.
+            </p>
+          )}
 
           {/* Create project form */}
           <form
@@ -298,7 +329,7 @@ export default function LandingPage() {
 
                     <div style={{ padding: '0.875rem 1rem' }}>
                       <div
-                        onClick={() => router.push(`/${rb.boardId}`)}
+                        onClick={() => router.push(activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
                         style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
                       >
                         <div style={{
@@ -356,11 +387,11 @@ export default function LandingPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => router.push(`/${rb.boardId}`)}
+                          onClick={() => router.push(activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
                           className="btn-primary"
                           style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
                         >
-                          Open →
+                          Open {activeVersion} →
                         </button>
                       </div>
                     </div>

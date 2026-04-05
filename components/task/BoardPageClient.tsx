@@ -18,11 +18,12 @@ import {
   DEFAULT_COLUMNS,
 } from '@/lib/types'
 import { BoardView } from './BoardView'
+import { BoardViewV2 } from './BoardViewV2'
 import { ProfileSetupModal } from '@/components/ProfileSetupModal'
 import { getLocalProfile, saveLocalProfile, generateProfileId } from '@/lib/profile'
 import { type Profile } from '@/lib/types'
 
-type Props = { boardId: string }
+type Props = { boardId: string; version?: 'v1' | 'v2' }
 
 function getSession(boardId: string): LocalSession | null {
   try {
@@ -51,7 +52,7 @@ function saveRecentBoard(boardId: string, name: string, nickname: string) {
   }
 }
 
-export function BoardPageClient({ boardId }: Props) {
+export function BoardPageClient({ boardId, version = 'v1' }: Props) {
   const [board, setBoard] = useState<Board | null>(null)
   const [columns, setColumns] = useState<Column[]>([])
   const [members, setMembers] = useState<Member[]>([])
@@ -638,50 +639,31 @@ export function BoardPageClient({ boardId }: Props) {
           onComplete={handleProfileComplete}
         />
       )}
-      {!showProfileModal && board && currentMember && (
-        <BoardView
-          board={board}
-          columns={columns}
-          members={members}
-          tasks={tasks}
-          currentMember={currentMember}
-          isCreator={isCreator}
-          milestones={milestones}
-          milestoneTasks={milestoneTasks}
-          budgetLines={budgetLines}
-          costTransactions={costTransactions}
-          onCreateTask={createTask}
-          onMoveTask={moveTask}
-          onReorderTask={reorderTask}
-          onAssignTask={assignTask}
-          onUpdateTask={updateTask}
-          onDeleteTask={deleteTask}
-          onAddColumn={addColumn}
-          onDeleteColumn={deleteColumn}
-          onRenameColumn={renameColumn}
-          onReorderColumn={reorderColumn}
-          onUpdateFilePanelUrl={updateFilePanelUrl}
-          onUpdateBoardName={updateBoardName}
-          onUpdateBoardInfo={updateBoardInfo}
-          onAddMilestone={addMilestone}
-          onDeleteMilestone={deleteMilestone}
-          onUpdateMilestoneDate={updateMilestoneDate}
-          onUpdateMilestoneName={updateMilestoneName}
-          onCompleteMilestone={completeMilestone}
-          onLinkTask={linkTask}
-          onUnlinkTask={unlinkTask}
-          onUpdateMilestoneDependency={updateMilestoneDependency}
-          onAddTransaction={addTransaction}
-          onUpdateTransaction={updateTransaction}
-          onDeleteTransaction={deleteTransaction}
-          onAddBudgetLine={addBudgetLine}
-          onUpdateBudgetLine={updateBudgetLine}
-          onDeleteBudgetLine={deleteBudgetLine}
-          onImportBudgetLines={importBudgetLines}
-          onChangeCurrency={changeCurrency}
-          onUpdateMemberRole={updateMemberRole}
-        />
-      )}
+      {!showProfileModal && board && currentMember && (() => {
+        const sharedProps = {
+          board, columns, members, tasks, currentMember, isCreator,
+          milestones, milestoneTasks, budgetLines, costTransactions,
+          onCreateTask: createTask, onMoveTask: moveTask, onReorderTask: reorderTask,
+          onAssignTask: assignTask, onUpdateTask: updateTask, onDeleteTask: deleteTask,
+          onAddColumn: addColumn, onDeleteColumn: deleteColumn,
+          onRenameColumn: renameColumn, onReorderColumn: reorderColumn,
+          onUpdateFilePanelUrl: updateFilePanelUrl,
+          onUpdateBoardName: updateBoardName, onUpdateBoardInfo: updateBoardInfo,
+          onAddMilestone: addMilestone, onDeleteMilestone: deleteMilestone,
+          onUpdateMilestoneDate: updateMilestoneDate, onUpdateMilestoneName: updateMilestoneName,
+          onCompleteMilestone: completeMilestone,
+          onLinkTask: linkTask, onUnlinkTask: unlinkTask,
+          onUpdateMilestoneDependency: updateMilestoneDependency,
+          onAddTransaction: addTransaction, onUpdateTransaction: updateTransaction,
+          onDeleteTransaction: deleteTransaction,
+          onAddBudgetLine: addBudgetLine, onUpdateBudgetLine: updateBudgetLine,
+          onDeleteBudgetLine: deleteBudgetLine, onImportBudgetLines: importBudgetLines,
+          onChangeCurrency: changeCurrency, onUpdateMemberRole: updateMemberRole,
+        }
+        return version === 'v2'
+          ? <BoardViewV2 {...sharedProps} />
+          : <BoardView {...sharedProps} />
+      })()}
     </>
   )
 }

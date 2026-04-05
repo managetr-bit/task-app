@@ -356,6 +356,11 @@ export function BoardView({
           </button>
         </div>
 
+        {/* v1 badge */}
+        <div style={{ flexShrink: 0, padding: '0 0.25rem 0 0' }}>
+          <span style={{ fontSize: '0.55rem', fontWeight: 800, letterSpacing: '0.06em', color: '#7C3AED', background: '#EDE9FE', border: '1px solid #DDD6FE', borderRadius: 4, padding: '0.15rem 0.35rem', textTransform: 'uppercase' }}>v1</span>
+        </div>
+
         {/* 2. Project Name / Description */}
         <div
           onClick={() => setShowProjectInfo(true)}
