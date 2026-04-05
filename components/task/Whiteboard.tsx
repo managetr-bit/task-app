@@ -14,9 +14,10 @@ type Props = {
   onClose: () => void
   cloudScriptUrl?: string
   driveFolderId?: string
+  inline?: boolean   // render as inline panel instead of fullscreen overlay
 }
 
-export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: Props) {
+export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId, inline = false }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [tool, setTool] = useState<Tool>('pen')
   const [color, setColor] = useState('#1a1a1a')
@@ -183,6 +184,34 @@ export function Whiteboard({ boardId, onClose, cloudScriptUrl, driveFolderId }: 
       setDriveStatus('error')
     }
     setTimeout(() => setDriveStatus('idle'), 3500)
+  }
+
+  if (inline) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%', background: '#fff', overflow: 'hidden', position: 'relative' }}>
+        {/* Compact inline toolbar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.35rem 0.625rem', borderBottom: '1px solid #F3F4F6', background: '#FAFAFA', flexShrink: 0, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Whiteboard</span>
+          <div style={{ width: 1, height: 16, background: '#E8E5E0' }} />
+          {(['pen', 'eraser'] as Tool[]).map(t => (
+            <button key={t} onClick={() => setTool(t)} style={{ width: 24, height: 24, borderRadius: 6, border: tool === t ? '2px solid #7C3AED' : '1.5px solid #E8E5E0', background: tool === t ? '#EDE9FE' : '#fff', cursor: 'pointer', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {t === 'pen' ? '✏️' : '🧹'}
+            </button>
+          ))}
+          <div style={{ display: 'flex', gap: '0.2rem', alignItems: 'center' }}>
+            {COLORS.map(c => (
+              <button key={c} onClick={() => { setColor(c); setTool('pen') }} style={{ width: c === color && tool === 'pen' ? 16 : 13, height: c === color && tool === 'pen' ? 16 : 13, borderRadius: '50%', background: c, border: c === color && tool === 'pen' ? '2px solid #1a1a1a' : '1.5px solid transparent', cursor: 'pointer', flexShrink: 0 }} />
+            ))}
+          </div>
+          <button onClick={clearCanvas} style={{ padding: '0.15rem 0.4rem', borderRadius: 5, border: '1.5px solid #E8E5E0', background: '#fff', color: '#6b7280', fontSize: '0.65rem', cursor: 'pointer' }}>Clear</button>
+          <button onClick={downloadPng} style={{ padding: '0.15rem 0.4rem', borderRadius: 5, border: '1.5px solid #E8E5E0', background: '#fff', color: '#6b7280', fontSize: '0.65rem', cursor: 'pointer' }}>Save as PNG</button>
+        </div>
+        <div style={{ flex: 1, overflow: 'hidden', background: '#f9f9f8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}>
+          <canvas ref={canvasRef} width={1600} height={900} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block', background: '#fff', touchAction: 'none', userSelect: 'none' }}
+            onPointerDown={startDrawing} onPointerMove={draw} onPointerUp={stopDrawing} onPointerCancel={stopDrawing} />
+        </div>
+      </div>
+    )
   }
 
   return (
