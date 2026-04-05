@@ -5,7 +5,7 @@ import {
   type Board, type Column, type Member, type MemberRole, type Task,
   type Milestone, type MilestoneTask, type Priority, type BudgetLine, type CostTransaction,
 } from '@/lib/types'
-import { TimelineCashFlow } from './TimelineCashFlow'
+import { GanttV2 } from './v2/GanttV2'
 import { NotesPanel } from './NotesPanel'
 import { FilePanel } from './FilePanel'
 import { Whiteboard } from './Whiteboard'
@@ -337,24 +337,19 @@ export function BoardViewV2(props: Props) {
           ))}
         </div>
 
-        {/* ── Timeline ── */}
+        {/* ── Timeline (v2 Gantt) ── */}
         <div style={{ background: '#FFFFFF', borderBottom: '1.5px solid #E8E5F0', flexShrink: 0 }}>
-          <TimelineCashFlow
+          <GanttV2
+            tasks={tasks}
+            columns={columns}
             milestones={milestones}
             milestoneTasks={milestoneTasks}
-            tasks={tasks}
             costTransactions={costTransactions}
             budgetLines={budgetLines}
             currency={board.currency}
-            onAdd={onAddMilestone}
-            onDelete={onDeleteMilestone}
-            onUpdateDate={onUpdateMilestoneDate}
-            onUpdateName={onUpdateMilestoneName}
-            onComplete={onCompleteMilestone}
-            onLinkTask={onLinkTask}
-            onUnlinkTask={onUnlinkTask}
-            onCollapse={() => {}}
-            onUpdateDependency={onUpdateMilestoneDependency}
+            boardPhotos={board.photos ?? []}
+            onAddMilestone={onAddMilestone}
+            onUpdateMilestoneDate={onUpdateMilestoneDate}
           />
         </div>
 
