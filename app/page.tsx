@@ -23,11 +23,13 @@ export default function LandingPage() {
   const [profile, setProfile]                 = useState<Profile | null>(null)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [pendingCreate, setPendingCreate]     = useState(false)
-  const [activeVersion, setActiveVersion]     = useState<'v1' | 'v2'>('v1')
+  const [activeVersion, setActiveVersion]     = useState<'v1' | 'v2' | 'v3'>('v1')
 
-  // Pre-select v2 tab if ?v=2 is in the URL (e.g. redirected from /v2)
+  // Pre-select tab from ?v= param
   useEffect(() => {
-    if (searchParams.get('v') === '2') setActiveVersion('v2')
+    const v = searchParams.get('v')
+    if (v === '2') setActiveVersion('v2')
+    if (v === '3') setActiveVersion('v3')
   }, [searchParams])
 
   useEffect(() => {
@@ -74,7 +76,8 @@ export default function LandingPage() {
       } catch { /* ignore */ }
     }
 
-    router.push(activeVersion === 'v2' ? `/v2/${board.id}` : `/${board.id}`)
+    const path = activeVersion === 'v3' ? `/v3/${board.id}` : activeVersion === 'v2' ? `/v2/${board.id}` : `/${board.id}`
+    router.push(path)
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -220,7 +223,11 @@ export default function LandingPage() {
 
           {/* Version switcher */}
           <div style={{ display: 'flex', gap: '0.375rem', background: '#EEEBF8', borderRadius: 10, padding: '0.25rem', marginBottom: '1.5rem' }}>
-            {(['v1', 'v2'] as const).map(v => (
+            {([
+              { v: 'v1', label: 'v1 — Kanban' },
+              { v: 'v2', label: 'v2 — Dashboard' },
+              { v: 'v3', label: 'v3 — Spreadsheet' },
+            ] as { v: 'v1' | 'v2' | 'v3'; label: string }[]).map(({ v, label }) => (
               <button
                 key={v}
                 onClick={() => setActiveVersion(v)}
@@ -232,15 +239,10 @@ export default function LandingPage() {
                   boxShadow: activeVersion === v ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                 }}
               >
-                {v === 'v1' ? 'v1 — Kanban' : 'v2 — Dashboard'}
+                {label}
               </button>
             ))}
           </div>
-          {activeVersion === 'v2' && (
-            <p style={{ fontSize: '0.75rem', color: '#7C3AED', marginBottom: '1rem', fontWeight: 500 }}>
-              Projects created or opened in v2 will use the new dashboard layout.
-            </p>
-          )}
 
           {/* Create project form */}
           <form
@@ -329,7 +331,7 @@ export default function LandingPage() {
 
                     <div style={{ padding: '0.875rem 1rem' }}>
                       <div
-                        onClick={() => router.push(activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
+                        onClick={() => router.push(activeVersion === 'v3' ? `/v3/${rb.boardId}` : activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
                         style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
                       >
                         <div style={{
@@ -387,7 +389,7 @@ export default function LandingPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => router.push(activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
+                          onClick={() => router.push(activeVersion === 'v3' ? `/v3/${rb.boardId}` : activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
                           className="btn-primary"
                           style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
                         >
