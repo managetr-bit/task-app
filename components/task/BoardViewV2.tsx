@@ -84,6 +84,7 @@ export function BoardViewV2(props: Props) {
   const [showProjectInfo, setShowProjectInfo] = useState(false)
   const [showInvite, setShowInvite] = useState(false)
   const [showCost, setShowCost] = useState(false)
+  const [showWhiteboard, setShowWhiteboard] = useState(false)
   const [recentNotes, setRecentNotes] = useState<Note[]>([])
   const [weather, setWeather] = useState<Weather>(null)
   const [cloudScriptUrl, setCloudScriptUrl] = useState<string>(() => {
@@ -413,9 +414,25 @@ export function BoardViewV2(props: Props) {
             />
           </div>
 
-          {/* Whiteboard */}
-          <div style={{ flex: 1.5, minWidth: 0, borderRight: '1.5px solid #E8E5F0', overflow: 'hidden' }}>
-            <Whiteboard boardId={board.id} onClose={() => {}} cloudScriptUrl={cloudScriptUrl || undefined} driveFolderId={driveFolderId} />
+          {/* Whiteboard launcher */}
+          <div style={{ flex: 1.5, minWidth: 0, borderRight: '1.5px solid #E8E5F0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '0.625rem 0.875rem', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: '#1a1a1a' }}>✏️ Whiteboard</span>
+              <button
+                onClick={() => setShowWhiteboard(true)}
+                style={{ padding: '0.25rem 0.625rem', background: '#EDE9FE', color: '#7C3AED', border: '1px solid #DDD6FE', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}
+              >
+                Open →
+              </button>
+            </div>
+            <div
+              onClick={() => setShowWhiteboard(true)}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer', background: '#FAFAF9' }}
+            >
+              <span style={{ fontSize: '2rem', opacity: 0.3 }}>🖊</span>
+              <span style={{ fontSize: '0.75rem', color: '#9CA3AF' }}>Native freehand canvas</span>
+              <span style={{ fontSize: '0.65rem', color: '#C4BFBA' }}>Click to open</span>
+            </div>
           </div>
 
           {/* Activity Feed + Weather */}
@@ -471,6 +488,9 @@ export function BoardViewV2(props: Props) {
           onClose={() => setShowProjectInfo(false)}
           onSave={async (updates) => { await onUpdateBoardInfo(updates); setShowProjectInfo(false) }}
         />
+      )}
+      {showWhiteboard && (
+        <Whiteboard boardId={board.id} onClose={() => setShowWhiteboard(false)} cloudScriptUrl={cloudScriptUrl || undefined} driveFolderId={driveFolderId} />
       )}
       {showInvite && (
         <InviteManager
