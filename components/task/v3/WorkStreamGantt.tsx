@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef } from 'react'
 import {
   type Task, type Column, type Milestone, type MilestoneTask,
   type CostTransaction, type BudgetLine,
@@ -9,7 +9,7 @@ import {
 // ─── types ────────────────────────────────────────────────────────────────────
 
 type Timeframe = 'weekly' | 'monthly' | 'quarterly'
-type LayerKey  = 'photos' | 'milestones' | 'risks'
+type LayerKey  = 'photos' | 'milestones' | 'risks' | 'process'
 
 type Period = { label: string; start: Date; end: Date; key: string }
 
@@ -17,6 +17,22 @@ type Risk = {
   id: string; name: string
   severity: 'H' | 'M' | 'L'
   startFrac: number; endFrac: number
+}
+
+type ProcessStep = {
+  id: string
+  name: string
+  description: string
+  startFrac: number
+  endFrac: number
+}
+
+type ProcessPhase = {
+  id: string
+  label: string
+  purpose: string
+  color: string
+  steps: ProcessStep[]
 }
 
 export type WorkStreamGanttProps = {
@@ -34,7 +50,7 @@ export type WorkStreamGanttProps = {
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-const LABEL_W = 148  // px
+const LABEL_W = 148
 
 const COL_W: Record<Timeframe, number> = { weekly: 44, monthly: 64, quarterly: 100 }
 
@@ -48,6 +64,136 @@ const DEMO_RISKS: Risk[] = [
   { id: 'r1', name: 'Permit Approval Delay',    severity: 'H', startFrac: 0.02, endFrac: 0.20 },
   { id: 'r2', name: 'Material Cost Overrun',     severity: 'M', startFrac: 0.25, endFrac: 0.55 },
   { id: 'r3', name: 'Weather / Site Disruption', severity: 'L', startFrac: 0.60, endFrac: 0.80 },
+]
+
+// ── Standard Construction Process ─────────────────────────────────────────────
+//    Fractions reflect a realistic overlapping Türkiye construction sequence.
+
+const STANDARD_PROCESS: ProcessPhase[] = [
+  {
+    id: 'p1',
+    label: 'FAZ 1 — Geliştirme & Hukuki Temel',
+    purpose: 'Yatırımın fizibilitesini kesinleştirmek ve arsa kontrolünü ele almak.',
+    color: '#7C3AED',
+    steps: [
+      {
+        id: 'p1s1',
+        name: 'Proje Araştırması & Ön Değerlendirme',
+        description: 'Pazar analizi, bölge imar durumu (emsal / fonksiyon) ve finansal modelleme (Pro-forma). Yatırımın yapılabilirliğini kanıtlayan temel çalışmadır.',
+        startFrac: 0.00, endFrac: 0.08,
+      },
+      {
+        id: 'p1s2',
+        name: 'Proje Görüşmeleri & Ön Anlaşma',
+        description: 'Paydaşlarla (arsa sahipleri / yatırımcılar) temel ticari şartlarda mutabakat sağlanması. Ön protokol veya niyet mektubu imzalanır.',
+        startFrac: 0.05, endFrac: 0.14,
+      },
+      {
+        id: 'p1s3',
+        name: 'Sözleşme Süreci',
+        description: 'Noter onaylı Kat Karşılığı İnşaat Sözleşmesi\'nin imzalanması ve tapuya şerh düşürülmesi. Hukuki zemin tamamlanır.',
+        startFrac: 0.11, endFrac: 0.18,
+      },
+    ],
+  },
+  {
+    id: 'p2',
+    label: 'FAZ 2 — Tasarım, Mühendislik & Ruhsatlandırma',
+    purpose: 'Kağıt üzerindeki projenin yasal onaylarını almak.',
+    color: '#2563EB',
+    steps: [
+      {
+        id: 'p2s1',
+        name: 'Konsept Tasarım & Mühendislik',
+        description: 'Mimari, statik, elektrik ve mekanik uygulama projelerinin hazırlanması. Koordinasyon toplantıları ve BIM / 2D çizim süreçleri.',
+        startFrac: 0.16, endFrac: 0.30,
+      },
+      {
+        id: 'p2s2',
+        name: 'Ruhsatlandırma',
+        description: 'İlgili belediyeden Yapı Ruhsatı\'nın alınması. Onay, inşaatın resmi başlangıç tetikleyicisidir. Yapı denetim sözleşmesi bu aşamada imzalanır.',
+        startFrac: 0.26, endFrac: 0.36,
+      },
+    ],
+  },
+  {
+    id: 'p3',
+    label: 'FAZ 3 — Altyapı & Kaba Yapı',
+    purpose: 'Binanın taşıyıcı sistemini ve ana omurgasını kurmak.',
+    color: '#EA580C',
+    steps: [
+      {
+        id: 'p3s1',
+        name: 'Mobilizasyon & Hafriyat',
+        description: 'Şantiye kurulumu, çevre güvenliği, iksa (kazı koruma) işleri ve hafriyat nakliyesi. Zemin etüdüne göre zemin iyileştirmesi gerekebilir.',
+        startFrac: 0.34, endFrac: 0.44,
+      },
+      {
+        id: 'p3s2',
+        name: 'Kaba İnşaat — Taşıyıcı Sistem',
+        description: 'Temel dökümü, kolon, kiriş ve döşeme imalatları (karkas). Yapı denetim kontrolleri her kat dökümünden önce yapılır.',
+        startFrac: 0.41, endFrac: 0.63,
+      },
+      {
+        id: 'p3s3',
+        name: 'E&M Faz 1 — Ankastre',
+        description: 'Beton dökümü öncesi bırakılan borulama, rezervasyonlar ve ana şaft / kolon hatları. Sonradan değiştirimi imkânsız kritik işlerdir.',
+        startFrac: 0.42, endFrac: 0.62,
+      },
+    ],
+  },
+  {
+    id: 'p4',
+    label: 'FAZ 4 — İnce İşler, Cephe & Dış Mekan',
+    purpose: 'Binayı dış hava şartlarından izole etmek ve yaşam standartlarını oluşturmak.',
+    color: '#0D9488',
+    steps: [
+      {
+        id: 'p4s1',
+        name: 'Cephe Kapatma & Doğrama',
+        description: 'Pencerelerin takılması, dış cephe kaplama sistemi ve su yalıtımı. Bu aşamanın tamamlanması binanın "suya kapalı" hale gelmesi anlamına gelir.',
+        startFrac: 0.60, endFrac: 0.74,
+      },
+      {
+        id: 'p4s2',
+        name: 'İnce İşler — İç Mekan',
+        description: 'Alçı, şap, seramik, asma tavan ve boya işleri. E&M 2. faz (branşman, armatür) bu işlerle eş zamanlı yürütülür.',
+        startFrac: 0.68, endFrac: 0.84,
+      },
+      {
+        id: 'p4s3',
+        name: 'Çevre Düzenleme — Peyzaj',
+        description: 'İstinat duvarları, sert zemin kaplamaları (parke, asfalt), otopark ve bitkilendirme. İskan için zorunlu tamamlanma şartı.',
+        startFrac: 0.78, endFrac: 0.90,
+      },
+    ],
+  },
+  {
+    id: 'p5',
+    label: 'FAZ 5 — Devreye Alma, Kabul & Teslimat',
+    purpose: 'Teknik sistemleri çalıştırmak ve mülkiyeti devretmek.',
+    color: '#059669',
+    steps: [
+      {
+        id: 'p5s1',
+        name: 'Devreye Alma (Commissioning)',
+        description: 'Mekanik ve elektrik sistem testleri: asansör, yangın algılama/söndürme, hidrofor, doğalgaz. Sertifikalar teknik şartname karşılaştırmasıyla onaylanır.',
+        startFrac: 0.84, endFrac: 0.92,
+      },
+      {
+        id: 'p5s2',
+        name: 'Resmi İşlemler & İskan',
+        description: 'Yapı denetim onayları ve Yapı Kullanma İzin Belgesi (İskan) alımı. İskansız satış veya kira mümkün değildir.',
+        startFrac: 0.89, endFrac: 0.96,
+      },
+      {
+        id: 'p5s3',
+        name: 'Proje Kapanış & Teslimat',
+        description: 'Kat mülkiyeti tapularının verilmesi, arsa sahibi / müşteri teslim tutanakları ve kusur takip sürecinin başlatılması (garanti dönemi).',
+        startFrac: 0.93, endFrac: 1.00,
+      },
+    ],
+  },
 ]
 
 const STRIPE =
@@ -87,7 +233,6 @@ function computePeriods(start: Date, end: Date, tf: Timeframe): Period[] {
     }
   } else {
     const c = new Date(start)
-    // align to Monday
     c.setDate(c.getDate() - ((c.getDay() + 6) % 7))
     while (c <= end) {
       const pEnd = addDays(c, 6)
@@ -113,6 +258,44 @@ function colBarStyle(colName: string): { bg: string; stripe: boolean; dashed: bo
   return { bg: '#CBD5E1', stripe: false, dashed: true }
 }
 
+// ─── Info tooltip ─────────────────────────────────────────────────────────────
+
+function InfoTooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  return (
+    <div
+      ref={ref}
+      style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button style={{
+        width: 14, height: 14, borderRadius: '50%',
+        background: 'rgba(148,163,184,0.18)', border: '1px solid #CBD5E1',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'help', padding: 0, fontSize: '0.5rem', color: '#64748B', fontWeight: 800,
+        lineHeight: 1, flexShrink: 0,
+      }}>ⓘ</button>
+      {open && (
+        <div style={{
+          position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)',
+          zIndex: 50,
+          background: '#0F172A', color: '#E2E8F0',
+          fontSize: '0.62rem', lineHeight: 1.55, fontWeight: 400,
+          padding: '0.5rem 0.7rem', borderRadius: 6,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+          width: 240, whiteSpace: 'normal', pointerEvents: 'none',
+        }}>
+          <div style={{ position: 'absolute', left: -5, top: '50%', transform: 'translateY(-50%)', width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: '5px solid #0F172A' }} />
+          {text}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── component ────────────────────────────────────────────────────────────────
 
 export function WorkStreamGantt({
@@ -127,12 +310,12 @@ export function WorkStreamGantt({
 
   const [filter,    setFilter]    = useState<string>('all')
   const [layers,    setLayers]    = useState<Record<LayerKey, boolean>>({
-    photos: false, milestones: true, risks: false,
+    photos: false, milestones: true, risks: false, process: false,
   })
   const [tf,        setTf]        = useState<Timeframe>('monthly')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
-  // ── date range ───────────────────────────────────────────────────────────────
+  // ── date range ────────────────────────────────────────────────────────────
   const { rangeStart, rangeEnd } = useMemo(() => {
     const dates: number[] = []
     tasks.forEach(t => { if (t.due_date) dates.push(new Date(t.due_date + 'T00:00:00').getTime()) })
@@ -140,13 +323,13 @@ export function WorkStreamGantt({
     costTransactions.forEach(t => dates.push(new Date(t.date + 'T00:00:00').getTime()))
     if (dates.length === 0) {
       const now = new Date()
-      const s = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-      const e = new Date(now.getFullYear(), now.getMonth() + 10, 0)
-      return { rangeStart: s, rangeEnd: e }
+      return {
+        rangeStart: new Date(now.getFullYear(), now.getMonth() - 2, 1),
+        rangeEnd:   new Date(now.getFullYear(), now.getMonth() + 10, 0),
+      }
     }
-    const minMs = Math.min(...dates), maxMs = Math.max(...dates)
-    const s = new Date(minMs); s.setMonth(s.getMonth() - 1); s.setDate(1)
-    const e = new Date(maxMs); e.setMonth(e.getMonth() + 1); e.setDate(0)
+    const s = new Date(Math.min(...dates)); s.setMonth(s.getMonth() - 1); s.setDate(1)
+    const e = new Date(Math.max(...dates)); e.setMonth(e.getMonth() + 1); e.setDate(0)
     return { rangeStart: s, rangeEnd: e }
   }, [tasks, milestones, costTransactions])
 
@@ -159,35 +342,30 @@ export function WorkStreamGantt({
   const pct = (d: Date) =>
     Math.max(0, Math.min(100, (d.getTime() - rangeStart.getTime()) / totalMs * 100))
 
-  const today      = new Date()
-  const todayPct   = pct(today)
+  const today        = new Date()
+  const todayPct     = pct(today)
   const todayInRange = todayPct > 0 && todayPct < 100
 
   // ── filter ────────────────────────────────────────────────────────────────
-  const visibleColumns = useMemo(() => {
-    if (filter === 'all') return columns
-    return columns.filter(c => c.id === filter)
-  }, [columns, filter])
+  const visibleColumns = useMemo(() =>
+    filter === 'all' ? columns : columns.filter(c => c.id === filter),
+    [columns, filter],
+  )
 
   const tasksByCol = useMemo(() => {
     const map: Record<string, Task[]> = {}
     columns.forEach(c => { map[c.id] = [] })
     tasks.forEach(t => {
-      if (map[t.column_id] !== undefined && t.due_date)
-        map[t.column_id].push(t)
+      if (map[t.column_id] !== undefined && t.due_date) map[t.column_id].push(t)
     })
     return map
   }, [tasks, columns])
 
-  // cash flow
   const cashIn  = costTransactions.filter(t => t.type === 'cash_in'  && !t.is_forecast)
   const cashOut = costTransactions.filter(t => t.type === 'cash_out' && !t.is_forecast)
   const showFlow = cashIn.length > 0 || cashOut.length > 0
 
-  const colW = COL_W[tf]
-  const totalW = LABEL_W + periods.length * colW
-
-  // ── shared today line ─────────────────────────────────────────────────────
+  // ── shared sub-components ─────────────────────────────────────────────────
   const TodayLine = () => todayInRange
     ? <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${todayPct}%`, width: 1.5, background: '#2563EB', opacity: 0.5, pointerEvents: 'none', zIndex: 2 }} />
     : null
@@ -210,11 +388,10 @@ export function WorkStreamGantt({
     </>
   )
 
-  // ── render ────────────────────────────────────────────────────────────────
   return (
     <div style={{ background: '#F8FAFC', borderTop: '1.5px solid #E2E8F0' }}>
 
-      {/* Controls bar */}
+      {/* ── Controls bar ── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap',
         padding: '0.5rem 1rem', background: '#fff', borderBottom: '1px solid #E2E8F0',
@@ -237,21 +414,26 @@ export function WorkStreamGantt({
         <div style={{ width: 1, height: 18, background: '#E2E8F0', margin: '0 0.25rem', flexShrink: 0 }} />
 
         {/* LAYER toggles */}
-        {(['photos', 'milestones', 'risks'] as LayerKey[]).map(k => {
-          const active = layers[k]
+        {([
+          { key: 'photos',   label: 'Photos'   },
+          { key: 'milestones', label: 'Milestones' },
+          { key: 'risks',    label: 'Risks'    },
+          { key: 'process',  label: 'Süreç'   },
+        ] as { key: LayerKey; label: string }[]).map(({ key, label }) => {
+          const active = layers[key]
           return (
-            <button key={k} onClick={() => setLayers(p => ({ ...p, [k]: !p[k] }))} style={{
+            <button key={key} onClick={() => setLayers(p => ({ ...p, [key]: !p[key] }))} style={{
               padding: '0.2rem 0.55rem', borderRadius: 99, fontSize: '0.67rem', fontWeight: 600,
               cursor: 'pointer', border: 'none', transition: 'all 0.12s',
-              background: active ? '#0EA5E9' : '#F1F5F9',
-              color:      active ? '#fff'    : '#64748B',
-            }}>{k.charAt(0).toUpperCase() + k.slice(1)}</button>
+              background: active ? (key === 'process' ? '#7C3AED' : '#0EA5E9') : '#F1F5F9',
+              color:      active ? '#fff' : '#64748B',
+            }}>{label}</button>
           )
         })}
 
         <div style={{ flex: 1 }} />
 
-        {/* Timeframe switcher */}
+        {/* Timeframe */}
         <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 8, padding: 2, gap: 1 }}>
           {(['weekly', 'monthly', 'quarterly'] as Timeframe[]).map(t => (
             <button key={t} onClick={() => setTf(t)} style={{
@@ -265,34 +447,21 @@ export function WorkStreamGantt({
         </div>
       </div>
 
-      {/* Gantt area */}
+      {/* ── Gantt area ── */}
       <div style={{ overflowX: 'auto' }}>
-        <div style={{ minWidth: totalW }}>
+        <div style={{ minWidth: LABEL_W + periods.length * COL_W[tf] }}>
 
-          {/* Header row */}
+          {/* Period header */}
           <div style={{ display: 'flex', height: 38, background: '#F1F5F9', borderBottom: '1px solid #E2E8F0', position: 'sticky', top: 0, zIndex: 5 }}>
-            <div style={{
-              width: LABEL_W, flexShrink: 0,
-              borderRight: '1px solid #E2E8F0',
-              display: 'flex', alignItems: 'center', padding: '0 0.75rem',
-              background: '#F1F5F9',
-            }}>
+            <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 0.75rem', background: '#F1F5F9' }}>
               <span style={{ fontSize: '0.57rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Work Stream</span>
             </div>
             <div style={{ flex: 1, display: 'flex' }}>
               {periods.map(p => {
                 const isNow = today >= p.start && today <= p.end
                 return (
-                  <div key={p.key} style={{
-                    flex: 1, borderRight: '1px solid #E2E8F0',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: isNow ? '#EFF6FF' : 'transparent',
-                  }}>
-                    <span style={{
-                      fontSize: '0.58rem', fontWeight: isNow ? 800 : 500,
-                      color: isNow ? '#2563EB' : '#94A3B8',
-                      whiteSpace: 'nowrap', letterSpacing: isNow ? '-0.01em' : 0,
-                    }}>
+                  <div key={p.key} style={{ flex: 1, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isNow ? '#EFF6FF' : 'transparent' }}>
+                    <span style={{ fontSize: '0.58rem', fontWeight: isNow ? 800 : 500, color: isNow ? '#2563EB' : '#94A3B8', whiteSpace: 'nowrap' }}>
                       {p.label}{isNow ? ' · Now' : ''}
                     </span>
                   </div>
@@ -301,7 +470,7 @@ export function WorkStreamGantt({
             </div>
           </div>
 
-          {/* Site Chronicle */}
+          {/* ── Site Chronicle ── */}
           {layers.photos && boardPhotos.length > 0 && (
             <div style={{ display: 'flex', height: 64, borderBottom: '1px solid #E2E8F0' }}>
               <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0 0.75rem', background: '#fff' }}>
@@ -312,15 +481,7 @@ export function WorkStreamGantt({
                 {boardPhotos.slice(0, 6).map((url, i) => {
                   const frac = (i + 0.5) / boardPhotos.slice(0, 6).length
                   return (
-                    <div key={i} style={{
-                      position: 'absolute',
-                      left: `calc(${frac * 100}% - 20px)`,
-                      top: 6, width: 40, height: 52,
-                      borderRadius: 4, overflow: 'hidden',
-                      border: '2px solid #fff',
-                      boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                      zIndex: 1,
-                    }}>
+                    <div key={i} style={{ position: 'absolute', left: `calc(${frac * 100}% - 20px)`, top: 6, width: 40, height: 52, borderRadius: 4, overflow: 'hidden', border: '2px solid #fff', boxShadow: '0 2px 6px rgba(0,0,0,0.15)', zIndex: 1 }}>
                       <img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   )
@@ -330,7 +491,7 @@ export function WorkStreamGantt({
             </div>
           )}
 
-          {/* Work stream rows */}
+          {/* ── Work stream rows (columns) ── */}
           {visibleColumns.map(col => {
             const colTasks = tasksByCol[col.id] ?? []
             const style    = colBarStyle(col.name)
@@ -342,72 +503,42 @@ export function WorkStreamGantt({
 
             return (
               <React.Fragment key={col.id}>
-                {/* Column header row */}
                 <div
                   onClick={() => setCollapsed(p => ({ ...p, [col.id]: !p[col.id] }))}
                   style={{ display: 'flex', height: 36, borderBottom: '1px solid #E2E8F0', cursor: 'pointer', background: '#fff' }}
                 >
-                  <div style={{
-                    width: LABEL_W, flexShrink: 0,
-                    borderRight: '1px solid #E2E8F0',
-                    display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0 0.75rem',
-                  }}>
-                    <span style={{
-                      fontSize: '0.6rem', color: '#94A3B8', flexShrink: 0,
-                      transition: 'transform 0.15s',
-                      display: 'inline-block',
-                      transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-                    }}>▾</span>
+                  <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0 0.75rem' }}>
+                    <span style={{ fontSize: '0.6rem', color: '#94A3B8', flexShrink: 0, display: 'inline-block', transition: 'transform 0.15s', transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
                     <div style={{ width: 7, height: 7, borderRadius: '50%', background: style.bg, flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#1E293B', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {col.name}
-                    </span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#1E293B', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{col.name}</span>
                     <span style={{ fontSize: '0.57rem', color: '#94A3B8', flexShrink: 0 }}>{colTasks.length}</span>
                   </div>
                   <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                     <GridLines />
                     {spanL !== null && spanR !== null && (
                       <div style={{
-                        position: 'absolute',
-                        left: `${spanL}%`,
-                        width: `${Math.max(spanR - spanL, 0.6)}%`,
-                        top: '22%', height: '56%', borderRadius: 3,
+                        position: 'absolute', left: `${spanL}%`, width: `${Math.max(spanR - spanL, 0.6)}%`,
+                        top: '22%', height: '56%', borderRadius: 3, zIndex: 1,
                         background: style.dashed ? 'transparent' : style.bg,
                         backgroundImage: style.stripe ? STRIPE : 'none',
-                        border: style.dashed ? `1.5px dashed #94A3B8` : 'none',
-                        opacity: 0.85, zIndex: 1,
+                        border: style.dashed ? '1.5px dashed #94A3B8' : 'none',
+                        opacity: 0.85,
                       }} />
                     )}
                     <TodayLine />
                   </div>
                 </div>
 
-                {/* Task sub-rows */}
                 {isOpen && colTasks.map(task => {
                   const d  = new Date(task.due_date! + 'T00:00:00')
-                  const s  = addDays(d, -7)
-                  const bL = pct(s), bR = pct(d)
+                  const bL = pct(addDays(d, -7)), bR = pct(d)
                   return (
                     <div key={task.id} style={{ display: 'flex', height: 26, borderBottom: '1px solid #F8FAFC', background: '#FAFBFD' }}>
-                      <div style={{
-                        width: LABEL_W, flexShrink: 0,
-                        borderRight: '1px solid #E2E8F0',
-                        display: 'flex', alignItems: 'center', padding: '0 0.75rem 0 2rem',
-                      }}>
-                        <span style={{ fontSize: '0.62rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {task.title}
-                        </span>
+                      <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 0.75rem 0 2rem' }}>
+                        <span style={{ fontSize: '0.62rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
                       </div>
                       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                        <div style={{
-                          position: 'absolute',
-                          left: `${bL}%`,
-                          width: `${Math.max(bR - bL, 0.4)}%`,
-                          top: '15%', height: '70%', borderRadius: 2,
-                          background: style.bg, opacity: 0.55,
-                          backgroundImage: style.stripe ? STRIPE : 'none',
-                          zIndex: 1,
-                        }} />
+                        <div style={{ position: 'absolute', left: `${bL}%`, width: `${Math.max(bR - bL, 0.4)}%`, top: '15%', height: '70%', borderRadius: 2, background: style.bg, opacity: 0.55, backgroundImage: style.stripe ? STRIPE : 'none', zIndex: 1 }} />
                         <TodayLine />
                       </div>
                     </div>
@@ -417,7 +548,7 @@ export function WorkStreamGantt({
             )
           })}
 
-          {/* Milestones row */}
+          {/* ── Milestones ── */}
           {layers.milestones && milestones.length > 0 && (
             <div style={{ display: 'flex', height: 34, borderBottom: '1px solid #E2E8F0' }}>
               <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 0.75rem', background: '#fff' }}>
@@ -429,15 +560,7 @@ export function WorkStreamGantt({
                   const p = pct(new Date(m.target_date + 'T00:00:00'))
                   if (p < 0 || p > 100) return null
                   return (
-                    <div key={m.id} title={`${m.name} · ${m.target_date}`} style={{
-                      position: 'absolute',
-                      left: `${p}%`, top: '50%',
-                      transform: 'translate(-50%, -50%) rotate(45deg)',
-                      width: 10, height: 10, zIndex: 2,
-                      background: m.completed_at ? '#10B981' : '#F59E0B',
-                      border: '2px solid #fff',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.18)',
-                    }} />
+                    <div key={m.id} title={`${m.name} · ${m.target_date}`} style={{ position: 'absolute', left: `${p}%`, top: '50%', transform: 'translate(-50%, -50%) rotate(45deg)', width: 10, height: 10, zIndex: 2, background: m.completed_at ? '#10B981' : '#F59E0B', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)' }} />
                   )
                 })}
                 <TodayLine />
@@ -445,44 +568,81 @@ export function WorkStreamGantt({
             </div>
           )}
 
-          {/* Risk rows */}
-          {layers.risks && (
-            <>
-              {DEMO_RISKS.map(risk => (
-                <div key={risk.id} style={{ display: 'flex', height: 30, borderBottom: '1px solid #F1F5F9' }}>
-                  <div style={{
-                    width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0',
-                    display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0 0.75rem', background: '#fff',
-                  }}>
-                    <span style={{
-                      fontSize: '0.5rem', fontWeight: 800, borderRadius: 3,
-                      padding: '0.1rem 0.3rem',
-                      background: SEV[risk.severity].bg,
-                      color: SEV[risk.severity].text,
-                    }}>{risk.severity}</span>
-                    <span style={{ fontSize: '0.6rem', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {risk.name}
-                    </span>
+          {/* ── Risk rows ── */}
+          {layers.risks && DEMO_RISKS.map(risk => (
+            <div key={risk.id} style={{ display: 'flex', height: 30, borderBottom: '1px solid #F1F5F9' }}>
+              <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0 0.75rem', background: '#fff' }}>
+                <span style={{ fontSize: '0.5rem', fontWeight: 800, borderRadius: 3, padding: '0.1rem 0.3rem', background: SEV[risk.severity].bg, color: SEV[risk.severity].text }}>{risk.severity}</span>
+                <span style={{ fontSize: '0.6rem', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{risk.name}</span>
+              </div>
+              <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#fff' }}>
+                <GridLines />
+                <div style={{ position: 'absolute', left: `${risk.startFrac * 100}%`, width: `${(risk.endFrac - risk.startFrac) * 100}%`, top: '20%', height: '60%', borderRadius: 2, background: SEV[risk.severity].text + '22', borderLeft: `3px solid ${SEV[risk.severity].text}`, zIndex: 1 }} />
+                <TodayLine />
+              </div>
+            </div>
+          ))}
+
+          {/* ── Standard Process rows ── */}
+          {layers.process && STANDARD_PROCESS.map(phase => {
+            const phaseOpen = !collapsed[phase.id]
+            return (
+              <React.Fragment key={phase.id}>
+                {/* Phase header */}
+                <div
+                  onClick={() => setCollapsed(p => ({ ...p, [phase.id]: !p[phase.id] }))}
+                  style={{ display: 'flex', height: 32, borderBottom: '1px solid #E2E8F0', cursor: 'pointer', background: phase.color + '0C' }}
+                >
+                  <div style={{ width: LABEL_W, flexShrink: 0, borderRight: `2px solid ${phase.color}`, display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0 0.6rem' }}>
+                    <span style={{ fontSize: '0.6rem', color: phase.color, flexShrink: 0, display: 'inline-block', transition: 'transform 0.15s', transform: phaseOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
+                    <span style={{ fontSize: '0.63rem', fontWeight: 700, color: phase.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{phase.label}</span>
+                    <InfoTooltip text={phase.purpose} />
                   </div>
-                  <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#fff' }}>
+                  <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
                     <GridLines />
+                    {/* Phase span bar */}
                     <div style={{
                       position: 'absolute',
-                      left: `${risk.startFrac * 100}%`,
-                      width: `${(risk.endFrac - risk.startFrac) * 100}%`,
-                      top: '20%', height: '60%', borderRadius: 2,
-                      background: SEV[risk.severity].text + '22',
-                      borderLeft: `3px solid ${SEV[risk.severity].text}`,
-                      zIndex: 1,
+                      left: `${phase.steps[0].startFrac * 100}%`,
+                      width: `${(phase.steps[phase.steps.length - 1].endFrac - phase.steps[0].startFrac) * 100}%`,
+                      top: '35%', height: '30%', borderRadius: 2,
+                      background: phase.color, opacity: 0.12, zIndex: 1,
                     }} />
                     <TodayLine />
                   </div>
                 </div>
-              ))}
-            </>
-          )}
 
-          {/* Financial Flow row */}
+                {/* Step rows */}
+                {phaseOpen && phase.steps.map(step => (
+                  <div key={step.id} style={{ display: 'flex', height: 28, borderBottom: '1px solid #F1F5F9', background: '#fff' }}>
+                    <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', borderLeft: `2px solid ${phase.color}30`, display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0 0.6rem 0 1.2rem' }}>
+                      <span style={{ fontSize: '0.62rem', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        {step.name}
+                      </span>
+                      <InfoTooltip text={step.description} />
+                    </div>
+                    <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#fff' }}>
+                      <GridLines />
+                      <div style={{
+                        position: 'absolute',
+                        left: `${step.startFrac * 100}%`,
+                        width: `${Math.max((step.endFrac - step.startFrac) * 100, 0.5)}%`,
+                        top: '22%', height: '56%', borderRadius: 3,
+                        background: phase.color, opacity: 0.55,
+                        backgroundImage: STRIPE,
+                        zIndex: 1,
+                      }} />
+                      {/* Start dot */}
+                      <div style={{ position: 'absolute', left: `${step.startFrac * 100}%`, top: '50%', transform: 'translate(-50%, -50%)', width: 7, height: 7, borderRadius: '50%', background: phase.color, border: '1.5px solid #fff', zIndex: 2 }} />
+                      <TodayLine />
+                    </div>
+                  </div>
+                ))}
+              </React.Fragment>
+            )
+          })}
+
+          {/* ── Financial Flow ── */}
           {showFlow && (
             <div style={{ display: 'flex', height: 44, borderBottom: '1px solid #E2E8F0' }}>
               <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 0.75rem', background: '#fff' }}>
@@ -493,27 +653,15 @@ export function WorkStreamGantt({
                 {cashOut.map(t => {
                   const p = pct(new Date(t.date + 'T00:00:00'))
                   if (p < 0 || p > 100) return null
-                  const h = Math.max(6, Math.min(32, 4 + t.amount / 200000))
                   return (
-                    <div key={t.id} title={`Cash Out: ${t.amount}`} style={{
-                      position: 'absolute', bottom: 2,
-                      left: `${p}%`, transform: 'translateX(-4px)',
-                      width: 5, height: h,
-                      background: '#EF4444', borderRadius: '2px 2px 0 0', opacity: 0.8, zIndex: 1,
-                    }} />
+                    <div key={t.id} title={`Cash Out: ${t.amount}`} style={{ position: 'absolute', bottom: 2, left: `${p}%`, transform: 'translateX(-4px)', width: 5, height: Math.max(6, Math.min(32, 4 + t.amount / 200000)), background: '#EF4444', borderRadius: '2px 2px 0 0', opacity: 0.8, zIndex: 1 }} />
                   )
                 })}
                 {cashIn.map(t => {
                   const p = pct(new Date(t.date + 'T00:00:00'))
                   if (p < 0 || p > 100) return null
-                  const h = Math.max(6, Math.min(32, 4 + t.amount / 200000))
                   return (
-                    <div key={t.id} title={`Cash In: ${t.amount}`} style={{
-                      position: 'absolute', top: 2,
-                      left: `${p}%`, transform: 'translateX(1px)',
-                      width: 5, height: h,
-                      background: '#10B981', borderRadius: '0 0 2px 2px', opacity: 0.8, zIndex: 1,
-                    }} />
+                    <div key={t.id} title={`Cash In: ${t.amount}`} style={{ position: 'absolute', top: 2, left: `${p}%`, transform: 'translateX(1px)', width: 5, height: Math.max(6, Math.min(32, 4 + t.amount / 200000)), background: '#10B981', borderRadius: '0 0 2px 2px', opacity: 0.8, zIndex: 1 }} />
                   )
                 })}
                 <TodayLine />
