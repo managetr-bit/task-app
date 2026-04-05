@@ -486,7 +486,7 @@ export function BoardViewV3(props: Props) {
           board={board}
           boardId={board.id}
           onClose={() => setShowProjectInfo(false)}
-          onSave={onUpdateBoardInfo}
+          onSave={async (updates) => { await onUpdateBoardInfo(updates); setShowProjectInfo(false) }}
         />
       )}
       {showInvite && (
@@ -501,23 +501,27 @@ export function BoardViewV3(props: Props) {
         />
       )}
       {showCost && (
-        <CostPanel
-          boardId={board.id}
-          currency={board.currency}
-          transactions={costTransactions}
-          milestones={milestones}
-          canEdit={isCreator || currentMember.role === 'admin'}
-          onClose={() => setShowCost(false)}
-          onAddTransaction={onAddTransaction}
-          onUpdateTransaction={onUpdateTransaction}
-          onDeleteTransaction={onDeleteTransaction}
-          onAddBudgetLine={onAddBudgetLine}
-          onUpdateBudgetLine={onUpdateBudgetLine}
-          onDeleteBudgetLine={onDeleteBudgetLine}
-          onImportBudgetLines={onImportBudgetLines}
-          onChangeCurrency={onChangeCurrency}
-          budgetLines={budgetLines}
-        />
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 100, display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
+          <div style={{ width: '55vw', minWidth: 480, background: '#fff', overflow: 'auto', position: 'relative' }}>
+            <button onClick={() => setShowCost(false)} style={{ position: 'sticky', top: 12, float: 'right', marginRight: 12, zIndex: 1, background: '#fff', border: '1.5px solid #E8E5E0', borderRadius: 8, cursor: 'pointer', padding: '0.25rem 0.5rem', color: '#9CA3AF', fontSize: '0.85rem' }}>✕</button>
+            <CostPanel
+              boardId={board.id}
+              currency={board.currency}
+              budgetLines={budgetLines}
+              transactions={costTransactions}
+              milestones={milestones}
+              canEdit={isCreator || currentMember.role === 'admin'}
+              onAddTransaction={onAddTransaction}
+              onUpdateTransaction={onUpdateTransaction}
+              onDeleteTransaction={onDeleteTransaction}
+              onAddBudgetLine={onAddBudgetLine}
+              onUpdateBudgetLine={onUpdateBudgetLine}
+              onDeleteBudgetLine={onDeleteBudgetLine}
+              onImportBudgetLines={onImportBudgetLines}
+              onChangeCurrency={onChangeCurrency}
+            />
+          </div>
+        </div>
       )}
 
     </div>
