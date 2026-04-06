@@ -32,6 +32,7 @@ type ProcessMilestone = {
 type ProcessPhase = {
   id: string
   name: string         // "FAZ 1 — …"
+  shortName: string    // e.g. "GELİŞTİRME" — shown as second row label
   purpose: string      // ⓘ tooltip
   color: string
   startFrac: number
@@ -81,7 +82,7 @@ const DEMO_RISKS: Risk[] = [
 const STANDARD_PROCESS: ProcessPhase[] = [
   {
     id: 'p1', color: '#7C3AED', startFrac: 0.00, endFrac: 0.10,
-    name: 'FAZ 1 — Geliştirme & Hukuki',
+    name: 'FAZ 1 — Geliştirme & Hukuki', shortName: 'GELİŞTİRME',
     purpose: 'Yatırımın fizibilitesini kesinleştirmek ve arsa kontrolünü ele almak.',
     milestones: [
       { id: 'km1',  num: 1,  label: 'Ön Anlaşma',       startFrac: 0.00, endFrac: 0.06, major: false, why: 'Arsa sahibiyle temel ticari şartların mutabakatı; ön protokol veya niyet mektubu. Hukuki zırhın ilk halkası.' },
@@ -90,7 +91,7 @@ const STANDARD_PROCESS: ProcessPhase[] = [
   },
   {
     id: 'p2', color: '#2563EB', startFrac: 0.06, endFrac: 0.28,
-    name: 'FAZ 2 — Tasarım & Ruhsat',
+    name: 'FAZ 2 — Tasarım & Ruhsat', shortName: 'TASARIM',
     purpose: 'Kağıt üzerindeki projenin yasal onaylarını almak.',
     milestones: [
       { id: 'km3',  num: 3,  label: 'Zemin Etüdü',       startFrac: 0.06, endFrac: 0.12, major: false, why: 'Yanlış zemin verisi kaba inşaat bütçesini %20 artırabilir. Tüm statik projelerin temel girdisidir.' },
@@ -102,7 +103,7 @@ const STANDARD_PROCESS: ProcessPhase[] = [
   },
   {
     id: 'p3', color: '#EA580C', startFrac: 0.24, endFrac: 0.54,
-    name: 'FAZ 3 — Altyapı & Kaba Yapı',
+    name: 'FAZ 3 — Altyapı & Kaba Yapı', shortName: 'KABA YAPI',
     purpose: 'Binanın taşıyıcı sistemini ve ana omurgasını kurmak.',
     milestones: [
       { id: 'km8',  num: 8,  label: 'Mobilizasyon',       startFrac: 0.24, endFrac: 0.29, major: false, why: 'Şantiye sahasının kontrol altına alınması. Geri sayım saatinin başladığı andır.' },
@@ -115,7 +116,7 @@ const STANDARD_PROCESS: ProcessPhase[] = [
   },
   {
     id: 'p4', color: '#0D9488', startFrac: 0.48, endFrac: 0.93,
-    name: 'FAZ 4 — İnce İşler & Cephe',
+    name: 'FAZ 4 — İnce İşler & Cephe', shortName: 'İNCE İŞLER',
     purpose: 'Binayı dış hava şartlarından izole etmek ve yaşam standartlarını oluşturmak.',
     milestones: [
       { id: 'km14', num: 14, label: 'Cephe Başl.',         startFrac: 0.48, endFrac: 0.54, major: false, why: 'Binayı dış şartlardan izole etme sürecinin başlangıcı. Cephe ekibinin mobilizasyonunu tetikler.' },
@@ -132,7 +133,7 @@ const STANDARD_PROCESS: ProcessPhase[] = [
   },
   {
     id: 'p5', color: '#059669', startFrac: 0.88, endFrac: 1.00,
-    name: 'FAZ 5 — Devreye Alma & Teslimat',
+    name: 'FAZ 5 — Devreye Alma & Teslimat', shortName: 'TESLİMAT',
     purpose: 'Teknik sistemleri çalıştırmak ve mülkiyeti devretmek.',
     milestones: [
       { id: 'km24', num: 24, label: 'Teknik Kabul',        startFrac: 0.88, endFrac: 0.93, major: false, why: 'İskan dosyasının "itfaiye" engelini aşması. Yangın ve kaçış sistemleri testleri sunulur.' },
@@ -496,71 +497,64 @@ export function WorkStreamGantt({
             </div>
           ))}
 
-          {/* ══ STANDARD PROCESS — swim-lane layout ══ */}
+          {/* ══ STANDARD PROCESS — swim-lane layout (no header row) ══ */}
           {layers.process && STANDARD_PROCESS.map(phase => {
-            const rows      = assignToRows(phase.milestones)
-            const usedRows  = rows.filter(r => r.length > 0).length
-            const nRows     = Math.max(usedRows, 2)
-            const phaseH    = nRows * ROW_H
-            const phaseOpen = !collapsed[phase.id]
+            const rows  = assignToRows(phase.milestones)
+            const nRows = Math.max(rows.filter(r => r.length > 0).length, 2)
+
+            // Row labels: row 0 = "FAZ X", row 1 = shortName, rest = ""
+            const fazNum  = phase.name.split(' — ')[0]  // e.g. "FAZ 1"
+            const rowLabels = Array.from({ length: nRows }, (_, i) =>
+              i === 0 ? fazNum : i === 1 ? phase.shortName : ''
+            )
 
             return (
               <React.Fragment key={phase.id}>
-                {/* Phase header (single row, collapsible) */}
-                <div
-                  onClick={() => setCollapsed(p => ({ ...p, [phase.id]: !p[phase.id] }))}
-                  style={{ display: 'flex', height: 30, background: phase.color + '12', borderBottom: '1px solid ' + phase.color + '30', cursor: 'pointer', borderTop: '1px solid ' + phase.color + '20' }}
-                >
-                  <div style={{ width: LABEL_W, flexShrink: 0, borderRight: `2px solid ${phase.color}`, display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0 0.625rem' }}>
-                    <span style={{ fontSize: '0.58rem', color: phase.color, flexShrink: 0, display: 'inline-block', transition: 'transform 0.15s', transform: phaseOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: phase.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{phase.name}</span>
-                  </div>
-                  <div style={{ flex: 1, position: 'relative', background: phase.color + '06' }}>
-                    <TodayLine />
-                  </div>
-                </div>
+                {Array.from({ length: nRows }, (_, rowIdx) => {
+                  const rowKms = rows[rowIdx] ?? []
+                  const isFirst = rowIdx === 0
+                  const isLast  = rowIdx === nRows - 1
 
-                {/* Swim lanes — one row per assigned lane */}
-                {phaseOpen && (
-                  <div style={{ display: 'flex', borderBottom: '2px solid ' + phase.color + '25' }}>
-                    {/* Phase label column — spans all swim lanes */}
-                    <div style={{
-                      width: LABEL_W, flexShrink: 0,
-                      height: phaseH,
-                      borderRight: `2px solid ${phase.color}`,
-                      background: phase.color + '08',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      padding: '0 0.5rem',
+                  return (
+                    <div key={rowIdx} style={{
+                      display: 'flex', height: ROW_H,
+                      borderTop:    isFirst ? `1.5px solid ${phase.color}30` : 'none',
+                      borderBottom: isLast  ? `1.5px solid ${phase.color}30` : `1px solid ${phase.color}15`,
                     }}>
-                      <span style={{ fontSize: '0.52rem', fontWeight: 700, color: phase.color, textAlign: 'center', letterSpacing: '0.04em', opacity: 0.8, userSelect: 'none', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                        {phase.name.split(' — ')[0]}
-                      </span>
-                    </div>
+                      {/* Per-row label cell */}
+                      <div style={{
+                        width: LABEL_W, flexShrink: 0,
+                        borderRight: `2px solid ${phase.color}`,
+                        background: phase.color + (isFirst ? '15' : '08'),
+                        display: 'flex', alignItems: 'center',
+                        padding: '0 0.625rem',
+                      }}>
+                        <span style={{
+                          fontSize: isFirst ? '0.63rem' : '0.56rem',
+                          fontWeight: isFirst ? 800 : 600,
+                          color: phase.color,
+                          letterSpacing: '0.04em',
+                          userSelect: 'none',
+                          opacity: isFirst ? 1 : 0.75,
+                        }}>
+                          {rowLabels[rowIdx]}
+                        </span>
+                      </div>
 
-                    {/* Lanes grid */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      {Array.from({ length: nRows }, (_, rowIdx) => {
-                        const rowKms = rows[rowIdx] ?? []
-                        const isLast = rowIdx === nRows - 1
-                        return (
-                          <div key={rowIdx} style={{
-                            height: ROW_H,
-                            position: 'relative',
-                            overflow: 'visible',
-                            borderBottom: isLast ? 'none' : '1px solid ' + phase.color + '15',
-                            background: rowIdx % 2 === 0 ? phase.color + '04' : 'transparent',
-                          }}>
-                            <GridBg bg={phase.color + '03'} />
-                            {rowKms.map(km => (
-                              <DiamondMarker key={km.id} km={km} color={phase.color} />
-                            ))}
-                            <TodayLine />
-                          </div>
-                        )
-                      })}
+                      {/* Timeline lane */}
+                      <div style={{
+                        flex: 1, position: 'relative', overflow: 'visible',
+                        background: phase.color + (rowIdx % 2 === 0 ? '05' : '02'),
+                      }}>
+                        <GridBg bg={phase.color + '03'} />
+                        {rowKms.map(km => (
+                          <DiamondMarker key={km.id} km={km} color={phase.color} />
+                        ))}
+                        <TodayLine />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )
+                })}
               </React.Fragment>
             )
           })}
