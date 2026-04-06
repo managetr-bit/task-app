@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   type Task, type Column, type Milestone, type MilestoneTask,
   type CostTransaction, type BudgetLine,
@@ -22,16 +22,17 @@ type Risk = {
 type ProcessMilestone = {
   id: string
   num: number
-  shortName: string      // shown in row label
-  why: string            // shown in ⓘ tooltip
-  frac: number           // 0–1 along project timeline
-  major: boolean         // large gold diamond, all-caps in data
+  label: string        // short 2-3 word bar label
+  why: string          // ⓘ tooltip
+  startFrac: number
+  endFrac: number
+  major: boolean
 }
 
 type ProcessPhase = {
   id: string
-  label: string
-  purpose: string
+  name: string         // "FAZ 1 — …"
+  purpose: string      // ⓘ tooltip
   color: string
   startFrac: number
   endFrac: number
@@ -53,7 +54,9 @@ export type WorkStreamGanttProps = {
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
-const LABEL_W = 160
+const LABEL_W  = 130
+const ROW_H    = 28   // px — height of one swim-lane row
+const N_ROWS   = 4    // max lanes per phase
 
 const COL_W: Record<Timeframe, number> = { weekly: 44, monthly: 64, quarterly: 100 }
 
@@ -69,74 +72,78 @@ const DEMO_RISKS: Risk[] = [
   { id: 'r3', name: 'Weather / Site Disruption', severity: 'L', startFrac: 0.60, endFrac: 0.80 },
 ]
 
-// ─── Standard Construction Process (Türkiye Kat Karşılığı — 24-month / 26 KM) ─
+// ─── Standard Construction Process — 24-month / 26 KM ────────────────────────
+//
+//  startFrac / endFrac are proportional to the 24-month total timeline.
+//  The greedy row-assignment algorithm prevents bars from overlapping within
+//  each phase's N_ROWS swim lanes.
 
 const STANDARD_PROCESS: ProcessPhase[] = [
   {
-    id: 'p1', color: '#7C3AED', startFrac: 0.00, endFrac: 0.08,
-    label: 'FAZ 1 — Geliştirme & Hukuki Temel',
+    id: 'p1', color: '#7C3AED', startFrac: 0.00, endFrac: 0.10,
+    name: 'FAZ 1 — Geliştirme & Hukuki',
     purpose: 'Yatırımın fizibilitesini kesinleştirmek ve arsa kontrolünü ele almak.',
     milestones: [
-      { id: 'km1',  num: 1,  shortName: 'Arsa Sahibi Ön Anlaşması',        frac: 0.02, major: false, why: 'Hukuki zırhın ilk halkası. Arsa üzerindeki hakların ticari şartlarda tescil altına alınması; kâr paylaşım modelinin netleşmesi.' },
-      { id: 'km2',  num: 2,  shortName: 'Resmi Sözleşme & Tapu Şerhi',     frac: 0.05, major: false, why: 'Noter onaylı Kat Karşılığı İnşaat Sözleşmesi\'nin tapu siciline şerh düşürülmesi. Hukuki zemin tamamlanır; arsa artık "bloke".' },
+      { id: 'km1',  num: 1,  label: 'Ön Anlaşma',       startFrac: 0.00, endFrac: 0.06, major: false, why: 'Arsa sahibiyle temel ticari şartların mutabakatı; ön protokol veya niyet mektubu. Hukuki zırhın ilk halkası.' },
+      { id: 'km2',  num: 2,  label: 'Tapu Şerhi',        startFrac: 0.04, endFrac: 0.10, major: false, why: 'Noter onaylı KKİS\'nin imzalanması ve tapuya şerh düşürülmesi. Hukuki zemin tamamlanır; arsa artık "bloke".' },
     ],
   },
   {
-    id: 'p2', color: '#2563EB', startFrac: 0.06, endFrac: 0.25,
-    label: 'FAZ 2 — Tasarım, Mühendislik & Ruhsatlandırma',
+    id: 'p2', color: '#2563EB', startFrac: 0.06, endFrac: 0.28,
+    name: 'FAZ 2 — Tasarım & Ruhsat',
     purpose: 'Kağıt üzerindeki projenin yasal onaylarını almak.',
     milestones: [
-      { id: 'km3',  num: 3,  shortName: 'Zemin Etüdü & Veri Onayı',        frac: 0.08, major: false, why: 'Yanlış zemin verisi kaba inşaat bütçesini %20 artırabilir. Tüm statik ve zemin mühendisliği projelerinin temel girdisidir.' },
-      { id: 'km4',  num: 4,  shortName: 'Konsept Proje Onayı',              frac: 0.12, major: false, why: 'Tasarımın "satılabilirlik" tescili. Ön satış ve pazarlama materyallerinin hazırlanmasına olanak sağlar; yatırımcı sunumlarında kullanılır.' },
-      { id: 'km5',  num: 5,  shortName: 'Avan Proje Belediye Onayı',        frac: 0.17, major: false, why: 'Emsal ve imar haklarının yasallaşması. Finansal modelin doğrulanması için kritik eşik; proje değişikliği bu noktadan sonra çok pahalıdır.' },
-      { id: 'km6',  num: 6,  shortName: 'Uygulama Projeleri (Statik/MEP)', frac: 0.21, major: false, why: 'Statik, elektrik, mekanik uygulama projelerinin tamamlanması. Ruhsat başvurusu için belediyeye sunulacak teknik dosyanın hazırlanması.' },
-      { id: 'km7',  num: 7,  shortName: '⭐ YAPI RUHSATI ALIMI',            frac: 0.24, major: true,  why: 'İnşaatın resmi başlangıç tetikleyicisi ve finansmanın önünün açılması. Banka inşaat kredisi için genellikle bu belge zorunlu tutulur.' },
+      { id: 'km3',  num: 3,  label: 'Zemin Etüdü',       startFrac: 0.06, endFrac: 0.12, major: false, why: 'Yanlış zemin verisi kaba inşaat bütçesini %20 artırabilir. Tüm statik projelerin temel girdisidir.' },
+      { id: 'km4',  num: 4,  label: 'Konsept Proje',      startFrac: 0.10, endFrac: 0.16, major: false, why: 'Tasarımın "satılabilirlik" tescili. Ön satış ve pazarlama materyallerinin hazırlanmasına olanak sağlar.' },
+      { id: 'km5',  num: 5,  label: 'Avan Proje',         startFrac: 0.15, endFrac: 0.21, major: false, why: 'Emsal ve imar haklarının yasallaşması. Finansal modelin doğrulanması için kritik eşik.' },
+      { id: 'km6',  num: 6,  label: 'Uyg. Projeleri',     startFrac: 0.19, endFrac: 0.24, major: false, why: 'Statik, elektrik, mekanik uygulama projelerinin tamamlanması. Ruhsat başvurusu için zorunlu teknik dosya.' },
+      { id: 'km7',  num: 7,  label: 'YAPI RUHSATI',       startFrac: 0.22, endFrac: 0.28, major: true,  why: 'İnşaatın resmi başlangıç tetikleyicisi. Banka inşaat kredisi için bu belge zorunlu tutulur.' },
     ],
   },
   {
-    id: 'p3', color: '#EA580C', startFrac: 0.23, endFrac: 0.50,
-    label: 'FAZ 3 — Altyapı & Kaba Yapı İmalatları',
+    id: 'p3', color: '#EA580C', startFrac: 0.24, endFrac: 0.54,
+    name: 'FAZ 3 — Altyapı & Kaba Yapı',
     purpose: 'Binanın taşıyıcı sistemini ve ana omurgasını kurmak.',
     milestones: [
-      { id: 'km8',  num: 8,  shortName: 'Mobilizasyon & Hafriyat Başl.',   frac: 0.26, major: false, why: 'Şantiye sahasının kontrol altına alınması. Geri sayım saatinin başladığı andır; her gecikme hakediş gecikmesi anlamına gelir.' },
-      { id: 'km9',  num: 9,  shortName: 'Hafriyat & İksa Sonu',            frac: 0.30, major: false, why: 'Temel dökümü için en büyük fiziksel riskin geçilmesi. Çevre yapılara zarar ve kazı göçü riski bu noktada kapanır.' },
-      { id: 'km10', num: 10, shortName: 'Temel & Bodrum Betonarmesi',       frac: 0.35, major: false, why: 'Sıfır kotuna ulaşılması; finansal hakediş noktası. Bankalar genellikle bu aşamayı birinci kredi dilimi tetikleyicisi olarak kullanır.' },
-      { id: 'km11', num: 11, shortName: 'Normal Katlar Betonarme',          frac: 0.40, major: false, why: 'Periyodik üretim hızı kontrolü. Kat başına beton dökme süresinin takip edildiği kritik üretim metrikleridir.' },
-      { id: 'km12', num: 12, shortName: 'Alt Yüklenici İhale Sonu',         frac: 0.44, major: false, why: 'Kaba biterken ince işçilerin sahaya girmesini sağlayan kilit geçiş. Sözleşme gecikirse ince işler de kayar.' },
-      { id: 'km13', num: 13, shortName: '⭐ KARKAS SONU (Çatı Kapanışı)',    frac: 0.48, major: true,  why: 'Binanın silüetinin bitişi; kaba imalatın teknik kabulü. En büyük maliyet bloğunun kapanması ve ikinci hakediş dönemi.' },
+      { id: 'km8',  num: 8,  label: 'Mobilizasyon',       startFrac: 0.24, endFrac: 0.29, major: false, why: 'Şantiye sahasının kontrol altına alınması. Geri sayım saatinin başladığı andır.' },
+      { id: 'km9',  num: 9,  label: 'Hafriyat & İksa',    startFrac: 0.28, endFrac: 0.34, major: false, why: 'Temel dökümü için en büyük fiziksel riskin geçilmesi. Çevre yapılara zarar riski kapanır.' },
+      { id: 'km10', num: 10, label: 'Temel & Bodrum',      startFrac: 0.33, endFrac: 0.39, major: false, why: 'Sıfır kotuna ulaşılması; finansal hakediş noktası. Bankalar bu aşamayı kredi dilimi tetikleyicisi olarak kullanır.' },
+      { id: 'km11', num: 11, label: 'Normal Katlar',       startFrac: 0.38, endFrac: 0.46, major: false, why: 'Periyodik üretim hızı kontrolü. Kat başına beton dökme süresinin takip edildiği metrikler.' },
+      { id: 'km12', num: 12, label: 'Alt Yük. İhale',      startFrac: 0.43, endFrac: 0.49, major: false, why: 'Kaba biterken ince işçilerin sahaya girmesini sağlayan kilit geçiş. Gecikme ince işleri de kayatır.' },
+      { id: 'km13', num: 13, label: 'KARKAS SONU',         startFrac: 0.46, endFrac: 0.54, major: true,  why: 'Binanın silüetinin bitişi; kaba imalatın teknik kabulü. En büyük maliyet bloğunun kapanması.' },
     ],
   },
   {
-    id: 'p4', color: '#0D9488', startFrac: 0.48, endFrac: 0.90,
-    label: 'FAZ 4 — İnce İşler, Cephe & Dış Mekan',
+    id: 'p4', color: '#0D9488', startFrac: 0.48, endFrac: 0.93,
+    name: 'FAZ 4 — İnce İşler & Cephe',
     purpose: 'Binayı dış hava şartlarından izole etmek ve yaşam standartlarını oluşturmak.',
     milestones: [
-      { id: 'km14', num: 14, shortName: 'Dış Cephe & Doğrama Başl.',        frac: 0.50, major: false, why: 'Binayı dış şartlardan izole etme sürecinin başlangıcı. Alt yüklenici cephe ekibinin mobilizasyonunu tetikler.' },
-      { id: 'km15', num: 15, shortName: '⭐ DIŞ KABUK KAPANIŞI (Watertight)', frac: 0.55, major: true,  why: 'İç mekan ahşap ve boya işlerini garantiye alan en büyük KM. Islak hasar ve şantiye hava şartlarından etkilenme riski bu noktada kapanır.' },
-      { id: 'km16', num: 16, shortName: 'Kaba İnce İşler (Duvar/Sıva)',     frac: 0.59, major: false, why: 'Oda hacimlerinin ve fonksiyonun ortaya çıkması. Elektrik ve mekanik tesisat kanallarının sıva altına alınması.' },
-      { id: 'km17', num: 17, shortName: 'Şap & Islak Hacim Yalıtım Test.',  frac: 0.64, major: false, why: 'Su sızıntısı riskinin elimine edilmesi. Testler başarısız olursa tamirat seramik kaplamadan önce yapılmalıdır; çok pahalı.' },
-      { id: 'km18', num: 18, shortName: 'Ağır Sistem (Asansör/Trafo)',      frac: 0.68, major: false, why: 'Binanın damar ve sinir sisteminin ana cihazlarının kurulumu. Uzun tedarik süreli ekipmanlar; geç sipariş verilirse inşaatı bekletir.' },
-      { id: 'km19', num: 19, shortName: '⭐ ÖRNEK DAİRE ONAYI',              frac: 0.72, major: true,  why: 'Seri imalata geçmeden önce "kalite standardının" tescili. Hem müşteri hem yüklenici tarafından imzalanan standart haline gelir.' },
-      { id: 'km20', num: 20, shortName: 'Mobilya, Kapı & Seramik Montaj',   frac: 0.76, major: false, why: 'Mahal Listesi\'ndeki estetik kalitenin seri uygulanması. En yoğun iş gücü yoğunluğu; birden fazla alt yüklenici eş zamanlı.' },
-      { id: 'km21', num: 21, shortName: 'İç Mekan Final Boya & Vitrifiye',  frac: 0.80, major: false, why: 'Teslimat öncesi son estetik dokunuşlar. Bu aşamadan sonra şantiyeye erişim kısıtlanır; hasar riski sıfırlanır.' },
-      { id: 'km22', num: 22, shortName: 'Peyzaj & Çevre Düzenleme',         frac: 0.84, major: false, why: '"Proje bitti" algısını yaratan görsel final. İskan dosyası için belediye denetiminde aranan tamamlanma şartı.' },
-      { id: 'km23', num: 23, shortName: 'Temizlik & Snag List',              frac: 0.88, major: false, why: 'Yasal kabuller öncesi son teknik kontrol. Teslimat listesindeki açık kalemlerin kapatıldığı son fırsat.' },
+      { id: 'km14', num: 14, label: 'Cephe Başl.',         startFrac: 0.48, endFrac: 0.54, major: false, why: 'Binayı dış şartlardan izole etme sürecinin başlangıcı. Cephe ekibinin mobilizasyonunu tetikler.' },
+      { id: 'km15', num: 15, label: 'WATERTIGHT',          startFrac: 0.52, endFrac: 0.59, major: true,  why: 'İç mekan ahşap ve boya işlerini garantiye alan en büyük KM. Islak hasar riski bu noktada kapanır.' },
+      { id: 'km16', num: 16, label: 'Duvar/Sıva',          startFrac: 0.58, endFrac: 0.64, major: false, why: 'Oda hacimlerinin ortaya çıkması. E&M kanallarının sıva altına alınması.' },
+      { id: 'km17', num: 17, label: 'Yalıtım Testi',       startFrac: 0.62, endFrac: 0.68, major: false, why: 'Su sızıntısı riskinin elimine edilmesi. Başarısız test seramikten önce tamirat gerektirir.' },
+      { id: 'km18', num: 18, label: 'Ağır Sistemler',      startFrac: 0.66, endFrac: 0.72, major: false, why: 'Asansör, trafo, hidrofor ana cihazlarının kurulumu. Uzun tedarik süreli ekipmanlar.' },
+      { id: 'km19', num: 19, label: 'ÖRNEK DAİRE',         startFrac: 0.70, endFrac: 0.76, major: true,  why: 'Seri imalata geçmeden önce "kalite standardının" tescili. Hem müşteri hem yüklenici imzalar.' },
+      { id: 'km20', num: 20, label: 'Mobilya/Kapı',        startFrac: 0.74, endFrac: 0.80, major: false, why: 'Mahal Listesi\'ndeki estetik kalitenin seri uygulanması. En yoğun alt yüklenici dönemi.' },
+      { id: 'km21', num: 21, label: 'Final Boya',          startFrac: 0.78, endFrac: 0.85, major: false, why: 'Teslimat öncesi son estetik dokunuşlar. Şantiyeye erişim kısıtlanır.' },
+      { id: 'km22', num: 22, label: 'Peyzaj',              startFrac: 0.83, endFrac: 0.89, major: false, why: '"Proje bitti" algısını yaratan görsel final. İskan için belediye denetiminde aranan şart.' },
+      { id: 'km23', num: 23, label: 'Snag List',           startFrac: 0.87, endFrac: 0.93, major: false, why: 'Yasal kabuller öncesi son teknik kontrol. Açık kalemlerin kapatıldığı son fırsat.' },
     ],
   },
   {
     id: 'p5', color: '#059669', startFrac: 0.88, endFrac: 1.00,
-    label: 'FAZ 5 — Devreye Alma, Kabul & Teslimat',
+    name: 'FAZ 5 — Devreye Alma & Teslimat',
     purpose: 'Teknik sistemleri çalıştırmak ve mülkiyeti devretmek.',
     milestones: [
-      { id: 'km24', num: 24, shortName: 'Teknik Kabul & Sistem Testleri',   frac: 0.91, major: false, why: 'İskan dosyasının "itfaiye" engelini aşması. Yangın algılama, söndürme ve kaçış sistemleri testleri resmi kurumlara sunulur.' },
-      { id: 'km25', num: 25, shortName: '⭐ İSKAN ALIMI (Yapı Kullanma İzni)', frac: 0.96, major: true,  why: 'Binanın mülk statüsünü kazandığı an. Tapu devri ve ipotek kurulumu için zorunlu; iskansız satış hukuki açıdan geçersizdir.' },
-      { id: 'km26', num: 26, shortName: 'Nihai Teslimat & Tapu Devirleri',  frac: 1.00, major: false, why: 'Geliştiricinin finansal çıkışı (exit) ve sorumluluk devri. 2 yıllık yasal ayıp süresinin ve garanti döneminin başlangıcı.' },
+      { id: 'km24', num: 24, label: 'Teknik Kabul',        startFrac: 0.88, endFrac: 0.93, major: false, why: 'İskan dosyasının "itfaiye" engelini aşması. Yangın ve kaçış sistemleri testleri sunulur.' },
+      { id: 'km25', num: 25, label: 'İSKAN',               startFrac: 0.91, endFrac: 0.97, major: true,  why: 'Binanın mülk statüsünü kazandığı an. Tapu devri için zorunlu; iskansız satış hukuken geçersiz.' },
+      { id: 'km26', num: 26, label: 'Tapu Devri',          startFrac: 0.95, endFrac: 1.00, major: false, why: 'Geliştiricinin finansal çıkışı ve sorumluluk devri. 2 yıllık yasal ayıp ve garanti döneminin başlangıcı.' },
     ],
   },
 ]
 
 const STRIPE =
-  'repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,0.28) 3px,rgba(255,255,255,0.28) 6px)'
+  'repeating-linear-gradient(45deg,transparent,transparent 3px,rgba(255,255,255,0.22) 3px,rgba(255,255,255,0.22) 6px)'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -181,19 +188,83 @@ function colBarStyle(colName: string): { bg: string; stripe: boolean; dashed: bo
   return { bg: '#CBD5E1', stripe: false, dashed: true }
 }
 
-// ─── InfoTooltip ──────────────────────────────────────────────────────────────
+// Greedy row assignment: sorts KMs by startFrac, assigns to first non-overlapping row
+function assignToRows(kms: ProcessMilestone[], n = N_ROWS): ProcessMilestone[][] {
+  const rows: ProcessMilestone[][] = Array.from({ length: n }, () => [])
+  const ends: number[] = Array(n).fill(-1)
+  const GAP = 0.004
 
-function InfoTooltip({ text }: { text: string }) {
+  for (const km of [...kms].sort((a, b) => a.startFrac - b.startFrac)) {
+    // find first row where last bar ends before this bar starts
+    let pick = -1
+    for (let r = 0; r < n; r++) {
+      if (ends[r] + GAP <= km.startFrac) { pick = r; break }
+    }
+    // fallback: pick row with earliest end
+    if (pick === -1) pick = ends.indexOf(Math.min(...ends))
+    rows[pick].push(km)
+    ends[pick] = km.endFrac
+  }
+  return rows
+}
+
+// ─── BarTooltip ───────────────────────────────────────────────────────────────
+
+function BarTooltip({ km, color }: { km: ProcessMilestone; color: string }) {
   const [open, setOpen] = useState(false)
+
+  const bg   = km.major ? color : color + 'CC'
+  const minW = 38
+
   return (
-    <div style={{ position: 'relative', display: 'inline-flex', flexShrink: 0 }}
-      onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}
+    <div
+      style={{
+        position: 'absolute',
+        left: `${km.startFrac * 100}%`,
+        width: `${Math.max((km.endFrac - km.startFrac) * 100, 0)}%`,
+        minWidth: minW,
+        top: '12%', height: '76%',
+        borderRadius: 4,
+        background: bg,
+        backgroundImage: km.major ? 'none' : STRIPE,
+        display: 'flex', alignItems: 'center',
+        padding: '0 4px',
+        overflow: 'visible',
+        zIndex: open ? 10 : 1,
+        cursor: 'default',
+        boxShadow: km.major ? `0 1px 4px ${color}55` : 'none',
+        border: km.major ? `1.5px solid ${color}` : 'none',
+      }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
     >
-      <button style={{ width: 14, height: 14, borderRadius: '50%', background: 'rgba(148,163,184,0.15)', border: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'help', padding: 0, fontSize: '0.48rem', color: '#64748B', fontWeight: 800, lineHeight: 1, flexShrink: 0 }}>ⓘ</button>
+      {/* Bar label */}
+      <span style={{
+        fontSize: '0.55rem', fontWeight: km.major ? 800 : 600,
+        color: '#fff', whiteSpace: 'nowrap',
+        overflow: 'hidden', textOverflow: 'ellipsis',
+        flex: 1, letterSpacing: km.major ? '0.02em' : 0,
+      }}>
+        {km.label}
+      </span>
+
+      {/* Tooltip popup */}
       {open && (
-        <div style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)', zIndex: 60, background: '#0F172A', color: '#CBD5E1', fontSize: '0.62rem', lineHeight: 1.55, padding: '0.55rem 0.75rem', borderRadius: 6, boxShadow: '0 8px 32px rgba(0,0,0,0.45)', width: 250, whiteSpace: 'normal', pointerEvents: 'none' }}>
-          <div style={{ position: 'absolute', left: -5, top: '50%', transform: 'translateY(-50%)', width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: '5px solid #0F172A' }} />
-          {text}
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 60,
+          background: '#0F172A', color: '#CBD5E1',
+          fontSize: '0.62rem', lineHeight: 1.5,
+          padding: '0.5rem 0.7rem', borderRadius: 6,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
+          width: 230, whiteSpace: 'normal', pointerEvents: 'none',
+        }}>
+          <div style={{ fontWeight: 700, color: '#fff', marginBottom: '0.25rem', fontSize: '0.65rem' }}>
+            KM {km.num} — {km.label}
+          </div>
+          {km.why}
+          {/* arrow */}
+          <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0F172A' }} />
         </div>
       )}
     </div>
@@ -237,7 +308,6 @@ export function WorkStreamGantt({
   const todayInRange = todayPct > 0 && todayPct < 100
 
   const visibleColumns = useMemo(() => filter === 'all' ? columns : columns.filter(c => c.id === filter), [columns, filter])
-
   const tasksByCol = useMemo(() => {
     const map: Record<string, Task[]> = {}
     columns.forEach(c => { map[c.id] = [] })
@@ -249,16 +319,15 @@ export function WorkStreamGantt({
   const cashOut = costTransactions.filter(t => t.type === 'cash_out' && !t.is_forecast)
 
   // ── shared primitives ──────────────────────────────────────────────────────
-
   const TodayLine = () => todayInRange
-    ? <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${todayPct}%`, width: 1.5, background: '#2563EB', opacity: 0.45, pointerEvents: 'none', zIndex: 2 }} />
+    ? <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${todayPct}%`, width: 1.5, background: '#2563EB', opacity: 0.45, pointerEvents: 'none', zIndex: 3 }} />
     : null
 
-  const GridLines = () => (
+  const GridBg = ({ bg }: { bg?: string }) => (
     <>
       {periods.map(p => {
         const isNow = today >= p.start && today <= p.end
-        return <div key={p.key} style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(p.start)}%`, width: `${pct(p.end) - pct(p.start)}%`, background: isNow ? 'rgba(37,99,235,0.04)' : 'transparent', borderRight: '1px solid #F1F5F9', pointerEvents: 'none' }} />
+        return <div key={p.key} style={{ position: 'absolute', top: 0, bottom: 0, left: `${pct(p.start)}%`, width: `${pct(p.end) - pct(p.start)}%`, background: isNow ? 'rgba(37,99,235,0.06)' : (bg ?? 'transparent'), borderRight: '1px solid rgba(226,232,240,0.7)', pointerEvents: 'none' }} />
       })}
     </>
   )
@@ -267,33 +336,25 @@ export function WorkStreamGantt({
   return (
     <div style={{ background: '#F8FAFC', borderTop: '1.5px solid #E2E8F0' }}>
 
-      {/* Controls */}
+      {/* ── Controls bar ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', flexWrap: 'wrap', padding: '0.5rem 1rem', background: '#fff', borderBottom: '1px solid #E2E8F0' }}>
-
-        {/* STATUS pills */}
         <div style={{ display: 'flex', gap: '0.2rem' }}>
           {[{ id: 'all', label: 'All' }, ...columns.map(c => ({ id: c.id, label: c.name }))].map(opt => {
             const active = filter === opt.id
             return <button key={opt.id} onClick={() => setFilter(opt.id)} style={{ padding: '0.2rem 0.55rem', borderRadius: 99, fontSize: '0.67rem', fontWeight: 600, cursor: 'pointer', border: 'none', background: active ? '#0F172A' : '#F1F5F9', color: active ? '#fff' : '#64748B' }}>{opt.label}</button>
           })}
         </div>
-
         <div style={{ width: 1, height: 18, background: '#E2E8F0', margin: '0 0.125rem' }} />
-
-        {/* LAYER toggles */}
         {([
-          { key: 'photos',    label: 'Photos',     activeColor: '#0EA5E9' },
-          { key: 'milestones', label: 'Milestones', activeColor: '#0EA5E9' },
-          { key: 'risks',     label: 'Risks',      activeColor: '#0EA5E9' },
-          { key: 'process',   label: 'Süreç',      activeColor: '#7C3AED' },
-        ] as { key: LayerKey; label: string; activeColor: string }[]).map(({ key, label, activeColor }) => {
-          const active = layers[key]
-          return <button key={key} onClick={() => setLayers(p => ({ ...p, [key]: !p[key] }))} style={{ padding: '0.2rem 0.55rem', borderRadius: 99, fontSize: '0.67rem', fontWeight: 600, cursor: 'pointer', border: 'none', background: active ? activeColor : '#F1F5F9', color: active ? '#fff' : '#64748B' }}>{label}</button>
+          { key: 'photos',    label: 'Photos',     ac: '#0EA5E9' },
+          { key: 'milestones', label: 'Milestones', ac: '#0EA5E9' },
+          { key: 'risks',     label: 'Risks',      ac: '#0EA5E9' },
+          { key: 'process',   label: 'Süreç',      ac: '#7C3AED' },
+        ] as { key: LayerKey; label: string; ac: string }[]).map(({ key, label, ac }) => {
+          const on = layers[key]
+          return <button key={key} onClick={() => setLayers(p => ({ ...p, [key]: !p[key] }))} style={{ padding: '0.2rem 0.55rem', borderRadius: 99, fontSize: '0.67rem', fontWeight: 600, cursor: 'pointer', border: 'none', background: on ? ac : '#F1F5F9', color: on ? '#fff' : '#64748B' }}>{label}</button>
         })}
-
         <div style={{ flex: 1 }} />
-
-        {/* Timeframe */}
         <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 8, padding: 2, gap: 1 }}>
           {(['weekly', 'monthly', 'quarterly'] as Timeframe[]).map(t => (
             <button key={t} onClick={() => setTf(t)} style={{ padding: '0.2rem 0.55rem', borderRadius: 6, fontSize: '0.67rem', fontWeight: 600, cursor: 'pointer', border: 'none', background: tf === t ? '#fff' : 'transparent', color: tf === t ? '#0F172A' : '#64748B', boxShadow: tf === t ? '0 1px 3px rgba(0,0,0,0.10)' : 'none' }}>
@@ -303,7 +364,7 @@ export function WorkStreamGantt({
         </div>
       </div>
 
-      {/* Gantt */}
+      {/* ── Gantt ── */}
       <div style={{ overflowX: 'auto' }}>
         <div style={{ minWidth: LABEL_W + periods.length * COL_W[tf] }}>
 
@@ -327,11 +388,11 @@ export function WorkStreamGantt({
           {/* Site Chronicle */}
           {layers.photos && boardPhotos.length > 0 && (
             <div style={{ display: 'flex', height: 64, borderBottom: '1px solid #E2E8F0' }}>
-              <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0 0.75rem', background: '#fff' }}>
+              <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 0.75rem', background: '#fff' }}>
                 <span style={{ fontSize: '0.62rem', fontWeight: 600, color: '#64748B' }}>📷 Site Chronicle</span>
               </div>
               <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#F8FAFC' }}>
-                <GridLines />
+                <GridBg />
                 {boardPhotos.slice(0, 6).map((url, i) => {
                   const frac = (i + 0.5) / Math.min(boardPhotos.length, 6)
                   return <div key={i} style={{ position: 'absolute', left: `calc(${frac * 100}% - 20px)`, top: 6, width: 40, height: 52, borderRadius: 4, overflow: 'hidden', border: '2px solid #fff', boxShadow: '0 2px 6px rgba(0,0,0,0.15)', zIndex: 1 }}><img src={url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></div>
@@ -360,7 +421,7 @@ export function WorkStreamGantt({
                     <span style={{ fontSize: '0.57rem', color: '#94A3B8', flexShrink: 0 }}>{colTasks.length}</span>
                   </div>
                   <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                    <GridLines />
+                    <GridBg />
                     {spanL !== null && spanR !== null && (
                       <div style={{ position: 'absolute', left: `${spanL}%`, width: `${Math.max(spanR - spanL, 0.6)}%`, top: '22%', height: '56%', borderRadius: 3, background: style.dashed ? 'transparent' : style.bg, backgroundImage: style.stripe ? STRIPE : 'none', border: style.dashed ? '1.5px dashed #94A3B8' : 'none', opacity: 0.85, zIndex: 1 }} />
                     )}
@@ -393,7 +454,7 @@ export function WorkStreamGantt({
                 <span style={{ fontSize: '0.62rem', fontWeight: 600, color: '#64748B' }}>◈ Milestones</span>
               </div>
               <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#fff' }}>
-                <GridLines />
+                <GridBg />
                 {milestones.map(m => {
                   const p = pct(new Date(m.target_date + 'T00:00:00'))
                   if (p < 0 || p > 100) return null
@@ -404,7 +465,7 @@ export function WorkStreamGantt({
             </div>
           )}
 
-          {/* Risk rows */}
+          {/* Risks */}
           {layers.risks && DEMO_RISKS.map(risk => (
             <div key={risk.id} style={{ display: 'flex', height: 28, borderBottom: '1px solid #F1F5F9' }}>
               <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0 0.75rem', background: '#fff' }}>
@@ -412,117 +473,83 @@ export function WorkStreamGantt({
                 <span style={{ fontSize: '0.6rem', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{risk.name}</span>
               </div>
               <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#fff' }}>
-                <GridLines />
+                <GridBg />
                 <div style={{ position: 'absolute', left: `${risk.startFrac * 100}%`, width: `${(risk.endFrac - risk.startFrac) * 100}%`, top: '20%', height: '60%', borderRadius: 2, background: SEV[risk.severity].text + '22', borderLeft: `3px solid ${SEV[risk.severity].text}`, zIndex: 1 }} />
                 <TodayLine />
               </div>
             </div>
           ))}
 
-          {/* ══════ Standard Process (Süreç) ══════ */}
-          {layers.process && (
-            <>
-              {/* Section label */}
-              <div style={{ display: 'flex', height: 28, background: '#F8F5FF', borderBottom: '1px solid #E2E8F0', borderTop: '1px solid #E2E8F0' }}>
-                <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 0.75rem', gap: '0.3rem' }}>
-                  <span style={{ fontSize: '0.52rem', fontWeight: 800, color: '#7C3AED', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Standart Süreç — 24 Ay / 26 KM</span>
-                </div>
-                <div style={{ flex: 1, position: 'relative', background: '#F8F5FF' }}>
-                  {/* Phase color blocks in header */}
-                  {STANDARD_PROCESS.map(phase => (
-                    <div key={phase.id} title={phase.label} style={{ position: 'absolute', top: '35%', height: '30%', left: `${phase.startFrac * 100}%`, width: `${(phase.endFrac - phase.startFrac) * 100}%`, background: phase.color, opacity: 0.18, borderRadius: 2 }} />
-                  ))}
-                  <TodayLine />
-                </div>
-              </div>
+          {/* ══ STANDARD PROCESS — swim-lane layout ══ */}
+          {layers.process && STANDARD_PROCESS.map(phase => {
+            const rows      = assignToRows(phase.milestones)
+            const usedRows  = rows.filter(r => r.length > 0).length
+            const nRows     = Math.max(usedRows, 2)
+            const phaseH    = nRows * ROW_H
+            const phaseOpen = !collapsed[phase.id]
 
-              {STANDARD_PROCESS.map(phase => {
-                const phaseOpen = !collapsed[phase.id]
-                return (
-                  <React.Fragment key={phase.id}>
-                    {/* Phase header */}
-                    <div
-                      onClick={() => setCollapsed(p => ({ ...p, [phase.id]: !p[phase.id] }))}
-                      style={{ display: 'flex', height: 30, borderBottom: '1px solid #E2E8F0', cursor: 'pointer', background: phase.color + '08' }}
-                    >
-                      <div style={{ width: LABEL_W, flexShrink: 0, borderRight: `2px solid ${phase.color}`, display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0 0.6rem' }}>
-                        <span style={{ fontSize: '0.58rem', color: phase.color, flexShrink: 0, display: 'inline-block', transform: phaseOpen ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.15s' }}>▾</span>
-                        <span style={{ fontSize: '0.62rem', fontWeight: 700, color: phase.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{phase.label}</span>
-                        <InfoTooltip text={phase.purpose} />
-                      </div>
-                      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                        <GridLines />
-                        {/* Phase span bar */}
-                        <div style={{ position: 'absolute', left: `${phase.startFrac * 100}%`, width: `${(phase.endFrac - phase.startFrac) * 100}%`, top: 4, bottom: 4, borderRadius: 3, background: phase.color, opacity: 0.10, border: `1px solid ${phase.color}40`, zIndex: 1 }} />
-                        {/* Major milestone diamonds on phase header */}
-                        {phase.milestones.filter(km => km.major).map(km => (
-                          <div key={km.id} title={km.shortName} style={{ position: 'absolute', left: `${km.frac * 100}%`, top: '50%', transform: 'translate(-50%, -50%) rotate(45deg)', width: 8, height: 8, background: '#F59E0B', border: '1.5px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.25)', zIndex: 3 }} />
-                        ))}
-                        <TodayLine />
-                      </div>
+            return (
+              <React.Fragment key={phase.id}>
+                {/* Phase header (single row, collapsible) */}
+                <div
+                  onClick={() => setCollapsed(p => ({ ...p, [phase.id]: !p[phase.id] }))}
+                  style={{ display: 'flex', height: 30, background: phase.color + '12', borderBottom: '1px solid ' + phase.color + '30', cursor: 'pointer', borderTop: '1px solid ' + phase.color + '20' }}
+                >
+                  <div style={{ width: LABEL_W, flexShrink: 0, borderRight: `2px solid ${phase.color}`, display: 'flex', alignItems: 'center', gap: '0.35rem', padding: '0 0.625rem' }}>
+                    <span style={{ fontSize: '0.58rem', color: phase.color, flexShrink: 0, display: 'inline-block', transition: 'transform 0.15s', transform: phaseOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
+                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: phase.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{phase.name}</span>
+                  </div>
+                  <div style={{ flex: 1, position: 'relative', background: phase.color + '06' }}>
+                    {/* thin span indicator across phase range */}
+                    <div style={{ position: 'absolute', left: `${phase.startFrac * 100}%`, width: `${(phase.endFrac - phase.startFrac) * 100}%`, top: '38%', height: '24%', background: phase.color, opacity: 0.2, borderRadius: 2 }} />
+                    <TodayLine />
+                  </div>
+                </div>
+
+                {/* Swim lanes — one row per assigned lane */}
+                {phaseOpen && (
+                  <div style={{ display: 'flex', borderBottom: '2px solid ' + phase.color + '25' }}>
+                    {/* Phase label column — spans all swim lanes */}
+                    <div style={{
+                      width: LABEL_W, flexShrink: 0,
+                      height: phaseH,
+                      borderRight: `2px solid ${phase.color}`,
+                      background: phase.color + '08',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      padding: '0 0.5rem',
+                    }}>
+                      <span style={{ fontSize: '0.52rem', fontWeight: 700, color: phase.color, textAlign: 'center', letterSpacing: '0.04em', opacity: 0.7, userSelect: 'none' }}>
+                        {phase.milestones.length} KM
+                      </span>
                     </div>
 
-                    {/* KM rows */}
-                    {phaseOpen && phase.milestones.map((km, idx) => {
-                      const prevFrac = idx > 0 ? phase.milestones[idx - 1].frac : phase.startFrac
-                      return (
-                        <div key={km.id} style={{ display: 'flex', height: km.major ? 30 : 26, borderBottom: '1px solid #F1F5F9', background: km.major ? `${phase.color}05` : '#fff' }}>
-                          {/* Label */}
-                          <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', borderLeft: `2px solid ${phase.color}25`, display: 'flex', alignItems: 'center', gap: '0.3rem', padding: '0 0.55rem 0 1rem' }}>
-                            {/* KM number badge */}
-                            <div style={{
-                              flexShrink: 0, width: 16, height: 16, borderRadius: 3,
-                              background: km.major ? phase.color : phase.color + '20',
-                              color: km.major ? '#fff' : phase.color,
-                              fontSize: '0.46rem', fontWeight: 800,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                              {km.num}
-                            </div>
-                            <span style={{
-                              fontSize: km.major ? '0.63rem' : '0.6rem',
-                              fontWeight: km.major ? 700 : 500,
-                              color: km.major ? '#0F172A' : '#475569',
-                              flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                              // strip leading ⭐ from shortName
-                              ...(km.shortName.startsWith('⭐') ? { color: '#0F172A' } : {}),
-                            }}>
-                              {km.shortName.replace(/^⭐\s*/, '')}
-                            </span>
-                            <InfoTooltip text={km.why} />
-                          </div>
-
-                          {/* Timeline */}
-                          <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'transparent' }}>
-                            <GridLines />
-                            {/* Lead-in line from previous KM */}
-                            <div style={{ position: 'absolute', left: `${prevFrac * 100}%`, width: `${(km.frac - prevFrac) * 100}%`, top: '50%', height: 1, background: `${phase.color}30`, zIndex: 1 }} />
-                            {/* Milestone marker */}
-                            {km.major
-                              ? (
-                                <>
-                                  {/* Gold star diamond for major */}
-                                  <div style={{ position: 'absolute', left: `${km.frac * 100}%`, top: '50%', transform: 'translate(-50%, -50%) rotate(45deg)', width: 11, height: 11, background: '#F59E0B', border: '2px solid #fff', boxShadow: `0 2px 6px rgba(245,158,11,0.5), 0 0 0 2px ${phase.color}25`, zIndex: 3 }} />
-                                  {/* KM label above */}
-                                  <div style={{ position: 'absolute', left: `${km.frac * 100}%`, top: 2, transform: 'translateX(-50%)', fontSize: '0.47rem', fontWeight: 800, color: phase.color, whiteSpace: 'nowrap', zIndex: 4, background: 'rgba(255,255,255,0.92)', padding: '0 3px', borderRadius: 2 }}>
-                                    KM{km.num}
-                                  </div>
-                                </>
-                              )
-                              : (
-                                <div style={{ position: 'absolute', left: `${km.frac * 100}%`, top: '50%', transform: 'translate(-50%, -50%) rotate(45deg)', width: 7, height: 7, background: phase.color, border: '1.5px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.18)', zIndex: 2 }} />
-                              )
-                            }
+                    {/* Lanes grid */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      {Array.from({ length: nRows }, (_, rowIdx) => {
+                        const rowKms = rows[rowIdx] ?? []
+                        const isLast = rowIdx === nRows - 1
+                        return (
+                          <div key={rowIdx} style={{
+                            height: ROW_H,
+                            position: 'relative',
+                            overflow: 'visible',
+                            borderBottom: isLast ? 'none' : '1px solid ' + phase.color + '15',
+                            background: rowIdx % 2 === 0 ? phase.color + '04' : 'transparent',
+                          }}>
+                            <GridBg bg={phase.color + '03'} />
+                            {rowKms.map(km => (
+                              <BarTooltip key={km.id} km={km} color={phase.color} />
+                            ))}
                             <TodayLine />
                           </div>
-                        </div>
-                      )
-                    })}
-                  </React.Fragment>
-                )
-              })}
-            </>
-          )}
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
+            )
+          })}
 
           {/* Financial Flow */}
           {(cashIn.length > 0 || cashOut.length > 0) && (
@@ -531,7 +558,7 @@ export function WorkStreamGantt({
                 <span style={{ fontSize: '0.62rem', fontWeight: 600, color: '#64748B' }}>💰 Financial Flow</span>
               </div>
               <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#fff' }}>
-                <GridLines />
+                <GridBg />
                 {cashOut.map(t => {
                   const p = pct(new Date(t.date + 'T00:00:00'))
                   if (p < 0 || p > 100) return null
