@@ -419,50 +419,7 @@ export function WorkStreamGantt({
             </div>
           )}
 
-          {/* Work stream rows */}
-          {visibleColumns.map(col => {
-            const colTasks = tasksByCol[col.id] ?? []
-            const style    = colBarStyle(col.name)
-            const isOpen   = !collapsed[col.id]
-            const colDates = colTasks.map(t => new Date(t.due_date! + 'T00:00:00').getTime())
-            const spanL    = colDates.length ? pct(new Date(Math.min(...colDates))) : null
-            const spanR    = colDates.length ? pct(new Date(Math.max(...colDates))) : null
-
-            return (
-              <React.Fragment key={col.id}>
-                <div onClick={() => setCollapsed(p => ({ ...p, [col.id]: !p[col.id] }))} style={{ display: 'flex', height: 34, borderBottom: '1px solid #E2E8F0', cursor: 'pointer', background: '#fff' }}>
-                  <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', gap: '0.375rem', padding: '0 0.75rem' }}>
-                    <span style={{ fontSize: '0.6rem', color: '#94A3B8', flexShrink: 0, display: 'inline-block', transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>▾</span>
-                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: style.bg, flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.69rem', fontWeight: 600, color: '#1E293B', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{col.name}</span>
-                    <span style={{ fontSize: '0.57rem', color: '#94A3B8', flexShrink: 0 }}>{colTasks.length}</span>
-                  </div>
-                  <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                    <GridBg />
-                    {spanL !== null && spanR !== null && (
-                      <div style={{ position: 'absolute', left: `${spanL}%`, width: `${Math.max(spanR - spanL, 0.6)}%`, top: '22%', height: '56%', borderRadius: 3, background: style.dashed ? 'transparent' : style.bg, backgroundImage: style.stripe ? STRIPE : 'none', border: style.dashed ? '1.5px dashed #94A3B8' : 'none', opacity: 0.85, zIndex: 1 }} />
-                    )}
-                    <TodayLine />
-                  </div>
-                </div>
-                {isOpen && colTasks.map(task => {
-                  const d = new Date(task.due_date! + 'T00:00:00')
-                  const bL = pct(addDays(d, -7)), bR = pct(d)
-                  return (
-                    <div key={task.id} style={{ display: 'flex', height: 24, borderBottom: '1px solid #F8FAFC', background: '#FAFBFD' }}>
-                      <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 0.75rem 0 1.875rem' }}>
-                        <span style={{ fontSize: '0.62rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
-                      </div>
-                      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', left: `${bL}%`, width: `${Math.max(bR - bL, 0.4)}%`, top: '15%', height: '70%', borderRadius: 2, background: style.bg, opacity: 0.55, backgroundImage: style.stripe ? STRIPE : 'none', zIndex: 1 }} />
-                        <TodayLine />
-                      </div>
-                    </div>
-                  )
-                })}
-              </React.Fragment>
-            )
-          })}
+          {/* (work stream rows removed) */}
 
           {/* Project Milestones */}
           {layers.milestones && milestones.length > 0 && (
@@ -551,28 +508,113 @@ export function WorkStreamGantt({
             )
           })}
 
-          {/* Financial Flow */}
-          {(cashIn.length > 0 || cashOut.length > 0) && (
-            <div style={{ display: 'flex', height: 42, borderBottom: '1px solid #E2E8F0' }}>
-              <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 0.75rem', background: '#fff' }}>
-                <span style={{ fontSize: '0.62rem', fontWeight: 600, color: '#64748B' }}>💰 Financial Flow</span>
+          {/* ══ Cash rows — 3 × 2-row blocks ══ */}
+          {(() => {
+            const SYM = currency === 'TRY' ? '₺' : '$'
+            function fmtK(n: number) {
+              const abs = Math.abs(n)
+              const s   = abs >= 1_000_000 ? `${(abs / 1_000_000).toFixed(1)}M`
+                        : abs >= 1_000     ? `${(abs / 1_000).toFixed(0)}K`
+                        : abs.toFixed(0)
+              return (n < 0 ? '-' : '') + SYM + s
+            }
+
+            // Aggregate per period
+            const periodOut: number[]  = periods.map(() => 0)
+            const periodIn:  number[]  = periods.map(() => 0)
+
+            function addToPeriod(date: string, amount: number, arr: number[]) {
+              const d = new Date(date + 'T00:00:00').getTime()
+              for (let i = 0; i < periods.length; i++) {
+                if (d >= periods[i].start.getTime() && d <= periods[i].end.getTime()) {
+                  arr[i] += amount; return
+                }
+              }
+            }
+            cashOut.forEach(t => addToPeriod(t.date, t.amount, periodOut))
+            cashIn.forEach(t  => addToPeriod(t.date, t.amount, periodIn))
+            const periodNet = periodOut.map((o, i) => periodIn[i] - o)
+
+            const maxOut = Math.max(...periodOut, 1)
+            const maxIn  = Math.max(...periodIn,  1)
+            const maxNet = Math.max(...periodNet.map(Math.abs), 1)
+
+            const ROW_BG_OUT = '#FEF2F2'
+            const ROW_BG_IN  = '#F0FDF4'
+            const ROW_BG_NET = '#EFF6FF'
+            const C_OUT = '#EF4444'
+            const C_IN  = '#10B981'
+
+            type CashRowDef = {
+              label: string; sub: string
+              bg: string; barColor: string; textColor: string
+              values: number[]; maxVal: number; isNet: boolean
+            }
+
+            const rows: CashRowDef[] = [
+              { label: 'Cash Out',  sub: 'Harcama',  bg: ROW_BG_OUT, barColor: C_OUT,    textColor: C_OUT,    values: periodOut, maxVal: maxOut, isNet: false },
+              { label: 'Cash In',   sub: 'Tahsilat', bg: ROW_BG_IN,  barColor: C_IN,     textColor: C_IN,     values: periodIn,  maxVal: maxIn,  isNet: false },
+              { label: 'Net Cash',  sub: 'Bakiye',   bg: ROW_BG_NET, barColor: '#2563EB', textColor: '#2563EB', values: periodNet, maxVal: maxNet, isNet: true  },
+            ]
+
+            return rows.map((row, ri) => (
+              <div key={row.label} style={{
+                display: 'flex',
+                borderTop:    ri === 0 ? '1.5px solid #E2E8F0' : 'none',
+                borderBottom: '1.5px solid #E2E8F0',
+              }}>
+                {/* Label cell — 2 rows tall, centred */}
+                <div style={{
+                  width: LABEL_W, flexShrink: 0,
+                  height: N_ROWS * ROW_H,
+                  borderRight: `2px solid ${row.barColor}40`,
+                  background: row.bg,
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  gap: '0.1rem', padding: '0 0.5rem',
+                }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: row.textColor, letterSpacing: '0.03em', userSelect: 'none', lineHeight: 1.2 }}>{row.label}</span>
+                  <span style={{ fontSize: '0.54rem', fontWeight: 600, color: row.textColor, opacity: 0.65, letterSpacing: '0.06em', userSelect: 'none', lineHeight: 1.2 }}>{row.sub}</span>
+                </div>
+
+                {/* Period columns — row 0: bar, row 1: value text */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: row.bg }}>
+                  {/* Row 0 — bars */}
+                  <div style={{ height: ROW_H, display: 'flex', borderBottom: `1px dashed ${row.barColor}25` }}>
+                    {periods.map((p, i) => {
+                      const val = row.values[i]
+                      if (val === 0) return <div key={p.key} style={{ flex: 1, borderRight: '1px solid rgba(226,232,240,0.6)', position: 'relative' }}><GridBg bg="transparent" /><TodayLine /></div>
+                      const barH  = Math.round(Math.max(4, (Math.abs(val) / row.maxVal) * (ROW_H - 6)))
+                      const color = row.isNet ? (val >= 0 ? C_IN : C_OUT) : row.barColor
+                      return (
+                        <div key={p.key} style={{ flex: 1, borderRight: '1px solid rgba(226,232,240,0.6)', position: 'relative', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 2 }}>
+                          <div title={fmtK(val)} style={{ width: '60%', height: barH, background: color, borderRadius: '2px 2px 0 0', opacity: 0.75 }} />
+                          <TodayLine />
+                        </div>
+                      )
+                    })}
+                  </div>
+                  {/* Row 1 — values */}
+                  <div style={{ height: ROW_H, display: 'flex' }}>
+                    {periods.map((p, i) => {
+                      const val   = row.values[i]
+                      const color = row.isNet ? (val > 0 ? C_IN : val < 0 ? C_OUT : '#94A3B8') : row.barColor
+                      return (
+                        <div key={p.key} style={{ flex: 1, borderRight: '1px solid rgba(226,232,240,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                          {val !== 0 && (
+                            <span style={{ fontSize: '0.52rem', fontWeight: 700, color, whiteSpace: 'nowrap' }}>
+                              {fmtK(val)}
+                            </span>
+                          )}
+                          <TodayLine />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
               </div>
-              <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#fff' }}>
-                <GridBg />
-                {cashOut.map(t => {
-                  const p = pct(new Date(t.date + 'T00:00:00'))
-                  if (p < 0 || p > 100) return null
-                  return <div key={t.id} title={`Cash Out: ${t.amount}`} style={{ position: 'absolute', bottom: 2, left: `${p}%`, transform: 'translateX(-4px)', width: 5, height: Math.max(6, Math.min(32, 4 + t.amount / 200000)), background: '#EF4444', borderRadius: '2px 2px 0 0', opacity: 0.8, zIndex: 1 }} />
-                })}
-                {cashIn.map(t => {
-                  const p = pct(new Date(t.date + 'T00:00:00'))
-                  if (p < 0 || p > 100) return null
-                  return <div key={t.id} title={`Cash In: ${t.amount}`} style={{ position: 'absolute', top: 2, left: `${p}%`, transform: 'translateX(1px)', width: 5, height: Math.max(6, Math.min(32, 4 + t.amount / 200000)), background: '#10B981', borderRadius: '0 0 2px 2px', opacity: 0.8, zIndex: 1 }} />
-                })}
-                <TodayLine />
-              </div>
-            </div>
-          )}
+            ))
+          })()}
 
         </div>
       </div>
