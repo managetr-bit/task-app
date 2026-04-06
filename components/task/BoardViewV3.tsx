@@ -185,7 +185,7 @@ function MilestoneList({
   const COL_DEL   = 36
 
   return (
-    <div style={{ background: '#fff', borderTop: '1.5px solid #E2E8F0', borderBottom: '1.5px solid #E2E8F0' }}>
+    <div style={{ background: '#fff' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', padding: '0.625rem 1rem', borderBottom: '1px solid #E2E8F0', gap: '0.625rem' }}>
         <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.09em' }}>
@@ -389,9 +389,10 @@ export function BoardViewV3(props: Props) {
     onImportBudgetLines, onChangeCurrency, onUpdateMemberRole,
   } = props
 
-  const [showProjectInfo, setShowProjectInfo] = useState(false)
-  const [showInvite,      setShowInvite]       = useState(false)
-  const [showCost,        setShowCost]         = useState(false)
+  const [showProjectInfo,  setShowProjectInfo]  = useState(false)
+  const [showInvite,       setShowInvite]        = useState(false)
+  const [showCost,         setShowCost]          = useState(false)
+  const [showMilestones,   setShowMilestones]    = useState(false)
   const [recentNotes,     setRecentNotes]      = useState<Note[]>([])
   const [weather,         setWeather]          = useState<Weather>(null)
   const [cloudScriptUrl,  setCloudScriptUrl]   = useState<string>(() => {
@@ -537,6 +538,7 @@ export function BoardViewV3(props: Props) {
           <MembersBar members={members} currentMember={currentMember} isCreator={isCreator} onUpdateMemberRole={onUpdateMemberRole} />
           <button onClick={() => setShowInvite(true)} style={{ flexShrink: 0, padding: '0.3rem 0.625rem', background: 'rgba(14,165,233,0.12)', color: '#0EA5E9', border: '1px solid rgba(14,165,233,0.3)', borderRadius: 6, fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer' }}>+ Invite</button>
           <button onClick={() => setShowCost(true)} style={{ flexShrink: 0, padding: '0.3rem 0.5rem', background: 'none', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, fontSize: '0.72rem', cursor: 'pointer' }} title="Budget & Cost">💰</button>
+          <button onClick={() => setShowMilestones(true)} style={{ flexShrink: 0, padding: '0.3rem 0.5rem', background: 'none', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 6, fontSize: '0.72rem', cursor: 'pointer' }} title="Milestones">◈</button>
           <a href={`/${board.id}`}    style={{ flexShrink: 0, padding: '0.3rem 0.5rem', background: 'none', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, fontSize: '0.72rem', textDecoration: 'none' }}>v1</a>
           <a href={`/v2/${board.id}`} style={{ flexShrink: 0, padding: '0.3rem 0.5rem', background: 'none', color: 'rgba(255,255,255,0.35)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, fontSize: '0.72rem', textDecoration: 'none' }}>v2</a>
         </div>
@@ -763,22 +765,6 @@ export function BoardViewV3(props: Props) {
           />
 
           {/* ══════════════════════════════════════════════════════
-              MILESTONE LIST
-          ══════════════════════════════════════════════════════ */}
-          <MilestoneList
-            milestones={milestones}
-            rangeStart={msRangeStart}
-            rangeEnd={msRangeEnd}
-            canEdit={isCreator || currentMember.role === 'admin'}
-            today={today}
-            onAdd={onAddMilestone}
-            onUpdateDate={onUpdateMilestoneDate}
-            onUpdateName={onUpdateMilestoneName}
-            onComplete={onCompleteMilestone}
-            onDelete={onDeleteMilestone}
-          />
-
-          {/* ══════════════════════════════════════════════════════
               BOTTOM PANELS — 2 columns
           ══════════════════════════════════════════════════════ */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1.5px solid #E2E8F0', minHeight: 360, background: '#fff' }}>
@@ -889,6 +875,37 @@ export function BoardViewV3(props: Props) {
           onUpdateMemberRole={onUpdateMemberRole}
         />
       )}
+      {showMilestones && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1.5rem' }}>
+          <div style={{ width: '100%', maxWidth: 780, maxHeight: '85vh', background: '#fff', borderRadius: 12, boxShadow: '0 24px 64px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Modal header */}
+            <div style={{ display: 'flex', alignItems: 'center', padding: '0.875rem 1.25rem', borderBottom: '1.5px solid #E2E8F0', flexShrink: 0 }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.01em' }}>Kilometre Taşları</span>
+              <span style={{ marginLeft: '0.625rem', fontSize: '0.62rem', color: '#94A3B8', fontWeight: 500 }}>
+                {milestones.filter(m => m.completed_at).length}/{milestones.length} tamamlandı
+              </span>
+              <div style={{ flex: 1 }} />
+              <button onClick={() => setShowMilestones(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8', fontSize: '1rem', lineHeight: 1, padding: '0.25rem 0.375rem' }}>✕</button>
+            </div>
+            {/* Scrollable list */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              <MilestoneList
+                milestones={milestones}
+                rangeStart={msRangeStart}
+                rangeEnd={msRangeEnd}
+                canEdit={isCreator || currentMember.role === 'admin'}
+                today={today}
+                onAdd={onAddMilestone}
+                onUpdateDate={onUpdateMilestoneDate}
+                onUpdateName={onUpdateMilestoneName}
+                onComplete={onCompleteMilestone}
+                onDelete={onDeleteMilestone}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCost && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100, display: 'flex', alignItems: 'stretch', justifyContent: 'flex-end' }}>
           <div style={{ width: '55vw', minWidth: 480, background: '#fff', overflow: 'auto', position: 'relative' }}>
