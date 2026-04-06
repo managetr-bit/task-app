@@ -762,6 +762,9 @@ export function BoardViewV3(props: Props) {
             boardPhotos={photos}
             onAddMilestone={onAddMilestone}
             onUpdateMilestoneDate={onUpdateMilestoneDate}
+            onUpdateMilestoneName={onUpdateMilestoneName}
+            onDeleteMilestone={onDeleteMilestone}
+            onCompleteMilestone={onCompleteMilestone}
           />
 
           {/* ══════════════════════════════════════════════════════

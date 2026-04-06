@@ -51,6 +51,9 @@ export type WorkStreamGanttProps = {
   boardPhotos?: string[]
   onAddMilestone?: (name: string, date: string) => Promise<void>
   onUpdateMilestoneDate?: (id: string, date: string) => Promise<void>
+  onUpdateMilestoneName?: (id: string, name: string) => Promise<void>
+  onDeleteMilestone?: (id: string) => Promise<void>
+  onCompleteMilestone?: (id: string, complete: boolean) => Promise<void>
 }
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -288,18 +291,67 @@ function DiamondMarker({ km, color }: { km: ProcessMilestone; color: string }) {
   )
 }
 
+// ─── Project milestone marker (editable, overlaid on phase rows) ─────────────
+
+function ProjectMilestoneMarker({
+  ms,
+  pctFn,
+  onEdit,
+}: {
+  ms: Milestone
+  pctFn: (d: Date) => number
+  onEdit: (ms: Milestone, x: number, y: number) => void
+}) {
+  const p = pctFn(new Date(ms.target_date + 'T00:00:00'))
+  if (p < 0 || p > 100) return null
+  const done  = !!ms.completed_at
+  const color = done ? '#10B981' : '#F59E0B'
+  const bdr   = done ? '#059669' : '#D97706'
+  const D = 10
+  return (
+    <div
+      title={`${ms.name} · ${ms.target_date}`}
+      style={{
+        position: 'absolute', left: `${p}%`, top: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 8, pointerEvents: 'auto', cursor: 'pointer',
+      }}
+      onClick={(e) => { e.stopPropagation(); onEdit(ms, e.clientX, e.clientY) }}
+    >
+      <div style={{
+        width: D, height: D, background: color,
+        border: `2px solid ${bdr}`, borderRadius: 2,
+        transform: 'rotate(45deg)',
+        boxShadow: `0 1px 5px ${color}88`,
+      }} />
+    </div>
+  )
+}
+
 // ─── component ────────────────────────────────────────────────────────────────
+
+type MilestonePopover =
+  | { mode: 'create'; x: number; y: number }
+  | { mode: 'edit';   ms: Milestone; x: number; y: number }
 
 export function WorkStreamGantt({
   tasks, columns, milestones,
   costTransactions = [], budgetLines = [],
   currency = 'USD', boardPhotos = [],
+  onAddMilestone, onUpdateMilestoneDate,
+  onUpdateMilestoneName, onDeleteMilestone, onCompleteMilestone,
 }: WorkStreamGanttProps) {
 
   const [filter,    setFilter]    = useState<string>('all')
   const [layers,    setLayers]    = useState<Record<LayerKey, boolean>>({ photos: true, milestones: false, risks: false, process: true })
   const [tf,        setTf]        = useState<Timeframe>('monthly')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+
+  // ── milestone popover ─────────────────────────────────────────────────────
+  const [msPopover,  setMsPopover]  = useState<MilestonePopover | null>(null)
+  const [popName,    setPopName]    = useState('')
+  const [popDate,    setPopDate]    = useState('')
+  const [popSaving,  setPopSaving]  = useState(false)
 
   // ── date range ────────────────────────────────────────────────────────────
   const { rangeStart, rangeEnd } = useMemo(() => {
@@ -351,6 +403,7 @@ export function WorkStreamGantt({
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
+  <>
     <div style={{ background: '#F8FAFC', borderTop: '1.5px solid #E2E8F0' }}>
 
       {/* ── Controls bar ── */}
@@ -469,23 +522,62 @@ export function WorkStreamGantt({
                 </div>
 
                 {/* 2 timeline lanes stacked */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
-                  {Array.from({ length: N_ROWS }, (_, rowIdx) => {
-                    const rowKms = rows[rowIdx] ?? []
-                    return (
-                      <div key={rowIdx} style={{
-                        height: ROW_H, position: 'relative', overflow: 'visible',
-                        borderBottom: rowIdx < N_ROWS - 1 ? `1px dashed ${phase.color}20` : 'none',
-                      }}>
-                        <GridBg bg="transparent" />
-                        {rowKms.map(km => (
-                          <DiamondMarker key={km.id} km={km} color={phase.color} />
-                        ))}
-                        <TodayLine />
-                      </div>
-                    )
-                  })}
-                </div>
+                {(() => {
+                  const phaseStartMs = rangeStart.getTime() + phase.startFrac * totalMs
+                  const phaseEndMs   = rangeStart.getTime() + phase.endFrac   * totalMs
+                  const phaseMs = milestones.filter(m => {
+                    const t = new Date(m.target_date + 'T00:00:00').getTime()
+                    return t >= phaseStartMs && t <= phaseEndMs
+                  })
+                  return (
+                    <div
+                      style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', position: 'relative', cursor: onAddMilestone ? 'crosshair' : 'default' }}
+                      onClick={(e) => {
+                        if (!onAddMilestone) return
+                        const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect()
+                        const frac  = (e.clientX - rect.left) / rect.width
+                        const date  = new Date(rangeStart.getTime() + frac * totalMs)
+                        const dateStr = date.toISOString().split('T')[0]
+                        setPopName('')
+                        setPopDate(dateStr)
+                        setMsPopover({ mode: 'create', x: e.clientX, y: e.clientY })
+                      }}
+                    >
+                      {Array.from({ length: N_ROWS }, (_, rowIdx) => {
+                        const rowKms = rows[rowIdx] ?? []
+                        return (
+                          <div key={rowIdx} style={{
+                            height: ROW_H, position: 'relative', overflow: 'visible',
+                            borderBottom: rowIdx < N_ROWS - 1 ? `1px dashed ${phase.color}20` : 'none',
+                          }}>
+                            <GridBg bg="transparent" />
+                            {rowKms.map(km => (
+                              <DiamondMarker key={km.id} km={km} color={phase.color} />
+                            ))}
+                            <TodayLine />
+                          </div>
+                        )
+                      })}
+                      {/* Project milestones overlay */}
+                      {phaseMs.length > 0 && (
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 7 }}>
+                          {phaseMs.map(m => (
+                            <ProjectMilestoneMarker
+                              key={m.id}
+                              ms={m}
+                              pctFn={pct}
+                              onEdit={(ms, x, y) => {
+                                setPopName(ms.name)
+                                setPopDate(ms.target_date)
+                                setMsPopover({ mode: 'edit', ms, x, y })
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </div>
             )
           })}
@@ -637,5 +729,121 @@ export function WorkStreamGantt({
         </div>
       </div>
     </div>
+
+    {/* ── Milestone create / edit popover ── */}
+    {msPopover && (
+      <div
+        style={{
+          position: 'fixed',
+          top: msPopover.y,
+          left: msPopover.x,
+          zIndex: 2000,
+          transform: 'translate(-50%, calc(-100% - 12px))',
+          background: '#fff',
+          border: '1px solid #E2E8F0',
+          borderRadius: 10,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+          padding: '0.875rem 1rem',
+          width: 248,
+          pointerEvents: 'auto',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+          <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0F172A' }}>
+            {msPopover.mode === 'create' ? '+ Yeni Milestone' : 'Milestone Düzenle'}
+          </span>
+          <button
+            onClick={() => setMsPopover(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem', color: '#94A3B8', lineHeight: 1, padding: '0 0.1rem' }}
+          >✕</button>
+        </div>
+
+        {/* Name */}
+        <input
+          value={popName}
+          onChange={e => setPopName(e.target.value)}
+          placeholder="Milestone adı..."
+          autoFocus
+          onKeyDown={e => { if (e.key === 'Escape') setMsPopover(null) }}
+          style={{ width: '100%', border: '1px solid #E2E8F0', borderRadius: 6, padding: '0.32rem 0.55rem', fontSize: '0.7rem', marginBottom: '0.4rem', outline: 'none', boxSizing: 'border-box', color: '#0F172A' }}
+        />
+
+        {/* Date */}
+        <input
+          type="date"
+          value={popDate}
+          onChange={e => setPopDate(e.target.value)}
+          style={{ width: '100%', border: '1px solid #E2E8F0', borderRadius: 6, padding: '0.32rem 0.55rem', fontSize: '0.7rem', marginBottom: '0.55rem', outline: 'none', boxSizing: 'border-box', color: '#0F172A' }}
+        />
+
+        {/* Complete toggle (edit only) */}
+        {msPopover.mode === 'edit' && onCompleteMilestone && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.67rem', color: '#475569', cursor: 'pointer', marginBottom: '0.55rem' }}>
+            <input
+              type="checkbox"
+              checked={!!msPopover.ms.completed_at}
+              onChange={async (e) => {
+                await onCompleteMilestone(msPopover.ms.id, e.target.checked)
+                setMsPopover(null)
+              }}
+              style={{ accentColor: '#10B981', width: 13, height: 13 }}
+            />
+            Tamamlandı olarak işaretle
+          </label>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+          {msPopover.mode === 'edit' && onDeleteMilestone && (
+            <button
+              onClick={async () => {
+                setPopSaving(true)
+                await onDeleteMilestone((msPopover as { mode: 'edit'; ms: Milestone; x: number; y: number }).ms.id)
+                setPopSaving(false)
+                setMsPopover(null)
+              }}
+              style={{ fontSize: '0.65rem', padding: '0.28rem 0.65rem', borderRadius: 6, border: '1px solid #FCA5A5', background: '#FEF2F2', color: '#EF4444', cursor: 'pointer', fontWeight: 600 }}
+            >Sil</button>
+          )}
+          <button
+            onClick={() => setMsPopover(null)}
+            style={{ fontSize: '0.65rem', padding: '0.28rem 0.65rem', borderRadius: 6, border: '1px solid #E2E8F0', background: '#F8FAFC', color: '#64748B', cursor: 'pointer' }}
+          >İptal</button>
+          <button
+            disabled={!popName.trim() || !popDate || popSaving}
+            onClick={async () => {
+              if (!popName.trim() || !popDate) return
+              setPopSaving(true)
+              try {
+                if (msPopover.mode === 'create' && onAddMilestone) {
+                  await onAddMilestone(popName.trim(), popDate)
+                } else if (msPopover.mode === 'edit') {
+                  const editMs = (msPopover as { mode: 'edit'; ms: Milestone; x: number; y: number }).ms
+                  if (onUpdateMilestoneName && popName.trim() !== editMs.name) {
+                    await onUpdateMilestoneName(editMs.id, popName.trim())
+                  }
+                  if (onUpdateMilestoneDate && popDate !== editMs.target_date) {
+                    await onUpdateMilestoneDate(editMs.id, popDate)
+                  }
+                }
+              } finally {
+                setPopSaving(false)
+                setMsPopover(null)
+              }
+            }}
+            style={{
+              fontSize: '0.65rem', padding: '0.28rem 0.65rem', borderRadius: 6,
+              border: 'none', background: '#0F172A', color: '#fff',
+              cursor: (!popName.trim() || !popDate || popSaving) ? 'not-allowed' : 'pointer',
+              fontWeight: 600,
+              opacity: (!popName.trim() || !popDate || popSaving) ? 0.45 : 1,
+            }}
+          >{popSaving ? '...' : 'Kaydet'}</button>
+        </div>
+      </div>
+    )}
+  </>
   )
 }
