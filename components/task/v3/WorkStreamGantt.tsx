@@ -57,7 +57,7 @@ export type WorkStreamGanttProps = {
 
 const LABEL_W  = 130
 const ROW_H    = 26   // px — height of one swim-lane row
-const N_ROWS   = 5    // max lanes per phase (FAZ 4 has 10 KMs → can pack into 5)
+const N_ROWS   = 2    // every phase is exactly 2 rows tall
 
 const COL_W: Record<Timeframe, number> = { weekly: 44, monthly: 64, quarterly: 100 }
 
@@ -497,65 +497,57 @@ export function WorkStreamGantt({
             </div>
           ))}
 
-          {/* ══ STANDARD PROCESS — swim-lane layout (no header row) ══ */}
-          {layers.process && STANDARD_PROCESS.map(phase => {
-            const rows  = assignToRows(phase.milestones)
-            const nRows = Math.max(rows.filter(r => r.length > 0).length, 2)
-
-            // Row labels: row 0 = "FAZ X", row 1 = shortName, rest = ""
-            const fazNum  = phase.name.split(' — ')[0]  // e.g. "FAZ 1"
-            const rowLabels = Array.from({ length: nRows }, (_, i) =>
-              i === 0 ? fazNum : i === 1 ? phase.shortName : ''
-            )
+          {/* ══ STANDARD PROCESS — 2-row swim lanes per phase ══ */}
+          {layers.process && STANDARD_PROCESS.map((phase, phaseIdx) => {
+            const rows   = assignToRows(phase.milestones, N_ROWS)
+            const fazNum = phase.name.split(' — ')[0]   // "FAZ 1" … "FAZ 5"
+            const phaseH = N_ROWS * ROW_H
 
             return (
-              <React.Fragment key={phase.id}>
-                {Array.from({ length: nRows }, (_, rowIdx) => {
-                  const rowKms = rows[rowIdx] ?? []
-                  const isFirst = rowIdx === 0
-                  const isLast  = rowIdx === nRows - 1
+              <div key={phase.id} style={{
+                display: 'flex',
+                borderTop:    phaseIdx === 0 ? `1.5px solid ${phase.color}40` : 'none',
+                borderBottom: `1.5px solid ${phase.color}40`,
+              }}>
 
-                  return (
-                    <div key={rowIdx} style={{
-                      display: 'flex', height: ROW_H,
-                      borderTop:    isFirst ? `1.5px solid ${phase.color}30` : 'none',
-                      borderBottom: isLast  ? `1.5px solid ${phase.color}30` : `1px solid ${phase.color}15`,
-                    }}>
-                      {/* Per-row label cell */}
-                      <div style={{
-                        width: LABEL_W, flexShrink: 0,
-                        borderRight: `2px solid ${phase.color}`,
-                        background: phase.color + (isFirst ? '15' : '08'),
-                        display: 'flex', alignItems: 'center',
-                        padding: '0 0.625rem',
-                      }}>
-                        <span style={{
-                          fontSize: isFirst ? '0.63rem' : '0.56rem',
-                          fontWeight: isFirst ? 800 : 600,
-                          color: phase.color,
-                          letterSpacing: '0.04em',
-                          userSelect: 'none',
-                          opacity: isFirst ? 1 : 0.75,
-                        }}>
-                          {rowLabels[rowIdx]}
-                        </span>
-                      </div>
+                {/* Label cell — spans full phase height, text centred */}
+                <div style={{
+                  width: LABEL_W, flexShrink: 0,
+                  height: phaseH,
+                  borderRight: `2px solid ${phase.color}`,
+                  background: phase.color + '12',
+                  display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center',
+                  gap: '0.1rem',
+                  padding: '0 0.5rem',
+                }}>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: phase.color, letterSpacing: '0.03em', userSelect: 'none', lineHeight: 1.2 }}>
+                    {fazNum}
+                  </span>
+                  <span style={{ fontSize: '0.54rem', fontWeight: 700, color: phase.color, letterSpacing: '0.06em', userSelect: 'none', opacity: 0.75, lineHeight: 1.2 }}>
+                    {phase.shortName}
+                  </span>
+                </div>
 
-                      {/* Timeline lane */}
-                      <div style={{
-                        flex: 1, position: 'relative', overflow: 'visible',
-                        background: phase.color + (rowIdx % 2 === 0 ? '05' : '02'),
+                {/* 2 timeline lanes stacked */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: phase.color + '06' }}>
+                  {Array.from({ length: N_ROWS }, (_, rowIdx) => {
+                    const rowKms = rows[rowIdx] ?? []
+                    return (
+                      <div key={rowIdx} style={{
+                        height: ROW_H, position: 'relative', overflow: 'visible',
+                        borderBottom: rowIdx < N_ROWS - 1 ? `1px dashed ${phase.color}20` : 'none',
                       }}>
-                        <GridBg bg={phase.color + '03'} />
+                        <GridBg bg="transparent" />
                         {rowKms.map(km => (
                           <DiamondMarker key={km.id} km={km} color={phase.color} />
                         ))}
                         <TodayLine />
                       </div>
-                    </div>
-                  )
-                })}
-              </React.Fragment>
+                    )
+                  })}
+                </div>
+              </div>
             )
           })}
 
