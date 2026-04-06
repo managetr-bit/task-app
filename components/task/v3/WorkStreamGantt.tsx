@@ -297,7 +297,7 @@ export function WorkStreamGantt({
 }: WorkStreamGanttProps) {
 
   const [filter,    setFilter]    = useState<string>('all')
-  const [layers,    setLayers]    = useState<Record<LayerKey, boolean>>({ photos: false, milestones: true, risks: false, process: true })
+  const [layers,    setLayers]    = useState<Record<LayerKey, boolean>>({ photos: true, milestones: false, risks: false, process: true })
   const [tf,        setTf]        = useState<Timeframe>('monthly')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
@@ -364,7 +364,6 @@ export function WorkStreamGantt({
         <div style={{ width: 1, height: 18, background: '#E2E8F0', margin: '0 0.125rem' }} />
         {([
           { key: 'photos',    label: 'Photos',     ac: '#0EA5E9' },
-          { key: 'milestones', label: 'Milestones', ac: '#0EA5E9' },
           { key: 'risks',     label: 'Risks',      ac: '#0EA5E9' },
           { key: 'process',   label: 'Süreç',      ac: '#7C3AED' },
         ] as { key: LayerKey; label: string; ac: string }[]).map(({ key, label, ac }) => {
