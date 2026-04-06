@@ -421,23 +421,6 @@ export function WorkStreamGantt({
 
           {/* (work stream rows removed) */}
 
-          {/* Project Milestones */}
-          {layers.milestones && milestones.length > 0 && (
-            <div style={{ display: 'flex', height: 32, borderBottom: '1px solid #E2E8F0' }}>
-              <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', padding: '0 0.75rem', background: '#fff' }}>
-                <span style={{ fontSize: '0.62rem', fontWeight: 600, color: '#64748B' }}>◈ Milestones</span>
-              </div>
-              <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#fff' }}>
-                <GridBg />
-                {milestones.map(m => {
-                  const p = pct(new Date(m.target_date + 'T00:00:00'))
-                  if (p < 0 || p > 100) return null
-                  return <div key={m.id} title={`${m.name} · ${m.target_date}`} style={{ position: 'absolute', left: `${p}%`, top: '50%', transform: 'translate(-50%, -50%) rotate(45deg)', width: 10, height: 10, zIndex: 2, background: m.completed_at ? '#10B981' : '#F59E0B', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)' }} />
-                })}
-                <TodayLine />
-              </div>
-            </div>
-          )}
 
           {/* Risks */}
           {layers.risks && DEMO_RISKS.map(risk => (
