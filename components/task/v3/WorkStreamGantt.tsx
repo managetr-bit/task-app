@@ -55,8 +55,8 @@ export type WorkStreamGanttProps = {
 // ─── constants ────────────────────────────────────────────────────────────────
 
 const LABEL_W  = 130
-const ROW_H    = 28   // px — height of one swim-lane row
-const N_ROWS   = 4    // max lanes per phase
+const ROW_H    = 26   // px — height of one swim-lane row
+const N_ROWS   = 5    // max lanes per phase (FAZ 4 has 10 KMs → can pack into 5)
 
 const COL_W: Record<Timeframe, number> = { weekly: 44, monthly: 64, quarterly: 100 }
 
@@ -188,70 +188,87 @@ function colBarStyle(colName: string): { bg: string; stripe: boolean; dashed: bo
   return { bg: '#CBD5E1', stripe: false, dashed: true }
 }
 
-// Greedy row assignment: sorts KMs by startFrac, assigns to first non-overlapping row
+// Greedy row assignment: sorts KMs by endFrac, assigns to first non-overlapping row.
+// We use endFrac as the anchor (diamond position) + an estimated label width in frac
+// units so the text of one KM doesn't overlap the diamond of the next.
 function assignToRows(kms: ProcessMilestone[], n = N_ROWS): ProcessMilestone[][] {
   const rows: ProcessMilestone[][] = Array.from({ length: n }, () => [])
-  const ends: number[] = Array(n).fill(-1)
-  const GAP = 0.004
+  // labelFrac: approximate space taken by label text after the diamond.
+  // Assume ~8px per char at 0.57rem, label ~10 chars avg → ~80px.
+  // For a 24-month timeline displayed at ~1200px wide, 1% ≈ 12px → 80px ≈ 6.5%
+  const labelFrac = 0.072
 
-  for (const km of [...kms].sort((a, b) => a.startFrac - b.startFrac)) {
-    // find first row where last bar ends before this bar starts
+  // "occupied until" per row = endFrac of last item + its label width
+  const until: number[] = Array(n).fill(-1)
+
+  for (const km of [...kms].sort((a, b) => a.endFrac - b.endFrac)) {
     let pick = -1
     for (let r = 0; r < n; r++) {
-      if (ends[r] + GAP <= km.startFrac) { pick = r; break }
+      if (until[r] <= km.endFrac) { pick = r; break }
     }
-    // fallback: pick row with earliest end
-    if (pick === -1) pick = ends.indexOf(Math.min(...ends))
+    if (pick === -1) pick = until.indexOf(Math.min(...until))
     rows[pick].push(km)
-    ends[pick] = km.endFrac
+    until[pick] = km.endFrac + labelFrac
   }
   return rows
 }
 
-// ─── BarTooltip ───────────────────────────────────────────────────────────────
+// ─── DiamondMarker ────────────────────────────────────────────────────────────
+// Renders a diamond at km.endFrac with the label to its right.
+// The tooltip appears on hover above the diamond.
 
-function BarTooltip({ km, color }: { km: ProcessMilestone; color: string }) {
+function DiamondMarker({ km, color }: { km: ProcessMilestone; color: string }) {
   const [open, setOpen] = useState(false)
 
-  const bg   = km.major ? color : color + 'CC'
-  const minW = 38
+  const D = km.major ? 11 : 8          // diamond size (px)
+  const LABEL_OFFSET = D / 2 + 4       // gap between diamond edge and text
 
   return (
+    // anchor div sits at endFrac, centred vertically in the row
     <div
       style={{
         position: 'absolute',
-        left: `${km.startFrac * 100}%`,
-        width: `${Math.max((km.endFrac - km.startFrac) * 100, 0)}%`,
-        minWidth: minW,
-        top: '12%', height: '76%',
-        borderRadius: 4,
-        background: bg,
-        backgroundImage: km.major ? 'none' : STRIPE,
+        left: `${km.endFrac * 100}%`,
+        top: '50%',
+        transform: 'translateY(-50%)',
         display: 'flex', alignItems: 'center',
-        padding: '0 4px',
         overflow: 'visible',
-        zIndex: open ? 10 : 1,
+        zIndex: open ? 10 : 2,
         cursor: 'default',
-        boxShadow: km.major ? `0 1px 4px ${color}55` : 'none',
-        border: km.major ? `1.5px solid ${color}` : 'none',
       }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
-      {/* Bar label */}
+      {/* Diamond shape */}
+      <div style={{
+        width: D, height: D, flexShrink: 0,
+        background: km.major ? color : '#fff',
+        border: `2px solid ${color}`,
+        borderRadius: 2,
+        transform: 'rotate(45deg)',
+        boxShadow: km.major ? `0 1px 5px ${color}66` : `0 1px 3px rgba(0,0,0,0.15)`,
+      }} />
+
+      {/* Label to the right */}
       <span style={{
-        fontSize: '0.55rem', fontWeight: km.major ? 800 : 600,
-        color: '#fff', whiteSpace: 'nowrap',
-        overflow: 'hidden', textOverflow: 'ellipsis',
-        flex: 1, letterSpacing: km.major ? '0.02em' : 0,
+        marginLeft: LABEL_OFFSET,
+        fontSize: km.major ? '0.6rem' : '0.57rem',
+        fontWeight: km.major ? 800 : 600,
+        color: km.major ? color : '#475569',
+        whiteSpace: 'nowrap',
+        letterSpacing: km.major ? '0.01em' : 0,
+        userSelect: 'none',
       }}>
         {km.label}
       </span>
 
-      {/* Tooltip popup */}
+      {/* Tooltip — appears above diamond */}
       {open && (
         <div style={{
-          position: 'absolute', bottom: 'calc(100% + 6px)', left: '50%', transform: 'translateX(-50%)',
+          position: 'absolute',
+          bottom: `calc(100% + ${D / 2 + 6}px)`,
+          left: 0,
+          transform: 'translateX(-30%)',
           zIndex: 60,
           background: '#0F172A', color: '#CBD5E1',
           fontSize: '0.62rem', lineHeight: 1.5,
@@ -263,8 +280,7 @@ function BarTooltip({ km, color }: { km: ProcessMilestone; color: string }) {
             KM {km.num} — {km.label}
           </div>
           {km.why}
-          {/* arrow */}
-          <div style={{ position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0F172A' }} />
+          <div style={{ position: 'absolute', top: '100%', left: '30%', transform: 'translateX(-50%)', width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid #0F172A' }} />
         </div>
       )}
     </div>
@@ -538,7 +554,7 @@ export function WorkStreamGantt({
                           }}>
                             <GridBg bg={phase.color + '03'} />
                             {rowKms.map(km => (
-                              <BarTooltip key={km.id} km={km} color={phase.color} />
+                              <DiamondMarker key={km.id} km={km} color={phase.color} />
                             ))}
                             <TodayLine />
                           </div>
