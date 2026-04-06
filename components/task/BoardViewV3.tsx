@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   type Board, type Column, type Member, type MemberRole, type Task,
   type Milestone, type MilestoneTask, type Priority,
@@ -85,6 +85,296 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)}d ago`
 }
 
+// ─── Phase colors (mirrors WorkStreamGantt) ──────────────────────────────────
+
+const PHASE_FRACS = [
+  { label: 'FAZ 1', color: '#7C3AED', end: 0.10 },
+  { label: 'FAZ 2', color: '#2563EB', end: 0.28 },
+  { label: 'FAZ 3', color: '#EA580C', end: 0.54 },
+  { label: 'FAZ 4', color: '#0D9488', end: 0.93 },
+  { label: 'FAZ 5', color: '#059669', end: 1.00 },
+]
+
+function phaseForDate(date: string, rangeStart: Date, rangeEnd: Date): { label: string; color: string } {
+  const total = rangeEnd.getTime() - rangeStart.getTime()
+  if (total <= 0) return { label: 'FAZ 1', color: '#7C3AED' }
+  const frac = (new Date(date + 'T00:00:00').getTime() - rangeStart.getTime()) / total
+  for (const p of PHASE_FRACS) { if (frac <= p.end) return p }
+  return PHASE_FRACS[PHASE_FRACS.length - 1]
+}
+
+// ─── MilestoneList ────────────────────────────────────────────────────────────
+
+type MilestoneListProps = {
+  milestones: Milestone[]
+  rangeStart: Date
+  rangeEnd: Date
+  canEdit: boolean
+  today: string
+  onAdd: (name: string, date: string) => Promise<void>
+  onUpdateDate: (id: string, date: string) => Promise<void>
+  onUpdateName?: (id: string, name: string) => Promise<void>
+  onComplete: (id: string, complete: boolean) => Promise<void>
+  onDelete: (id: string) => Promise<void>
+}
+
+function MilestoneList({
+  milestones, rangeStart, rangeEnd, canEdit, today,
+  onAdd, onUpdateDate, onUpdateName, onComplete, onDelete,
+}: MilestoneListProps) {
+  const [editingId,   setEditingId]   = useState<string | null>(null)
+  const [editName,    setEditName]    = useState('')
+  const [newName,     setNewName]     = useState('')
+  const [newDate,     setNewDate]     = useState('')
+  const [addingRow,   setAddingRow]   = useState(false)
+  const [saving,      setSaving]      = useState<string | null>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
+
+  const sorted = [...milestones].sort((a, b) => a.target_date.localeCompare(b.target_date))
+  const done   = milestones.filter(m => m.completed_at).length
+
+  function startEdit(m: Milestone) {
+    setEditingId(m.id)
+    setEditName(m.name)
+    setTimeout(() => nameRef.current?.focus(), 30)
+  }
+
+  async function commitName(m: Milestone) {
+    const trimmed = editName.trim()
+    if (trimmed && trimmed !== m.name && onUpdateName) {
+      setSaving(m.id)
+      await onUpdateName(m.id, trimmed).catch(() => {})
+      setSaving(null)
+    }
+    setEditingId(null)
+  }
+
+  async function handleDateChange(id: string, date: string) {
+    setSaving(id)
+    await onUpdateDate(id, date).catch(() => {})
+    setSaving(null)
+  }
+
+  async function handleComplete(id: string, current: string | null) {
+    setSaving(id)
+    await onComplete(id, !current).catch(() => {})
+    setSaving(null)
+  }
+
+  async function handleDelete(id: string) {
+    if (!window.confirm('Delete this milestone?')) return
+    setSaving(id)
+    await onDelete(id).catch(() => {})
+    setSaving(null)
+  }
+
+  async function handleAdd() {
+    const name = newName.trim()
+    if (!name || !newDate) return
+    setSaving('new')
+    await onAdd(name, newDate).catch(() => {})
+    setSaving(null)
+    setNewName('')
+    setNewDate('')
+    setAddingRow(false)
+  }
+
+  const COL_DATE  = 110
+  const COL_PHASE = 68
+  const COL_COMP  = 84
+  const COL_DEL   = 36
+
+  return (
+    <div style={{ background: '#fff', borderTop: '1.5px solid #E2E8F0', borderBottom: '1.5px solid #E2E8F0' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '0.625rem 1rem', borderBottom: '1px solid #E2E8F0', gap: '0.625rem' }}>
+        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.09em' }}>
+          Milestone Listesi
+        </span>
+        <span style={{ fontSize: '0.6rem', color: '#94A3B8', fontWeight: 500 }}>
+          {done}/{milestones.length} tamamlandı
+        </span>
+        {/* progress bar */}
+        <div style={{ flex: 1, height: 4, background: '#F1F5F9', borderRadius: 99, overflow: 'hidden', maxWidth: 180 }}>
+          <div style={{ height: '100%', width: `${milestones.length > 0 ? done / milestones.length * 100 : 0}%`, background: '#10B981', borderRadius: 99, transition: 'width 0.3s' }} />
+        </div>
+        <div style={{ flex: 1 }} />
+        {canEdit && (
+          <button
+            onClick={() => { setAddingRow(true); setTimeout(() => nameRef.current?.focus(), 30) }}
+            style={{ padding: '0.25rem 0.625rem', background: '#0F172A', color: '#fff', border: 'none', borderRadius: 6, fontSize: '0.67rem', fontWeight: 600, cursor: 'pointer' }}
+          >+ Ekle</button>
+        )}
+      </div>
+
+      {/* Column headers */}
+      <div style={{ display: 'flex', padding: '0 1rem', height: 28, alignItems: 'center', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+        <div style={{ flex: 1, fontSize: '0.52rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Kilometre Taşı</div>
+        <div style={{ width: COL_PHASE, fontSize: '0.52rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Faz</div>
+        <div style={{ width: COL_DATE,  fontSize: '0.52rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Hedef Tarih</div>
+        <div style={{ width: COL_COMP,  fontSize: '0.52rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Durum</div>
+        {canEdit && <div style={{ width: COL_DEL }} />}
+      </div>
+
+      {/* Rows */}
+      <div>
+        {sorted.map(m => {
+          const phase    = phaseForDate(m.target_date, rangeStart, rangeEnd)
+          const overdue  = !m.completed_at && m.target_date < today
+          const isEdit   = editingId === m.id
+          const isSaving = saving === m.id
+
+          return (
+            <div key={m.id} style={{
+              display: 'flex', alignItems: 'center', padding: '0 1rem',
+              height: 36, borderBottom: '1px solid #F1F5F9',
+              background: m.completed_at ? '#F0FDF4' : overdue ? '#FFF7F7' : '#fff',
+              opacity: isSaving ? 0.5 : 1, transition: 'background 0.15s',
+            }}>
+              {/* Name */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, paddingRight: '0.75rem' }}>
+                {/* Diamond */}
+                <div style={{
+                  width: 9, height: 9, flexShrink: 0,
+                  background: m.completed_at ? '#10B981' : overdue ? '#EF4444' : phase.color,
+                  border: m.completed_at ? 'none' : `2px solid ${phase.color}`,
+                  borderRadius: 2, transform: 'rotate(45deg)',
+                  boxShadow: m.completed_at ? '0 1px 3px rgba(16,185,129,0.4)' : 'none',
+                }} />
+                {isEdit && canEdit
+                  ? (
+                    <input
+                      ref={nameRef}
+                      value={editName}
+                      onChange={e => setEditName(e.target.value)}
+                      onBlur={() => commitName(m)}
+                      onKeyDown={e => { if (e.key === 'Enter') commitName(m); if (e.key === 'Escape') setEditingId(null) }}
+                      style={{ flex: 1, fontSize: '0.72rem', border: 'none', borderBottom: `1.5px solid ${phase.color}`, outline: 'none', padding: '0 2px', background: 'transparent', color: '#0F172A', fontWeight: 600 }}
+                    />
+                  )
+                  : (
+                    <span
+                      onClick={() => canEdit && startEdit(m)}
+                      title={canEdit ? 'Düzenlemek için tıkla' : m.name}
+                      style={{
+                        fontSize: '0.72rem', fontWeight: m.completed_at ? 500 : 600,
+                        color: m.completed_at ? '#64748B' : '#0F172A',
+                        textDecoration: m.completed_at ? 'line-through' : 'none',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                        cursor: canEdit ? 'text' : 'default',
+                      }}
+                    >{m.name}</span>
+                  )
+                }
+              </div>
+
+              {/* Phase badge */}
+              <div style={{ width: COL_PHASE }}>
+                <span style={{ fontSize: '0.55rem', fontWeight: 700, padding: '0.12rem 0.35rem', borderRadius: 4, background: phase.color + '18', color: phase.color }}>
+                  {phase.label}
+                </span>
+              </div>
+
+              {/* Date */}
+              <div style={{ width: COL_DATE }}>
+                {canEdit
+                  ? (
+                    <input
+                      type="date"
+                      value={m.target_date}
+                      onChange={e => e.target.value && handleDateChange(m.id, e.target.value)}
+                      style={{ fontSize: '0.68rem', color: overdue ? '#EF4444' : '#334155', border: 'none', background: 'transparent', outline: 'none', cursor: 'pointer', fontWeight: overdue ? 700 : 400, width: '100%' }}
+                    />
+                  )
+                  : (
+                    <span style={{ fontSize: '0.68rem', color: overdue ? '#EF4444' : '#334155', fontWeight: overdue ? 700 : 400 }}>
+                      {new Date(m.target_date + 'T00:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                  )
+                }
+              </div>
+
+              {/* Status */}
+              <div style={{ width: COL_COMP }}>
+                {canEdit
+                  ? (
+                    <button
+                      onClick={() => handleComplete(m.id, m.completed_at)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.3rem',
+                        background: m.completed_at ? '#D1FAE5' : overdue ? '#FEE2E2' : '#F1F5F9',
+                        color:      m.completed_at ? '#059669' : overdue ? '#EF4444' : '#64748B',
+                        border: 'none', borderRadius: 99, padding: '0.18rem 0.5rem',
+                        fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >
+                      {m.completed_at ? '✓ Tamam' : overdue ? '⚠ Gecikti' : '○ Bekliyor'}
+                    </button>
+                  )
+                  : (
+                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: m.completed_at ? '#059669' : overdue ? '#EF4444' : '#64748B' }}>
+                      {m.completed_at ? '✓ Tamam' : overdue ? '⚠ Gecikti' : '○ Bekliyor'}
+                    </span>
+                  )
+                }
+              </div>
+
+              {/* Delete */}
+              {canEdit && (
+                <div style={{ width: COL_DEL, display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    onClick={() => handleDelete(m.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#CBD5E1', fontSize: '0.8rem', lineHeight: 1, padding: '0 2px' }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#EF4444' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#CBD5E1' }}
+                  >✕</button>
+                </div>
+              )}
+            </div>
+          )
+        })}
+
+        {/* Add row */}
+        {addingRow && canEdit && (
+          <div style={{ display: 'flex', alignItems: 'center', padding: '0 1rem', height: 40, borderBottom: '1px solid #F1F5F9', background: '#FAFBFF', gap: '0.5rem' }}>
+            <div style={{ width: 9, height: 9, flexShrink: 0, background: '#E2E8F0', border: '2px solid #CBD5E1', borderRadius: 2, transform: 'rotate(45deg)' }} />
+            <input
+              ref={nameRef}
+              placeholder="Milestone adı…"
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleAdd(); if (e.key === 'Escape') { setAddingRow(false) } }}
+              style={{ flex: 1, fontSize: '0.72rem', border: 'none', borderBottom: '1.5px solid #7C3AED', outline: 'none', padding: '0 2px', background: 'transparent', color: '#0F172A' }}
+            />
+            <input
+              type="date"
+              value={newDate}
+              onChange={e => setNewDate(e.target.value)}
+              style={{ fontSize: '0.68rem', border: '1px solid #E2E8F0', borderRadius: 4, padding: '0.2rem 0.4rem', outline: 'none', color: '#334155' }}
+            />
+            <button
+              onClick={handleAdd}
+              disabled={!newName.trim() || !newDate || saving === 'new'}
+              style={{ padding: '0.2rem 0.625rem', background: '#0F172A', color: '#fff', border: 'none', borderRadius: 5, fontSize: '0.67rem', fontWeight: 600, cursor: 'pointer', opacity: !newName.trim() || !newDate ? 0.4 : 1 }}
+            >{saving === 'new' ? '…' : 'Kaydet'}</button>
+            <button
+              onClick={() => setAddingRow(false)}
+              style={{ padding: '0.2rem 0.4rem', background: 'none', color: '#94A3B8', border: 'none', borderRadius: 5, fontSize: '0.8rem', cursor: 'pointer' }}
+            >✕</button>
+          </div>
+        )}
+
+        {milestones.length === 0 && !addingRow && (
+          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#CBD5E1' }}>
+            <div style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>◈</div>
+            <div style={{ fontSize: '0.68rem' }}>Henüz milestone eklenmemiş</div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function BoardViewV3(props: Props) {
@@ -92,7 +382,8 @@ export function BoardViewV3(props: Props) {
     board, columns, members, tasks, currentMember, isCreator,
     milestones, milestoneTasks, budgetLines, costTransactions,
     onUpdateFilePanelUrl, onUpdateBoardInfo,
-    onAddMilestone, onUpdateMilestoneDate,
+    onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate,
+    onUpdateMilestoneName, onCompleteMilestone,
     onAddTransaction, onUpdateTransaction, onDeleteTransaction,
     onAddBudgetLine, onUpdateBudgetLine, onDeleteBudgetLine,
     onImportBudgetLines, onChangeCurrency, onUpdateMemberRole,
@@ -201,6 +492,21 @@ export function BoardViewV3(props: Props) {
 
   // Billed invoices (total approved cash_in lines)
   const approvedInvoices = costTransactions.filter(t => t.type === 'cash_in' && !t.is_forecast).length
+
+  // Date range for milestone phase assignment (mirrors WorkStreamGantt logic)
+  const { msRangeStart, msRangeEnd } = useMemo(() => {
+    const ts: number[] = []
+    tasks.forEach(t => { if (t.due_date) ts.push(new Date(t.due_date + 'T00:00:00').getTime()) })
+    milestones.forEach(m => ts.push(new Date(m.target_date + 'T00:00:00').getTime()))
+    costTransactions.forEach(t => ts.push(new Date(t.date + 'T00:00:00').getTime()))
+    if (!ts.length) {
+      const now = new Date()
+      return { msRangeStart: new Date(now.getFullYear(), now.getMonth() - 1, 1), msRangeEnd: new Date(now.getFullYear(), now.getMonth() + 11, 0) }
+    }
+    const s = new Date(Math.min(...ts)); s.setMonth(s.getMonth() - 1); s.setDate(1)
+    const e = new Date(Math.max(...ts)); e.setMonth(e.getMonth() + 1); e.setDate(0)
+    return { msRangeStart: s, msRangeEnd: e }
+  }, [tasks, milestones, costTransactions])
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -454,6 +760,22 @@ export function BoardViewV3(props: Props) {
             boardPhotos={photos}
             onAddMilestone={onAddMilestone}
             onUpdateMilestoneDate={onUpdateMilestoneDate}
+          />
+
+          {/* ══════════════════════════════════════════════════════
+              MILESTONE LIST
+          ══════════════════════════════════════════════════════ */}
+          <MilestoneList
+            milestones={milestones}
+            rangeStart={msRangeStart}
+            rangeEnd={msRangeEnd}
+            canEdit={isCreator || currentMember.role === 'admin'}
+            today={today}
+            onAdd={onAddMilestone}
+            onUpdateDate={onUpdateMilestoneDate}
+            onUpdateName={onUpdateMilestoneName}
+            onComplete={onCompleteMilestone}
+            onDelete={onDeleteMilestone}
           />
 
           {/* ══════════════════════════════════════════════════════

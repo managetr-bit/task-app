@@ -296,7 +296,7 @@ export function WorkStreamGantt({
 }: WorkStreamGanttProps) {
 
   const [filter,    setFilter]    = useState<string>('all')
-  const [layers,    setLayers]    = useState<Record<LayerKey, boolean>>({ photos: false, milestones: true, risks: false, process: false })
+  const [layers,    setLayers]    = useState<Record<LayerKey, boolean>>({ photos: false, milestones: true, risks: false, process: true })
   const [tf,        setTf]        = useState<Timeframe>('monthly')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
