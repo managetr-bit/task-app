@@ -454,7 +454,7 @@ export function WorkStreamGantt({
                   width: LABEL_W, flexShrink: 0,
                   height: phaseH,
                   borderRight: `2px solid ${phase.color}`,
-                  background: phase.color + '12',
+                  background: '#fff',
                   display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'center',
                   gap: '0.1rem',
@@ -469,7 +469,7 @@ export function WorkStreamGantt({
                 </div>
 
                 {/* 2 timeline lanes stacked */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: phase.color + '06' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
                   {Array.from({ length: N_ROWS }, (_, rowIdx) => {
                     const rowKms = rows[rowIdx] ?? []
                     return (
@@ -501,9 +501,8 @@ export function WorkStreamGantt({
               return (n < 0 ? '-' : '') + SYM + s
             }
 
-            // Aggregate per period
-            const periodOut: number[]  = periods.map(() => 0)
-            const periodIn:  number[]  = periods.map(() => 0)
+            const periodOut: number[] = periods.map(() => 0)
+            const periodIn:  number[] = periods.map(() => 0)
 
             function addToPeriod(date: string, amount: number, arr: number[]) {
               const d = new Date(date + 'T00:00:00').getTime()
@@ -521,77 +520,114 @@ export function WorkStreamGantt({
             const maxIn  = Math.max(...periodIn,  1)
             const maxNet = Math.max(...periodNet.map(Math.abs), 1)
 
-            const ROW_BG_OUT = '#FEF2F2'
-            const ROW_BG_IN  = '#F0FDF4'
-            const ROW_BG_NET = '#EFF6FF'
             const C_OUT = '#EF4444'
             const C_IN  = '#10B981'
 
+            // period mid-point as pct of full timeline
+            function periodMidPct(i: number) {
+              const mid = new Date((periods[i].start.getTime() + periods[i].end.getTime()) / 2)
+              return pct(mid)
+            }
+            // width of one period slot as % of full timeline
+            const slotW = periods.length > 0
+              ? ((periods[0].end.getTime() - periods[0].start.getTime()) / (rangeEnd.getTime() - rangeStart.getTime())) * 100
+              : 0
+            const barW  = Math.max(slotW * 0.45, 0.4) // 45% of slot width
+
             type CashRowDef = {
               label: string; sub: string
-              bg: string; barColor: string; textColor: string
+              accentColor: string
               values: number[]; maxVal: number; isNet: boolean
             }
 
-            const rows: CashRowDef[] = [
-              { label: 'Cash Out',  sub: 'Harcama',  bg: ROW_BG_OUT, barColor: C_OUT,    textColor: C_OUT,    values: periodOut, maxVal: maxOut, isNet: false },
-              { label: 'Cash In',   sub: 'Tahsilat', bg: ROW_BG_IN,  barColor: C_IN,     textColor: C_IN,     values: periodIn,  maxVal: maxIn,  isNet: false },
-              { label: 'Net Cash',  sub: 'Bakiye',   bg: ROW_BG_NET, barColor: '#2563EB', textColor: '#2563EB', values: periodNet, maxVal: maxNet, isNet: true  },
+            const cashRowDefs: CashRowDef[] = [
+              { label: 'Cash Out', sub: 'Harcama',  accentColor: C_OUT,     values: periodOut, maxVal: maxOut, isNet: false },
+              { label: 'Cash In',  sub: 'Tahsilat', accentColor: C_IN,      values: periodIn,  maxVal: maxIn,  isNet: false },
+              { label: 'Net Cash', sub: 'Bakiye',   accentColor: '#2563EB', values: periodNet, maxVal: maxNet, isNet: true  },
             ]
 
-            return rows.map((row, ri) => (
+            return cashRowDefs.map((row, ri) => (
               <div key={row.label} style={{
                 display: 'flex',
                 borderTop:    ri === 0 ? '1.5px solid #E2E8F0' : 'none',
                 borderBottom: '1.5px solid #E2E8F0',
               }}>
-                {/* Label cell — 2 rows tall, centred */}
+                {/* Label cell */}
                 <div style={{
                   width: LABEL_W, flexShrink: 0,
                   height: N_ROWS * ROW_H,
-                  borderRight: `2px solid ${row.barColor}40`,
-                  background: row.bg,
+                  borderRight: `2px solid ${row.accentColor}`,
+                  background: '#fff',
                   display: 'flex', flexDirection: 'column',
                   alignItems: 'center', justifyContent: 'center',
                   gap: '0.1rem', padding: '0 0.5rem',
                 }}>
-                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: row.textColor, letterSpacing: '0.03em', userSelect: 'none', lineHeight: 1.2 }}>{row.label}</span>
-                  <span style={{ fontSize: '0.54rem', fontWeight: 600, color: row.textColor, opacity: 0.65, letterSpacing: '0.06em', userSelect: 'none', lineHeight: 1.2 }}>{row.sub}</span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 800, color: row.accentColor, letterSpacing: '0.03em', userSelect: 'none', lineHeight: 1.2 }}>{row.label}</span>
+                  <span style={{ fontSize: '0.54rem', fontWeight: 600, color: row.accentColor, opacity: 0.65, letterSpacing: '0.06em', userSelect: 'none', lineHeight: 1.2 }}>{row.sub}</span>
                 </div>
 
-                {/* Period columns — row 0: bar, row 1: value text */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: row.bg }}>
-                  {/* Row 0 — bars */}
-                  <div style={{ height: ROW_H, display: 'flex', borderBottom: `1px dashed ${row.barColor}25` }}>
-                    {periods.map((p, i) => {
+                {/* Timeline area — 2 stacked rows, absolute positioning like phase rows */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+                  {/* Row 0 — bar chart */}
+                  <div style={{ height: ROW_H, position: 'relative', overflow: 'visible', borderBottom: '1px dashed #E2E8F0' }}>
+                    <GridBg bg="transparent" />
+                    {periods.map((_, i) => {
                       const val = row.values[i]
-                      if (val === 0) return <div key={p.key} style={{ flex: 1, borderRight: '1px solid rgba(226,232,240,0.6)', position: 'relative' }}><GridBg bg="transparent" /><TodayLine /></div>
-                      const barH  = Math.round(Math.max(4, (Math.abs(val) / row.maxVal) * (ROW_H - 6)))
-                      const color = row.isNet ? (val >= 0 ? C_IN : C_OUT) : row.barColor
+                      if (val === 0) return null
+                      const barH  = Math.round(Math.max(3, (Math.abs(val) / row.maxVal) * (ROW_H - 5)))
+                      const color = row.isNet ? (val >= 0 ? C_IN : C_OUT) : row.accentColor
+                      const midPct = periodMidPct(i)
+                      if (midPct < 0 || midPct > 100) return null
                       return (
-                        <div key={p.key} style={{ flex: 1, borderRight: '1px solid rgba(226,232,240,0.6)', position: 'relative', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', paddingBottom: 2 }}>
-                          <div title={fmtK(val)} style={{ width: '60%', height: barH, background: color, borderRadius: '2px 2px 0 0', opacity: 0.75 }} />
-                          <TodayLine />
-                        </div>
+                        <div
+                          key={i}
+                          title={fmtK(val)}
+                          style={{
+                            position: 'absolute',
+                            left: `${midPct}%`,
+                            bottom: 2,
+                            transform: 'translateX(-50%)',
+                            width: `${barW}%`,
+                            height: barH,
+                            background: color,
+                            borderRadius: '2px 2px 0 0',
+                            opacity: 0.8,
+                            zIndex: 2,
+                          }}
+                        />
                       )
                     })}
+                    <TodayLine />
                   </div>
-                  {/* Row 1 — values */}
-                  <div style={{ height: ROW_H, display: 'flex' }}>
-                    {periods.map((p, i) => {
+                  {/* Row 1 — value labels */}
+                  <div style={{ height: ROW_H, position: 'relative', overflow: 'visible' }}>
+                    <GridBg bg="transparent" />
+                    {periods.map((_, i) => {
                       const val   = row.values[i]
-                      const color = row.isNet ? (val > 0 ? C_IN : val < 0 ? C_OUT : '#94A3B8') : row.barColor
+                      if (val === 0) return null
+                      const color = row.isNet ? (val > 0 ? C_IN : val < 0 ? C_OUT : '#94A3B8') : row.accentColor
+                      const midPct = periodMidPct(i)
+                      if (midPct < 0 || midPct > 100) return null
                       return (
-                        <div key={p.key} style={{ flex: 1, borderRight: '1px solid rgba(226,232,240,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                          {val !== 0 && (
-                            <span style={{ fontSize: '0.52rem', fontWeight: 700, color, whiteSpace: 'nowrap' }}>
-                              {fmtK(val)}
-                            </span>
-                          )}
-                          <TodayLine />
-                        </div>
+                        <span
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            left: `${midPct}%`,
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            fontSize: '0.5rem',
+                            fontWeight: 700,
+                            color,
+                            whiteSpace: 'nowrap',
+                            zIndex: 2,
+                          }}
+                        >
+                          {fmtK(val)}
+                        </span>
                       )
                     })}
+                    <TodayLine />
                   </div>
                 </div>
               </div>
