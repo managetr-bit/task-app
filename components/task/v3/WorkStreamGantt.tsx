@@ -516,8 +516,6 @@ export function WorkStreamGantt({
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, color: phase.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{phase.name}</span>
                   </div>
                   <div style={{ flex: 1, position: 'relative', background: phase.color + '06' }}>
-                    {/* thin span indicator across phase range */}
-                    <div style={{ position: 'absolute', left: `${phase.startFrac * 100}%`, width: `${(phase.endFrac - phase.startFrac) * 100}%`, top: '38%', height: '24%', background: phase.color, opacity: 0.2, borderRadius: 2 }} />
                     <TodayLine />
                   </div>
                 </div>
@@ -534,8 +532,8 @@ export function WorkStreamGantt({
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       padding: '0 0.5rem',
                     }}>
-                      <span style={{ fontSize: '0.52rem', fontWeight: 700, color: phase.color, textAlign: 'center', letterSpacing: '0.04em', opacity: 0.7, userSelect: 'none' }}>
-                        {phase.milestones.length} KM
+                      <span style={{ fontSize: '0.52rem', fontWeight: 700, color: phase.color, textAlign: 'center', letterSpacing: '0.04em', opacity: 0.8, userSelect: 'none', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
+                        {phase.name.split(' — ')[0]}
                       </span>
                     </div>
 
