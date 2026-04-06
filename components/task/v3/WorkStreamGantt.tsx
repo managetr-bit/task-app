@@ -239,11 +239,12 @@ function DiamondMarker({ km, color }: { km: ProcessMilestone; color: string }) {
         overflow: 'visible',
         zIndex: open ? 10 : 2,
         cursor: 'default',
+        pointerEvents: 'none',
       }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}
     >
-      {/* Diamond shape */}
+      {/* Diamond shape — re-enable pointer events on just the diamond */}
       <div style={{
         width: D, height: D, flexShrink: 0,
         background: km.major ? color : '#fff',
@@ -251,9 +252,13 @@ function DiamondMarker({ km, color }: { km: ProcessMilestone; color: string }) {
         borderRadius: 2,
         transform: 'rotate(45deg)',
         boxShadow: km.major ? `0 1px 5px ${color}66` : `0 1px 3px rgba(0,0,0,0.15)`,
-      }} />
+        pointerEvents: 'auto',
+      }}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+      />
 
-      {/* Label to the right */}
+      {/* Label to the right — no pointer events so it never blocks project milestone clicks */}
       <span style={{
         marginLeft: LABEL_OFFSET,
         fontSize: km.major ? '0.6rem' : '0.57rem',
@@ -262,6 +267,7 @@ function DiamondMarker({ km, color }: { km: ProcessMilestone; color: string }) {
         whiteSpace: 'nowrap',
         letterSpacing: km.major ? '0.01em' : 0,
         userSelect: 'none',
+        pointerEvents: 'none',
       }}>
         {km.label}
       </span>
@@ -314,7 +320,7 @@ function ProjectMilestoneMarker({
       style={{
         position: 'absolute', left: `${p}%`, top: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: 8, pointerEvents: 'auto', cursor: 'pointer',
+        zIndex: 32, pointerEvents: 'auto', cursor: 'pointer',
       }}
       onClick={(e) => { e.stopPropagation(); onEdit(ms, e.clientX, e.clientY) }}
     >
@@ -560,7 +566,7 @@ export function WorkStreamGantt({
                       })}
                       {/* Project milestones overlay */}
                       {phaseMs.length > 0 && (
-                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 7 }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 30 }}>
                           {phaseMs.map(m => (
                             <ProjectMilestoneMarker
                               key={m.id}
