@@ -7,7 +7,6 @@ import {
 } from '@/lib/types'
 import { GanttV4 } from './v4/GanttV4'
 
-// ─── Full props (same interface as other board views so BoardPageClient can render it) ───
 type Props = {
   board: Board
   columns: Column[]
@@ -51,144 +50,24 @@ type Props = {
   onUpdateMemberRole: (memberId: string, role: MemberRole) => Promise<void>
 }
 
-// ─── Design tokens (mirroring GanttV4) ───────────────────────────────────────
-const PRIMARY    = '#320075'
-const ON_SURFACE = '#131b2e'
-const OUTLINE    = '#7b7484'
-const SURF_LOW   = '#f2f3ff'
-const SURF_CONT  = '#eaedff'
-const OUTLINE_V  = '#ccc3d4'
-
 export function BoardViewV4({
   board, milestones, costTransactions,
   onAddMilestone, onDeleteMilestone, onUpdateMilestoneDate,
   onUpdateMilestoneName, onCompleteMilestone,
 }: Props) {
-  const photos = (board.photos ?? []).filter(Boolean)
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#faf8ff',
-      fontFamily: 'Inter, sans-serif',
-    }}>
-
-      {/* ── Top bar ── */}
-      <header style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 2rem',
-        height: 52,
-        background: 'rgba(255,255,255,0.75)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: `1px solid ${OUTLINE_V}33`,
-        position: 'sticky', top: 0, zIndex: 50,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <div style={{
-            width: 30, height: 30,
-            background: `linear-gradient(135deg, ${PRIMARY}, #4a1d96)`,
-            borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.7rem', color: '#fff', fontWeight: 800,
-          }}>
-            ◈
-          </div>
-          <span style={{ fontSize: '1rem', fontWeight: 900, color: PRIMARY, letterSpacing: '-0.02em' }}>
-            {board.name}
-          </span>
-          {board.location_address && (
-            <span style={{ fontSize: '0.68rem', color: OUTLINE, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-              <span>📍</span>
-              {board.location_address}
-            </span>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {/* Project health badge */}
-          <div style={{
-            padding: '0.3rem 0.85rem',
-            background: '#f0fdf4',
-            border: '1px solid #bbf7d0',
-            borderRadius: 99,
-            display: 'flex', alignItems: 'center', gap: '0.4rem',
-          }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a' }} />
-            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#15803d', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              On Track
-            </span>
-          </div>
-
-          {/* Currency badge */}
-          <div style={{
-            padding: '0.3rem 0.85rem',
-            background: SURF_CONT,
-            borderRadius: 99,
-          }}>
-            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: PRIMARY }}>
-              {board.currency === 'TRY' ? '₺ TRY' : '$ USD'}
-            </span>
-          </div>
-        </div>
-      </header>
-
-      {/* ── Cover photo strip (if any) ── */}
-      {photos.length > 0 && (
-        <div style={{
-          height: 160, position: 'relative', overflow: 'hidden',
-          background: ON_SURFACE,
-        }}>
-          <img
-            src={photos[0]}
-            alt="Project"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.55 }}
-          />
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: `linear-gradient(135deg, ${PRIMARY}cc 0%, transparent 60%)`,
-          }} />
-          <div style={{
-            position: 'absolute', bottom: '1.25rem', left: '2rem',
-          }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-              background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.25)',
-              borderRadius: 99, padding: '0.3rem 0.85rem',
-            }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#6ffbbe' }} />
-              <span style={{ fontSize: '0.63rem', fontWeight: 700, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Executing
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Gantt ── */}
-      <div style={{
-        margin: '1.5rem 2rem',
-        background: '#ffffff',
-        borderRadius: 16,
-        overflow: 'hidden',
-        boxShadow: '0 8px 32px -4px rgba(19,27,46,0.08)',
-        border: `1px solid ${OUTLINE_V}33`,
-      }}>
-        <GanttV4
-          board={board}
-          milestones={milestones}
-          costTransactions={costTransactions}
-          currency={board.currency}
-          onAddMilestone={onAddMilestone}
-          onUpdateMilestoneDate={onUpdateMilestoneDate}
-          onUpdateMilestoneName={onUpdateMilestoneName}
-          onDeleteMilestone={onDeleteMilestone}
-          onCompleteMilestone={onCompleteMilestone}
-        />
-      </div>
-
-      {/* ── Bottom padding ── */}
-      <div style={{ height: '2rem' }} />
+    <div style={{ minHeight: '100vh', background: '#faf8ff', fontFamily: 'Inter, sans-serif' }}>
+      <GanttV4
+        board={board}
+        milestones={milestones}
+        costTransactions={costTransactions}
+        currency={board.currency}
+        onAddMilestone={onAddMilestone}
+        onUpdateMilestoneDate={onUpdateMilestoneDate}
+        onUpdateMilestoneName={onUpdateMilestoneName}
+        onDeleteMilestone={onDeleteMilestone}
+        onCompleteMilestone={onCompleteMilestone}
+      />
     </div>
   )
 }
