@@ -23,13 +23,14 @@ export default function LandingPage() {
   const [profile, setProfile]                 = useState<Profile | null>(null)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [pendingCreate, setPendingCreate]     = useState(false)
-  const [activeVersion, setActiveVersion]     = useState<'v1' | 'v2' | 'v3'>('v1')
+  const [activeVersion, setActiveVersion]     = useState<'v1' | 'v2' | 'v3' | 'v4'>('v1')
 
   // Pre-select tab from ?v= param
   useEffect(() => {
     const v = searchParams.get('v')
     if (v === '2') setActiveVersion('v2')
     if (v === '3') setActiveVersion('v3')
+    if (v === '4') setActiveVersion('v4')
   }, [searchParams])
 
   useEffect(() => {
@@ -76,7 +77,7 @@ export default function LandingPage() {
       } catch { /* ignore */ }
     }
 
-    const path = activeVersion === 'v3' ? `/v3/${board.id}` : activeVersion === 'v2' ? `/v2/${board.id}` : `/${board.id}`
+    const path = activeVersion === 'v4' ? `/v4/${board.id}` : activeVersion === 'v3' ? `/v3/${board.id}` : activeVersion === 'v2' ? `/v2/${board.id}` : `/${board.id}`
     router.push(path)
   }
 
@@ -227,7 +228,8 @@ export default function LandingPage() {
               { v: 'v1', label: 'v1 — Kanban' },
               { v: 'v2', label: 'v2 — Dashboard' },
               { v: 'v3', label: 'v3 — Spreadsheet' },
-            ] as { v: 'v1' | 'v2' | 'v3'; label: string }[]).map(({ v, label }) => (
+              { v: 'v4', label: 'v4 — Blueprint' },
+            ] as { v: 'v1' | 'v2' | 'v3' | 'v4'; label: string }[]).map(({ v, label }) => (
               <button
                 key={v}
                 onClick={() => setActiveVersion(v)}
@@ -331,7 +333,7 @@ export default function LandingPage() {
 
                     <div style={{ padding: '0.875rem 1rem' }}>
                       <div
-                        onClick={() => router.push(activeVersion === 'v3' ? `/v3/${rb.boardId}` : activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
+                        onClick={() => router.push(activeVersion === 'v4' ? `/v4/${rb.boardId}` : activeVersion === 'v3' ? `/v3/${rb.boardId}` : activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
                         style={{ cursor: 'pointer', flex: 1, minWidth: 0 }}
                       >
                         <div style={{
@@ -389,7 +391,7 @@ export default function LandingPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => router.push(activeVersion === 'v3' ? `/v3/${rb.boardId}` : activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
+                          onClick={() => router.push(activeVersion === 'v4' ? `/v4/${rb.boardId}` : activeVersion === 'v3' ? `/v3/${rb.boardId}` : activeVersion === 'v2' ? `/v2/${rb.boardId}` : `/${rb.boardId}`)}
                           className="btn-primary"
                           style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem' }}
                         >
